@@ -24,16 +24,16 @@ class _PlayerPageState extends State<PlayerPage> {
   bool _showSoundEffects = false;
   double _currentPosition = 0.0;
   double _totalDuration = 0.0;
-  
+
   // Subscription management
   late StreamSubscription _playingSubscription;
-  late StreamSubscription _positionSubscription; 
+  late StreamSubscription _positionSubscription;
   late StreamSubscription _durationSubscription;
-  
+
   // Media data
   MediaItem? _currentMedia;
   final MediaLocalDataSource _mediaDataSource = MediaLocalDataSource();
-  
+
   // Mock data - TODO: Replace with actual media data
   String get _title => _currentMedia?.title ?? '加载中...';
   String get _category => _currentMedia?.category ?? '未知';
@@ -80,19 +80,21 @@ class _PlayerPageState extends State<PlayerPage> {
     if (widget.mediaId != null) {
       try {
         final mediaItems = await _mediaDataSource.getMediaItems();
-        final media = mediaItems.firstWhere((item) => item.id == widget.mediaId);
+        final media = mediaItems.firstWhere(
+          (item) => item.id == widget.mediaId,
+        );
         setState(() {
           _currentMedia = media;
         });
-        
+
         // Load audio file
         await _loadAudioFile(media.filePath);
       } catch (e) {
         debugPrint('Error loading media: $e');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('加载媒体失败: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('加载媒体失败: $e')));
         }
       }
     }
@@ -106,16 +108,23 @@ class _PlayerPageState extends State<PlayerPage> {
           debugPrint('Loading web audio for media ID: ${_currentMedia!.id}');
           final mimeType = _getMimeType(_currentMedia!.filePath);
           debugPrint('Using MIME type: $mimeType');
-          
-          final blobUrl = _mediaDataSource.createAudioBlobUrl(_currentMedia!.id, mimeType);
-          
+
+          final blobUrl = _mediaDataSource.createAudioBlobUrl(
+            _currentMedia!.id,
+            mimeType,
+          );
+
           if (blobUrl != null) {
-            debugPrint('Successfully created blob URL, attempting to load audio');
+            debugPrint(
+              'Successfully created blob URL, attempting to load audio',
+            );
             await _audioPlayer.setUrl(blobUrl);
             debugPrint('Web audio loaded from blob URL successfully');
             return;
           } else {
-            debugPrint('Failed to create blob URL for media ID: ${_currentMedia!.id}');
+            debugPrint(
+              'Failed to create blob URL for media ID: ${_currentMedia!.id}',
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('无法创建音频播放链接，请检查文件是否正确上传')),
             );
@@ -125,7 +134,7 @@ class _PlayerPageState extends State<PlayerPage> {
           debugPrint('No current media available for web playback');
         }
       }
-      
+
       // For desktop platforms, load from file path
       debugPrint('Loading desktop audio from file path: $filePath');
       await _audioPlayer.setFilePath(filePath);
@@ -133,9 +142,9 @@ class _PlayerPageState extends State<PlayerPage> {
     } catch (e) {
       debugPrint('Error loading audio file: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载音频文件失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载音频文件失败: $e')));
       }
     }
   }
@@ -172,7 +181,7 @@ class _PlayerPageState extends State<PlayerPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
@@ -197,10 +206,7 @@ class _PlayerPageState extends State<PlayerPage> {
                           context.go('/');
                         }
                       },
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                      ),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
                     ),
                   ),
                   Text(
@@ -237,7 +243,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 40),
-                    
+
                     // Album Art
                     Container(
                       width: 300,
@@ -324,7 +330,9 @@ class _PlayerPageState extends State<PlayerPage> {
                         Text(
                           _category,
                           style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.7,
+                            ),
                           ),
                         ),
                       ],
@@ -336,7 +344,9 @@ class _PlayerPageState extends State<PlayerPage> {
                       currentPosition: _currentPosition,
                       totalDuration: _totalDuration,
                       onSeek: (position) async {
-                        await _audioPlayer.seek(Duration(seconds: position.toInt()));
+                        await _audioPlayer.seek(
+                          Duration(seconds: position.toInt()),
+                        );
                       },
                     ),
                     const SizedBox(height: 32),
@@ -368,7 +378,8 @@ class _PlayerPageState extends State<PlayerPage> {
 
                     // Bottom Action Buttons
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         _buildActionButton(
                           icon: Icons.repeat,
@@ -376,10 +387,12 @@ class _PlayerPageState extends State<PlayerPage> {
                             // TODO: Toggle repeat
                           },
                         ),
+                        SizedBox(width: 16),
                         _buildActionButton(
                           icon: Icons.timer,
                           onTap: _showTimerDialog,
                         ),
+                        SizedBox(width: 16),
                         _buildActionButton(
                           icon: Icons.equalizer,
                           onTap: () {
@@ -393,9 +406,8 @@ class _PlayerPageState extends State<PlayerPage> {
                     const SizedBox(height: 32),
 
                     // Sound Effects Panel
-                    if (_showSoundEffects)
-                      const SoundEffectsPanel(),
-                      
+                    if (_showSoundEffects) const SoundEffectsPanel(),
+
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -412,7 +424,7 @@ class _PlayerPageState extends State<PlayerPage> {
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
-    
+
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -422,6 +434,7 @@ class _PlayerPageState extends State<PlayerPage> {
         ),
       ),
       child: IconButton(
+        iconSize: 16,
         onPressed: onTap,
         icon: Icon(
           icon,
@@ -449,11 +462,13 @@ class _PlayerPageState extends State<PlayerPage> {
               height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            
+
             // Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -473,7 +488,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 ],
               ),
             ),
-            
+
             // Options
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -547,9 +562,9 @@ class _PlayerPageState extends State<PlayerPage> {
                 title: Text('$minutes 分钟后'),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('已设置 $minutes 分钟定时')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('已设置 $minutes 分钟定时')));
                 },
               ),
           ],

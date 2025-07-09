@@ -30,12 +30,12 @@ class PlayerControls extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         // Shuffle
-        _AnimatedControlButton(
-          icon: Icons.shuffle,
-          isActive: isShuffled,
-          onPressed: onShuffle,
-          size: 24,
-        ),
+        // _AnimatedControlButton(
+        //   icon: Icons.shuffle,
+        //   isActive: isShuffled,
+        //   onPressed: onShuffle,
+        //   size: 24,
+        // ),
 
         // Previous
         _AnimatedControlButton(
@@ -55,12 +55,12 @@ class PlayerControls extends StatelessWidget {
         ),
 
         // Repeat
-        _AnimatedControlButton(
-          icon: _getRepeatIcon(),
-          isActive: repeatMode != RepeatMode.none,
-          onPressed: onRepeat,
-          size: 24,
-        ),
+        // _AnimatedControlButton(
+        //   icon: _getRepeatIcon(),
+        //   isActive: repeatMode != RepeatMode.none,
+        //   onPressed: onRepeat,
+        //   size: 24,
+        // ),
       ],
     );
   }

@@ -1,13 +1,16 @@
-import 'dart:html' as html show window, Storage, Blob, Url;
 import 'dart:convert';
 import 'dart:typed_data';
 import '../../features/media/domain/entities/media_item.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+// Conditional import for web-only functionality
+import 'web_storage_helper_io.dart' as html if (dart.library.html) 'dart:html';
 
 class WebStorageHelper {
   static const String _mediaItemsKey = 'mindra_media_items';
   static const String _sessionsKey = 'mindra_sessions';
   static const String _preferencesKey = 'mindra_preferences';
-  
+
   // Store blob URLs temporarily (not persisted)
   static final Map<String, String> _blobUrls = {};
   static final Map<String, Uint8List> _mediaBytes = {};
@@ -17,7 +20,9 @@ class WebStorageHelper {
   // Store file bytes in memory for current session
   static Future<void> storeMediaBytes(String mediaId, Uint8List bytes) async {
     try {
-      print('Storing media bytes for ID: $mediaId, size: ${bytes.length} bytes');
+      print(
+        'Storing media bytes for ID: $mediaId, size: ${bytes.length} bytes',
+      );
       _mediaBytes[mediaId] = bytes;
       print('Successfully stored media bytes in memory for ID: $mediaId');
     } catch (e) {
@@ -36,8 +41,10 @@ class WebStorageHelper {
         return null;
       }
 
-      print('Found stored bytes for media ID: $mediaId, length: ${bytes.length}');
-      
+      print(
+        'Found stored bytes for media ID: $mediaId, length: ${bytes.length}',
+      );
+
       // Create blob and return object URL
       final blob = html.Blob([bytes], mimeType);
       final url = html.Url.createObjectUrl(blob);
@@ -57,6 +64,7 @@ class WebStorageHelper {
       print('Error revoking blob URL: $e');
     }
   }
+
   static Future<void> insertMediaItem(MediaItem item) async {
     final items = await getMediaItems();
     items.removeWhere((existing) => existing.id == item.id);
@@ -67,12 +75,14 @@ class WebStorageHelper {
   static Future<List<MediaItem>> getMediaItems() async {
     final jsonString = _localStorage[_mediaItemsKey];
     if (jsonString == null) return [];
-    
+
     final jsonList = json.decode(jsonString) as List;
     return jsonList.map((json) => MediaItem.fromMap(json)).toList();
   }
 
-  static Future<List<MediaItem>> getMediaItemsByCategory(String category) async {
+  static Future<List<MediaItem>> getMediaItemsByCategory(
+    String category,
+  ) async {
     final items = await getMediaItems();
     if (category == '全部') return items;
     return items.where((item) => item.category == category).toList();
@@ -83,7 +93,10 @@ class WebStorageHelper {
     return items.where((item) => item.isFavorite).toList();
   }
 
-  static Future<void> updateMediaItem(String id, Map<String, dynamic> updates) async {
+  static Future<void> updateMediaItem(
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
     final items = await getMediaItems();
     final index = items.indexWhere((item) => item.id == id);
     if (index >= 0) {
@@ -100,12 +113,14 @@ class WebStorageHelper {
         category: updates['category'] ?? currentItem.category,
         duration: updates['duration'] ?? currentItem.duration,
         createdAt: currentItem.createdAt,
-        lastPlayedAt: updates['last_played_at'] != null 
-          ? DateTime.fromMillisecondsSinceEpoch(updates['last_played_at'])
-          : currentItem.lastPlayedAt,
+        lastPlayedAt: updates['last_played_at'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(updates['last_played_at'])
+            : currentItem.lastPlayedAt,
         playCount: updates['play_count'] ?? currentItem.playCount,
         tags: updates['tags']?.split(',') ?? currentItem.tags,
-        isFavorite: updates['is_favorite'] == 1 ? true : (updates['is_favorite'] == 0 ? false : currentItem.isFavorite),
+        isFavorite: updates['is_favorite'] == 1
+            ? true
+            : (updates['is_favorite'] == 0 ? false : currentItem.isFavorite),
         sourceUrl: updates['source_url'] ?? currentItem.sourceUrl,
       );
       items[index] = updatedItem;
@@ -127,7 +142,9 @@ class WebStorageHelper {
   // Preferences operations
   static Future<void> setPreference(String key, String value) async {
     final prefsJson = _localStorage[_preferencesKey];
-    final prefs = prefsJson != null ? json.decode(prefsJson) as Map<String, dynamic> : <String, dynamic>{};
+    final prefs = prefsJson != null
+        ? json.decode(prefsJson) as Map<String, dynamic>
+        : <String, dynamic>{};
     prefs[key] = value;
     _localStorage[_preferencesKey] = json.encode(prefs);
   }
