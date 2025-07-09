@@ -1,0 +1,177 @@
+import 'package:flutter/foundation.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart' as just_audio;
+import 'dart:io';
+import 'dart:async';
+
+class CrossPlatformAudioPlayer {
+  AudioPlayer? _audioPlayersInstance;
+  just_audio.AudioPlayer? _justAudioInstance;
+  
+  // Manual state tracking for audioplayers
+  bool _isPlaying = false;
+  Duration _currentPosition = Duration.zero;
+  Duration? _totalDuration;
+  
+  final StreamController<bool> _playingController = StreamController<bool>.broadcast();
+  final StreamController<Duration> _positionController = StreamController<Duration>.broadcast();
+  final StreamController<Duration?> _durationController = StreamController<Duration?>.broadcast();
+  
+  Timer? _positionTimer;
+  
+  bool get _useAudioPlayers => !kIsWeb && (Platform.isAndroid || Platform.isLinux);
+  
+  CrossPlatformAudioPlayer() {
+    if (_useAudioPlayers) {
+      _audioPlayersInstance = AudioPlayer();
+      _setupAudioPlayersListeners();
+    } else {
+      _justAudioInstance = just_audio.AudioPlayer();
+    }
+  }
+  
+  void _setupAudioPlayersListeners() {
+    if (_audioPlayersInstance == null) return;
+    
+    // Listen to player state changes
+    _audioPlayersInstance!.onPlayerStateChanged.listen((state) {
+      debugPrint('AudioPlayers: State changed to: $state');
+      switch (state) {
+        case PlayerState.playing:
+          _isPlaying = true;
+          _playingController.add(true);
+          break;
+        case PlayerState.paused:
+          _isPlaying = false;
+          _playingController.add(false);
+          break;
+        case PlayerState.stopped:
+        case PlayerState.completed:
+          _isPlaying = false;
+          _playingController.add(false);
+          _currentPosition = Duration.zero;
+          _positionController.add(Duration.zero);
+          break;
+        case PlayerState.disposed:
+          _isPlaying = false;
+          _playingController.add(false);
+          break;
+      }
+    });
+    
+    // Listen to duration changes
+    _audioPlayersInstance!.onDurationChanged.listen((duration) {
+      debugPrint('AudioPlayers: Duration changed: ${duration.inSeconds}s');
+      _totalDuration = duration;
+      _durationController.add(duration);
+    });
+    
+    // Listen to position changes
+    _audioPlayersInstance!.onPositionChanged.listen((position) {
+      debugPrint('AudioPlayers: Position changed: ${position.inSeconds}s');
+      _currentPosition = position;
+      _positionController.add(position);
+    });
+  }
+  
+  Future<void> setFilePath(String filePath) async {
+    if (_useAudioPlayers) {
+      debugPrint('AudioPlayers: Setting file path: $filePath');
+      await _audioPlayersInstance!.setSourceDeviceFile(filePath);
+      debugPrint('AudioPlayers: File loaded successfully');
+    } else {
+      if (kIsWeb && filePath.startsWith('web://')) {
+        // Handle web blob URLs separately
+        throw UnsupportedError('Web blob URL handling needs to be implemented');
+      } else {
+        await _justAudioInstance!.setFilePath(filePath);
+      }
+    }
+  }
+  
+  Future<void> setUrl(String url) async {
+    if (_useAudioPlayers) {
+      debugPrint('AudioPlayers: Setting URL: $url');
+      await _audioPlayersInstance!.setSourceUrl(url);
+    } else {
+      await _justAudioInstance!.setUrl(url);
+    }
+  }
+  
+  Future<void> play() async {
+    if (_useAudioPlayers) {
+      debugPrint('AudioPlayers: Play called');
+      await _audioPlayersInstance?.resume();
+    } else {
+      await _justAudioInstance?.play();
+    }
+  }
+  
+  Future<void> pause() async {
+    if (_useAudioPlayers) {
+      debugPrint('AudioPlayers: Pause called');
+      await _audioPlayersInstance?.pause();
+    } else {
+      await _justAudioInstance?.pause();
+    }
+  }
+  
+  Future<void> stop() async {
+    if (_useAudioPlayers) {
+      debugPrint('AudioPlayers: Stop called');
+      await _audioPlayersInstance?.stop();
+    } else {
+      await _justAudioInstance?.stop();
+    }
+  }
+  
+  Future<void> seek(Duration position) async {
+    if (_useAudioPlayers) {
+      debugPrint('AudioPlayers: Seek to ${position.inSeconds}s');
+      await _audioPlayersInstance?.seek(position);
+    } else {
+      await _justAudioInstance?.seek(position);
+    }
+  }
+  
+  Future<void> setVolume(double volume) async {
+    if (_useAudioPlayers) {
+      await _audioPlayersInstance?.setVolume(volume);
+    } else {
+      await _justAudioInstance?.setVolume(volume);
+    }
+  }
+  
+  Stream<Duration> get positionStream {
+    if (_useAudioPlayers) {
+      return _positionController.stream;
+    } else {
+      return _justAudioInstance?.positionStream ?? Stream.empty();
+    }
+  }
+  
+  Stream<Duration?> get durationStream {
+    if (_useAudioPlayers) {
+      return _durationController.stream;
+    } else {
+      return _justAudioInstance?.durationStream ?? Stream.empty();
+    }
+  }
+  
+  Stream<bool> get playingStream {
+    if (_useAudioPlayers) {
+      return _playingController.stream;
+    } else {
+      return _justAudioInstance?.playingStream ?? Stream.empty();
+    }
+  }
+  
+  Future<void> dispose() async {
+    _positionTimer?.cancel();
+    await _audioPlayersInstance?.dispose();
+    await _justAudioInstance?.dispose();
+    await _playingController.close();
+    await _positionController.close();
+    await _durationController.close();
+  }
+}
