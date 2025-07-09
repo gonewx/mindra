@@ -17,8 +17,7 @@ class AnimatedBottomNavigationBar extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      // 匹配原型高度：padding: var(--space-12) var(--space-16) = 12px + 12px + 内容高度
-      height: 62, // 更紧凑的高度匹配原型设计
+      // 移除固定高度，让内部的SizedBox控制高度
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         border: Border(
@@ -35,28 +34,24 @@ class AnimatedBottomNavigationBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 0,
-          horizontal: 14, // --space-16: 16px
-        ), // 匹配原型设计
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment
-              .spaceAround, // justify-content: space-around 匹配原型
-          children: items.asMap().entries.map((entry) {
-            final index = entry.key;
-            final item = entry.value;
+      child: SafeArea(
+        child: SizedBox(
+          height: 58, // 明确设定导航栏高度，提供足够点击区域
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
 
-            return Expanded(
-              // 让每个导航项占用相等空间
-              child: _AnimatedNavItem(
+              return _AnimatedNavItem(
                 icon: item.icon,
                 label: item.label,
                 isSelected: index == currentIndex,
                 onTap: () => onTap(index),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
@@ -117,35 +112,31 @@ class _AnimatedNavItemState extends State<_AnimatedNavItem> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return SizedBox(
-      width: double.infinity,
-      height: double.infinity,
-      child: Center(
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click, // cursor: pointer from CSS
-          onEnter: (_) => _onHoverChange(true),
-          onExit: (_) => _onHoverChange(false),
-          child: GestureDetector(
-            onTap: widget.onTap,
-            child: Column(
-              mainAxisSize: MainAxisSize.min, // 重要：只占用需要的空间
-              mainAxisAlignment: MainAxisAlignment.center, // 居中对齐
-              children: [
-                Icon(widget.icon, size: 25, color: _getItemColor(theme)),
-                const SizedBox(height: 3), // 原型间距
-                Text(
-                  widget.label,
-                  style: theme.textTheme.bodySmall!.copyWith(
-                    color: _getItemColor(theme),
-                    fontWeight: widget.isSelected
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    fontSize: 11, // 更小的字体以匹配原型紧凑设计
-                    height: 1.0, // 紧凑行高
-                  ),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => _onHoverChange(true),
+      onExit: (_) => _onHoverChange(false),
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(widget.icon, size: 25, color: _getItemColor(theme)),
+              const SizedBox(height: 3),
+              Text(
+                widget.label,
+                style: theme.textTheme.bodySmall!.copyWith(
+                  color: _getItemColor(theme),
+                  fontWeight: widget.isSelected
+                      ? FontWeight.w600
+                      : FontWeight.w400,
+                  fontSize: 11,
+                  height: 1.0,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
