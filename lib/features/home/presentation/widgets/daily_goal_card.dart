@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/goal_setting_dialog.dart';
+import '../../../../features/goals/data/services/goal_service.dart';
+import '../../../../features/goals/domain/entities/user_goal.dart';
 
-class DailyGoalCard extends StatelessWidget {
+class DailyGoalCard extends StatefulWidget {
   final double? cardPadding; // 卡片内边距控制
   final double? borderRadius; // 圆角控制
 
@@ -12,15 +14,47 @@ class DailyGoalCard extends StatelessWidget {
   });
 
   @override
+  State<DailyGoalCard> createState() => _DailyGoalCardState();
+}
+
+class _DailyGoalCardState extends State<DailyGoalCard> {
+  UserGoal? _currentGoal;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGoal();
+  }
+
+  Future<void> _loadGoal() async {
+    try {
+      final goal = await GoalService.getGoal();
+      if (mounted) {
+        setState(() {
+          _currentGoal = goal;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading goal: $e');
+    }
+  }
+
+  Future<void> _showGoalDialog() async {
+    await GoalSettingDialog.show(context);
+    // 重新加载目标设置
+    _loadGoal();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     // 使用可配置的参数，如果没有提供则使用默认值
-    final effectivePadding = cardPadding ?? 20.0; // 默认 20px 匹配原型
-    final effectiveBorderRadius = borderRadius ?? 12.0; // 默认 12px 匹配原型
+    final effectivePadding = widget.cardPadding ?? 20.0; // 默认 20px 匹配原型
+    final effectiveBorderRadius = widget.borderRadius ?? 12.0; // 默认 12px 匹配原型
 
     return InkWell(
-      onTap: () => GoalSettingDialog.show(context),
+      onTap: _showGoalDialog,
       borderRadius: BorderRadius.circular(effectiveBorderRadius),
       child: Container(
         constraints: const BoxConstraints(
@@ -64,7 +98,9 @@ class DailyGoalCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Flexible(
                       child: Text(
-                        '20分钟冥想',
+                        _currentGoal != null
+                            ? '${_currentGoal!.dailyGoal}冥想'
+                            : '20分钟冥想',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: Colors.white.withValues(alpha: 0.9),
                         ),
