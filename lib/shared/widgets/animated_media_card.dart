@@ -7,6 +7,8 @@ class AnimatedMediaCard extends StatefulWidget {
   final String? imageUrl;
   final bool isFavorite;
   final bool isListView;
+  final bool showActions; // 新增：是否显示收藏和更多选项按钮
+  final bool showDurationBadge; // 新增：是否在图片上显示时长标签
   final double? thumbnailSize; // 新增：缩略图尺寸（列表视图时使用）
   final EdgeInsets? cardPadding; // 新增：卡片内边距
   final VoidCallback? onTap;
@@ -21,6 +23,8 @@ class AnimatedMediaCard extends StatefulWidget {
     this.imageUrl,
     this.isFavorite = false,
     this.isListView = false,
+    this.showActions = true, // 默认显示收藏和更多选项按钮
+    this.showDurationBadge = true, // 默认在图片上显示时长标签
     this.thumbnailSize, // 默认为 null，使用内置默认值
     this.cardPadding, // 默认为 null，使用内置默认值
     this.onTap,
@@ -96,6 +100,24 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
   }
 
   Widget _buildAnimatedGridView(BuildContext context) {
+    // 响应式设计：根据屏幕宽度计算组件尺寸
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+    final isMediumScreen = screenWidth >= 600 && screenWidth < 900;
+
+    // 响应式图片高度
+    final imageHeight = isSmallScreen
+        ? 120.0
+        : (isMediumScreen ? 130.0 : 140.0);
+
+    // 响应式字体大小
+    final titleFontSize = isSmallScreen ? 14.0 : 14.0;
+    final categoryFontSize = isSmallScreen ? 12.0 : 12.0;
+    final durationFontSize = isSmallScreen ? 12.0 : 12.0;
+
+    // 响应式内边距
+    final contentPadding = isSmallScreen ? 12.0 : 14.0;
+
     return MouseRegion(
       onEnter: (_) => _onHoverChange(true),
       onExit: (_) => _onHoverChange(false),
@@ -109,155 +131,161 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
               elevation: _elevationAnimation.value,
               shadowColor: Theme.of(context).shadowColor.withValues(alpha: 0.2),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12), // --radius-lg: 12px
+                borderRadius: BorderRadius.circular(12),
               ),
               child: InkWell(
                 onTap: widget.onTap,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Image/Thumbnail - 固定高度匹配原型
-                    Container(
-                      height:
-                          120, // 固定高度120px匹配原型 .session-card img { height: 120px; }
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Theme.of(
-                              context,
-                            ).colorScheme.primary.withValues(alpha: 0.3),
-                            Theme.of(
-                              context,
-                            ).colorScheme.secondary.withValues(alpha: 0.3),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                    // Image/Thumbnail - 使用 Flexible 而不是固定高度
+                    Flexible(
+                      flex: 3, // 图片占据卡片 3/5 的空间
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.3),
+                              Theme.of(
+                                context,
+                              ).colorScheme.secondary.withValues(alpha: 0.3),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                         ),
-                      ),
-                      child: Stack(
-                        children: [
-                          widget.imageUrl != null
-                              ? Image.network(
-                                  widget.imageUrl!,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(
-                                      Icons.music_note,
-                                      size: 48,
+                        child: Stack(
+                          children: [
+                            widget.imageUrl != null
+                                ? Image.network(
+                                    widget.imageUrl!,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(
+                                        Icons.music_note,
+                                        size: isSmallScreen ? 36 : 48,
+                                        color: Colors.white,
+                                      );
+                                    },
+                                  )
+                                : Icon(
+                                    Icons.music_note,
+                                    size: isSmallScreen ? 36 : 48,
+                                    color: Colors.white,
+                                  ),
+
+                            // Duration Badge - 只在需要时显示
+                            if (widget.showDurationBadge)
+                              Positioned(
+                                bottom: isSmallScreen ? 6 : 8,
+                                right: isSmallScreen ? 6 : 8,
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: isSmallScreen ? 6 : 8,
+                                    vertical: isSmallScreen ? 3 : 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.7),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    widget.duration,
+                                    style: TextStyle(
                                       color: Colors.white,
-                                    );
-                                  },
-                                )
-                              : const Icon(
-                                  Icons.music_note,
-                                  size: 48,
-                                  color: Colors.white,
-                                ),
-
-                          // Duration Badge
-                          Positioned(
-                            bottom: 8,
-                            right: 8,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.7),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                widget.duration,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                                      fontSize: durationFontSize,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
 
-                          // Animated Favorite Button
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: _AnimatedFavoriteButton(
-                              isFavorite: widget.isFavorite,
-                              onTap: widget.onFavoriteToggle,
-                            ),
-                          ),
-                        ],
+                            // Animated Favorite Button - 只在需要时显示
+                            if (widget.showActions)
+                              Positioned(
+                                top: isSmallScreen ? 6 : 8,
+                                right: isSmallScreen ? 6 : 8,
+                                child: _AnimatedFavoriteButton(
+                                  isFavorite: widget.isFavorite,
+                                  onTap: widget.onFavoriteToggle,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
 
-                    // Content - 匹配原型布局
-                    Container(
-                      height: 72, // 固定内容区域高度，总高度192px - 120px图片 = 72px
-                      padding: const EdgeInsets.all(
-                        12,
-                      ), // --space-12: 12px 匹配原型
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            widget.title,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w100,
-                                  fontSize: 14, // --font-size-md: 14px 匹配原型
+                    // Content - 响应式布局
+                    Flexible(
+                      flex: 2, // 内容占据卡片 2/5 的空间
+                      child: Container(
+                        padding: EdgeInsets.all(contentPadding),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              widget.title,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w100,
+                                    fontSize: titleFontSize,
+                                  ),
+                              maxLines: isSmallScreen ? 1 : 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Category badge
+                                Flexible(
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isSmallScreen ? 6 : 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.secondary,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      widget.category,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: Colors.white,
+                                            fontSize: categoryFontSize,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                 ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4), // --space-4: 4px
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              // Category badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, // --space-8: 8px
-                                  vertical: 2, // --space-2: 2px
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.secondary,
-                                  borderRadius: BorderRadius.circular(
-                                    6,
-                                  ), // --radius-sm: 6px
-                                ),
-                                child: Text(
-                                  widget.category,
-                                  style: Theme.of(context).textTheme.labelSmall
+                                const SizedBox(width: 4),
+                                // Duration
+                                Text(
+                                  widget.duration,
+                                  style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
-                                        color: Colors.white,
-                                        fontSize:
-                                            11, // --font-size-xs: 11px 匹配原型
-                                        fontWeight: FontWeight.w500,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+                                        fontSize: durationFontSize,
                                       ),
                                 ),
-                              ),
-                              // Duration
-                              Text(
-                                widget.duration,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
-                                      fontSize: 12, // --font-size-sm: 12px 匹配原型
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -271,9 +299,22 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
   }
 
   Widget _buildAnimatedListView(BuildContext context) {
-    // 使用传入的参数或默认值
-    final thumbnailSize = widget.thumbnailSize ?? 64.0;
-    final cardPadding = widget.cardPadding ?? const EdgeInsets.all(12);
+    // 响应式设计：根据屏幕宽度计算组件尺寸
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+
+    // 响应式缩略图尺寸
+    final responsiveThumbnailSize =
+        widget.thumbnailSize ?? (isSmallScreen ? 56.0 : 64.0);
+
+    // 响应式内边距
+    final responsiveCardPadding =
+        widget.cardPadding ?? EdgeInsets.all(isSmallScreen ? 8.0 : 12.0);
+
+    // 响应式字体大小
+    final titleFontSize = isSmallScreen ? 14.0 : 15.0;
+    final categoryFontSize = isSmallScreen ? 11.0 : 12.0;
+    final durationFontSize = isSmallScreen ? 11.0 : 12.0;
 
     return MouseRegion(
       onEnter: (_) => _onHoverChange(true),
@@ -293,13 +334,13 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                 onTap: widget.onTap,
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
-                  padding: cardPadding,
+                  padding: responsiveCardPadding,
                   child: Row(
                     children: [
                       // Thumbnail
                       Container(
-                        width: thumbnailSize,
-                        height: thumbnailSize,
+                        width: responsiveThumbnailSize,
+                        height: responsiveThumbnailSize,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
                           gradient: LinearGradient(
@@ -322,17 +363,22 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                                   widget.imageUrl!,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(
+                                    return Icon(
                                       Icons.music_note,
                                       color: Colors.white,
+                                      size: isSmallScreen ? 24 : 32,
                                     );
                                   },
                                 ),
                               )
-                            : const Icon(Icons.music_note, color: Colors.white),
+                            : Icon(
+                                Icons.music_note,
+                                color: Colors.white,
+                                size: isSmallScreen ? 24 : 32,
+                              ),
                       ),
 
-                      const SizedBox(width: 12),
+                      SizedBox(width: isSmallScreen ? 8 : 12),
 
                       // Content
                       Expanded(
@@ -344,36 +390,44 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                               style: Theme.of(context).textTheme.bodyLarge
                                   ?.copyWith(
                                     fontWeight: FontWeight.w100,
-                                    fontSize: 15,
+                                    fontSize: titleFontSize,
                                   ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: isSmallScreen ? 3 : 4),
                             Row(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.primary
-                                        .withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    widget.category,
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.primary,
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                Flexible(
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isSmallScreen ? 6 : 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      widget.category,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: categoryFontSize,
+                                          ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: isSmallScreen ? 6 : 8),
                                 Text(
                                   widget.duration,
                                   style: Theme.of(context).textTheme.bodySmall
@@ -382,6 +436,7 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                                             .colorScheme
                                             .onSurface
                                             .withValues(alpha: 0.6),
+                                        fontSize: durationFontSize,
                                       ),
                                 ),
                               ],
@@ -390,23 +445,24 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                         ),
                       ),
 
-                      // Actions
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _AnimatedFavoriteButton(
-                            isFavorite: widget.isFavorite,
-                            onTap: widget.onFavoriteToggle,
-                            showBackground: false,
-                          ),
-                          _AnimatedIconButton(
-                            icon: Icons.more_vert,
-                            onTap:
-                                widget.onMoreOptions ??
-                                () => _showMoreOptions(context),
-                          ),
-                        ],
-                      ),
+                      // Actions - 只在需要时显示
+                      if (widget.showActions)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _AnimatedFavoriteButton(
+                              isFavorite: widget.isFavorite,
+                              onTap: widget.onFavoriteToggle,
+                              showBackground: false,
+                            ),
+                            _AnimatedIconButton(
+                              icon: Icons.more_vert,
+                              onTap:
+                                  widget.onMoreOptions ??
+                                  () => _showMoreOptions(context),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),

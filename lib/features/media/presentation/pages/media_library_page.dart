@@ -33,9 +33,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   bool _isGridView = true;
   final TextEditingController _searchController = TextEditingController();
 
-  final List<String> _categories = [
-    '全部', '专注', '睡前', '放松', '自然音效'
-  ];
+  final List<String> _categories = ['全部', '专注', '睡前', '放松', '自然音效'];
 
   @override
   void dispose() {
@@ -46,7 +44,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return SafeArea(
       child: Column(
         children: [
@@ -70,10 +68,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                   ),
                   child: IconButton(
                     onPressed: _showAddMediaDialog,
-                    icon: const Icon(
-                      Icons.add,
-                      color: Colors.white,
-                    ),
+                    icon: const Icon(Icons.add, color: Colors.white),
                   ),
                 ),
               ],
@@ -87,7 +82,9 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(25),
-                border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                ),
               ),
               child: TextField(
                 controller: _searchController,
@@ -124,39 +121,48 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
               itemBuilder: (context, index) {
                 final category = _categories[index];
                 final isSelected = category == _selectedCategory;
-                
+
                 return Padding(
                   padding: const EdgeInsets.only(right: 12),
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedCategory = category;
-                      });
-                      context.read<MediaBloc>().add(LoadMediaItemsByCategory(category));
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected 
-                          ? theme.colorScheme.primary 
-                          : theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: isSelected 
-                            ? theme.colorScheme.primary 
-                            : theme.colorScheme.outline.withValues(alpha: 0.2),
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click, // 添加手形光标
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedCategory = category;
+                        });
+                        context.read<MediaBloc>().add(
+                          LoadMediaItemsByCategory(category),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
                         ),
-                      ),
-                      child: Text(
-                        category,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: isSelected 
-                            ? Colors.white 
-                            : theme.colorScheme.onSurface,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(25),
+                          border: Border.all(
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.outline.withValues(
+                                    alpha: 0.2,
+                                  ),
+                          ),
+                        ),
+                        child: Text(
+                          category,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: isSelected
+                                ? Colors.white
+                                : theme.colorScheme.onSurface,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
                         ),
                       ),
                     ),
@@ -172,46 +178,60 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                GestureDetector(
-                  onTap: () => setState(() => _isGridView = true),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _isGridView 
-                        ? theme.colorScheme.primary 
-                        : theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click, // 添加手形光标
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isGridView = true),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _isGridView
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: theme.colorScheme.outline.withValues(
+                            alpha: 0.2,
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Icon(
-                      Icons.grid_view_rounded,
-                      color: _isGridView 
-                        ? Colors.white 
-                        : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      child: Icon(
+                        Icons.grid_view_rounded,
+                        color: _isGridView
+                            ? Colors.white
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => setState(() => _isGridView = false),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: !_isGridView 
-                        ? theme.colorScheme.primary 
-                        : theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click, // 添加手形光标
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isGridView = false),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: !_isGridView
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: theme.colorScheme.outline.withValues(
+                            alpha: 0.2,
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Icon(
-                      Icons.view_list_rounded,
-                      color: !_isGridView 
-                        ? Colors.white 
-                        : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      child: Icon(
+                        Icons.view_list_rounded,
+                        color: !_isGridView
+                            ? Colors.white
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
+                      ),
                     ),
                   ),
                 ),
@@ -219,11 +239,9 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Content
-          Expanded(
-            child: _buildMediaList(),
-          ),
+          Expanded(child: _buildMediaList()),
         ],
       ),
     );
@@ -233,9 +251,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
     return BlocBuilder<MediaBloc, MediaState>(
       builder: (context, state) {
         if (state is MediaLoading) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         } else if (state is MediaError) {
           return Center(
             child: Column(
@@ -243,10 +259,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
               children: [
                 const Icon(Icons.error_outline, size: 64, color: Colors.grey),
                 const SizedBox(height: 16),
-                Text(
-                  '加载失败',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('加载失败', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
                 Text(
                   state.message,
@@ -256,7 +269,9 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
-                    context.read<MediaBloc>().add(LoadMediaItemsByCategory(_selectedCategory));
+                    context.read<MediaBloc>().add(
+                      LoadMediaItemsByCategory(_selectedCategory),
+                    );
                   },
                   child: const Text('重试'),
                 ),
@@ -265,18 +280,19 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
           );
         } else if (state is MediaLoaded) {
           final mediaItems = state.mediaItems;
-          
+
           if (mediaItems.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.library_music_outlined, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    '暂无素材',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  const Icon(
+                    Icons.library_music_outlined,
+                    size: 64,
+                    color: Colors.grey,
                   ),
+                  const SizedBox(height: 16),
+                  Text('暂无素材', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
                   const Text(
                     '点击右上角按钮添加素材',
@@ -289,10 +305,12 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _isGridView ? _buildGridView(mediaItems) : _buildListView(mediaItems),
+            child: _isGridView
+                ? _buildGridView(mediaItems)
+                : _buildListView(mediaItems),
           );
         }
-        
+
         return const SizedBox.shrink();
       },
     );
@@ -311,7 +329,8 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
         final item = mediaItems[index];
         return MediaItemCard(
           title: item.title,
-          duration: '${item.duration ~/ 60}:${(item.duration % 60).toString().padLeft(2, '0')}',
+          duration:
+              '${item.duration ~/ 60}:${(item.duration % 60).toString().padLeft(2, '0')}',
           category: item.category,
           isFavorite: item.isFavorite,
           onTap: () => _playMedia(item.id),
@@ -330,7 +349,8 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
           padding: const EdgeInsets.only(bottom: 8),
           child: MediaItemCard(
             title: item.title,
-            duration: '${item.duration ~/ 60}:${(item.duration % 60).toString().padLeft(2, '0')}',
+            duration:
+                '${item.duration ~/ 60}:${(item.duration % 60).toString().padLeft(2, '0')}',
             category: item.category,
             isFavorite: item.isFavorite,
             isListView: true,
@@ -346,7 +366,9 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
     AddMediaDialog.show(context).then((_) {
       // Refresh media list after adding
       if (mounted) {
-        context.read<MediaBloc>().add(LoadMediaItemsByCategory(_selectedCategory));
+        context.read<MediaBloc>().add(
+          LoadMediaItemsByCategory(_selectedCategory),
+        );
       }
     });
   }

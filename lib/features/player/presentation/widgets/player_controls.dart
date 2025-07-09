@@ -45,10 +45,7 @@ class PlayerControls extends StatelessWidget {
         ),
 
         // Play/Pause - Main Button
-        _AnimatedPlayButton(
-          isPlaying: isPlaying,
-          onPressed: onPlayPause,
-        ),
+        _AnimatedPlayButton(isPlaying: isPlaying, onPressed: onPlayPause),
 
         // Next
         _AnimatedControlButton(
@@ -123,7 +120,7 @@ class _AnimatedControlButtonState extends State<_AnimatedControlButton>
     setState(() {
       _isHovered = isHovered;
     });
-    
+
     if (isHovered) {
       _controller.forward();
     } else {
@@ -145,8 +142,9 @@ class _AnimatedControlButtonState extends State<_AnimatedControlButton>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return MouseRegion(
+      cursor: SystemMouseCursors.click, // 添加手形光标
       onEnter: (_) => _onHoverChange(true),
       onExit: (_) => _onHoverChange(false),
       child: AnimatedBuilder(
@@ -171,10 +169,7 @@ class _AnimatedPlayButton extends StatefulWidget {
   final bool isPlaying;
   final VoidCallback? onPressed;
 
-  const _AnimatedPlayButton({
-    required this.isPlaying,
-    this.onPressed,
-  });
+  const _AnimatedPlayButton({required this.isPlaying, this.onPressed});
 
   @override
   State<_AnimatedPlayButton> createState() => _AnimatedPlayButtonState();
@@ -207,7 +202,7 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
     setState(() {
       _isHovered = isHovered;
     });
-    
+
     if (isHovered) {
       _controller.forward();
     } else {
@@ -235,7 +230,7 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
 
   Color _getBackgroundColor(ThemeData theme) {
     if (_isPressed) {
-      return theme.brightness == Brightness.dark 
+      return theme.brightness == Brightness.dark
           ? const Color(0xFF2996A1) // darkPrimaryActive
           : const Color(0xFF1A6873); // primaryActive
     } else if (_isHovered) {
@@ -249,8 +244,9 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return MouseRegion(
+      cursor: SystemMouseCursors.click, // 添加手形光标
       onEnter: (_) => _onHoverChange(true),
       onExit: (_) => _onHoverChange(false),
       child: GestureDetector(

@@ -18,7 +18,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     return SafeArea(
       child: SingleChildScrollView(
         padding: themeProvider.getResponsivePadding(context),
@@ -31,8 +31,9 @@ class _SettingsPageState extends State<SettingsPage> {
               style: theme.textTheme.headlineLarge?.copyWith(
                 color: theme.colorScheme.primary,
                 fontWeight: FontWeight.bold,
-                fontSize: theme.textTheme.headlineLarge!.fontSize! * 
-                         themeProvider.getResponsiveFontScale(context),
+                fontSize:
+                    theme.textTheme.headlineLarge!.fontSize! *
+                    themeProvider.getResponsiveFontScale(context),
               ),
             ),
             const SizedBox(height: 32),
@@ -75,7 +76,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // User Info
                   Text(
                     '冥想者',
@@ -95,7 +96,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Settings Sections
             _buildSettingsSection(
               title: '个性化设置',
@@ -115,10 +116,20 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: '通知设置',
                   onTap: _showNotificationDialog,
                 ),
+                _SettingItem(
+                  icon: Icons.view_module,
+                  title: '卡片间距',
+                  onTap: () => _showCardSpacingDialog(themeProvider),
+                ),
+                _SettingItem(
+                  icon: Icons.padding,
+                  title: '卡片内边距',
+                  onTap: () => _showCardPaddingDialog(themeProvider),
+                ),
               ],
             ),
             const SizedBox(height: 24),
-            
+
             _buildSettingsSection(
               title: '应用设置',
               items: [
@@ -135,7 +146,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
             const SizedBox(height: 24),
-            
+
             _buildSettingsSection(
               title: '帮助与支持',
               items: [
@@ -170,7 +181,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
-    
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -189,11 +200,7 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 32,
-              color: theme.colorScheme.primary,
-            ),
+            Icon(icon, size: 32, color: theme.colorScheme.primary),
             const SizedBox(height: 12),
             Text(
               title,
@@ -227,13 +234,10 @@ class _SettingsPageState extends State<SettingsPage> {
     required ValueChanged<bool> onChanged,
   }) {
     final theme = Theme.of(context);
-    
+
     return Row(
       children: [
-        Icon(
-          icon,
-          color: theme.colorScheme.primary,
-        ),
+        Icon(icon, color: theme.colorScheme.primary),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -273,15 +277,12 @@ class _SettingsPageState extends State<SettingsPage> {
     final theme = Theme.of(context);
     final iconColor = isDestructive ? Colors.red : theme.colorScheme.primary;
     final titleColor = isDestructive ? Colors.red : theme.colorScheme.onSurface;
-    
+
     return GestureDetector(
       onTap: onTap,
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: iconColor,
-          ),
+          Icon(icon, color: iconColor),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -344,9 +345,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _showNotificationDialog() {
     // Simple toggle - in real app this would open notification settings
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('通知设置已更新')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('通知设置已更新')));
   }
 
   void _showThemeDialog(ThemeProvider themeProvider) {
@@ -410,6 +411,143 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  void _showCardSpacingDialog(ThemeProvider themeProvider) {
+    double tempSpacing = themeProvider.cardSpacing;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('调整卡片间距'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '当前间距: ${tempSpacing.round()}px',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 16),
+              Slider(
+                value: tempSpacing,
+                min: 8.0,
+                max: 32.0,
+                divisions:
+                    12, // 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32
+                label: '${tempSpacing.round()}px',
+                onChanged: (value) {
+                  setState(() {
+                    tempSpacing = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '紧凑 (8px)',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    '宽松 (32px)',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                themeProvider.setCardSpacing(tempSpacing);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('卡片间距已设置为 ${tempSpacing.round()}px'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCardPaddingDialog(ThemeProvider themeProvider) {
+    double tempPadding = themeProvider.cardPadding;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('调整卡片内边距'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '当前内边距: ${tempPadding.round()}px',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 16),
+              Slider(
+                value: tempPadding,
+                min: 12.0,
+                max: 32.0,
+                divisions: 10, // 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32
+                label: '${tempPadding.round()}px',
+                onChanged: (value) {
+                  setState(() {
+                    tempPadding = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '紧凑 (12px)',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    '宽松 (32px)',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                themeProvider.setCardPadding(tempPadding);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('卡片内边距已设置为 ${tempPadding.round()}px'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showReminderDialog() {
     showDialog(
       context: context,
@@ -423,9 +561,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 title: Text(time),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('已设置提醒时间：$time')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('已设置提醒时间：$time')));
                   // TODO: Set reminder
                 },
               ),
@@ -450,9 +588,9 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () {
               Navigator.pop(context);
               // TODO: Clear all data
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('数据已清除')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('数据已清除')));
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('确认删除'),
@@ -468,9 +606,7 @@ class _SettingsPageState extends State<SettingsPage> {
       applicationName: 'Mindra',
       applicationVersion: '1.0.0',
       applicationIcon: const Icon(Icons.self_improvement, size: 48),
-      children: [
-        const Text('Mindra 是一款专注于冥想和正念练习的应用，帮助您缓解压力，提升专注力。'),
-      ],
+      children: [const Text('Mindra 是一款专注于冥想和正念练习的应用，帮助您缓解压力，提升专注力。')],
     );
   }
 
@@ -495,7 +631,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required List<_SettingItem> items,
   }) {
     final theme = Theme.of(context);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -523,14 +659,11 @@ class _SettingsPageState extends State<SettingsPage> {
             children: items.asMap().entries.map((entry) {
               final index = entry.key;
               final item = entry.value;
-              
+
               return Column(
                 children: [
                   ListTile(
-                    leading: Icon(
-                      item.icon,
-                      color: theme.colorScheme.primary,
-                    ),
+                    leading: Icon(item.icon, color: theme.colorScheme.primary),
                     title: Text(
                       item.title,
                       style: theme.textTheme.bodyLarge?.copyWith(
@@ -563,9 +696,5 @@ class _SettingItem {
   final String title;
   final VoidCallback onTap;
 
-  _SettingItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
+  _SettingItem({required this.icon, required this.title, required this.onTap});
 }

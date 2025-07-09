@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/theme_provider.dart';
 import '../widgets/daily_goal_card.dart';
 import '../widgets/quick_actions_grid.dart';
 import '../widgets/recommended_content.dart';
@@ -23,6 +25,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -49,7 +52,9 @@ class HomePage extends StatelessWidget {
                       Text(
                         '准备好开始今天的冥想之旅吗？',
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.7,
+                          ),
                         ),
                       ),
                     ],
@@ -58,7 +63,7 @@ class HomePage extends StatelessWidget {
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   ),
                   child: IconButton(
                     onPressed: () => context.go(AppRouter.settings),
@@ -73,7 +78,9 @@ class HomePage extends StatelessWidget {
             ),
             const SizedBox(height: 24), // --space-24: 24px
             // Daily Goal Card
-            const DailyGoalCard(),
+            DailyGoalCard(
+              cardPadding: themeProvider.cardPadding, // 使用主题提供者中的卡片内边距
+            ),
             const SizedBox(height: 32), // --space-32: 32px
             // Quick Actions
             const QuickActionsGrid(),
@@ -87,7 +94,9 @@ class HomePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const RecommendedContent(),
+            RecommendedContent(
+              cardSpacing: themeProvider.cardSpacing, // 使用主题提供者中的卡片间距
+            ),
             const SizedBox(height: 32),
 
             // Recent Sessions

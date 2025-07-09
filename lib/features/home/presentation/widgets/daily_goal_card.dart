@@ -2,27 +2,38 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/goal_setting_dialog.dart';
 
 class DailyGoalCard extends StatelessWidget {
-  const DailyGoalCard({super.key});
+  final double? cardPadding; // 卡片内边距控制
+  final double? borderRadius; // 圆角控制
+
+  const DailyGoalCard({
+    super.key,
+    this.cardPadding, // 默认为 null，使用内置默认值 20
+    this.borderRadius, // 默认为 null，使用内置默认值 12
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // 使用可配置的参数，如果没有提供则使用默认值
+    final effectivePadding = cardPadding ?? 20.0; // 默认 20px 匹配原型
+    final effectiveBorderRadius = borderRadius ?? 12.0; // 默认 12px 匹配原型
+
     return InkWell(
       onTap: () => GoalSettingDialog.show(context),
-      borderRadius: BorderRadius.circular(12), // --radius-lg: 12px
+      borderRadius: BorderRadius.circular(effectiveBorderRadius),
       child: Container(
         constraints: const BoxConstraints(
           minHeight: 100, // 确保最小高度，避免内容挤压
         ),
-        padding: const EdgeInsets.all(20), // --space-20: 20px
+        padding: EdgeInsets.all(effectivePadding), // 可配置的内边距
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
           ),
-          borderRadius: BorderRadius.circular(12), // --radius-lg: 12px
+          borderRadius: BorderRadius.circular(effectiveBorderRadius), // 可配置的圆角
           boxShadow: [
             BoxShadow(
               color: theme.colorScheme.primary.withValues(alpha: 0.3),

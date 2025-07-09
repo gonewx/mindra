@@ -125,6 +125,7 @@ class _AnimatedActionButtonState extends State<AnimatedActionButton>
     final theme = Theme.of(context);
 
     return MouseRegion(
+      cursor: SystemMouseCursors.click, // 添加手形光标
       onEnter: (_) => _onHoverChange(true),
       onExit: (_) => _onHoverChange(false),
       child: GestureDetector(
