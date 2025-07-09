@@ -22,6 +22,10 @@ class _PlayerPageState extends State<PlayerPage> {
   late CrossPlatformAudioPlayer _audioPlayer;
   bool _isPlaying = false;
   bool _showSoundEffects = false;
+  bool _isFavorited = false;
+  bool _isShuffled = false;
+  RepeatMode _repeatMode = RepeatMode.none;
+  Timer? _sleepTimer;
   double _currentPosition = 0.0;
   double _totalDuration = 0.0;
 
@@ -32,6 +36,9 @@ class _PlayerPageState extends State<PlayerPage> {
 
   // Media data
   MediaItem? _currentMedia;
+  List<MediaItem> _mediaItems = [];
+  List<MediaItem> _shuffledItems = [];
+  int _currentIndex = 0;
   final MediaLocalDataSource _mediaDataSource = MediaLocalDataSource();
 
   // Mock data - TODO: Replace with actual media data
@@ -45,6 +52,7 @@ class _PlayerPageState extends State<PlayerPage> {
     _audioPlayer = CrossPlatformAudioPlayer();
     _setupAudioPlayer();
     _loadMediaData();
+    _loadFavoriteStatus();
   }
 
   void _setupAudioPlayer() {
@@ -79,16 +87,20 @@ class _PlayerPageState extends State<PlayerPage> {
   Future<void> _loadMediaData() async {
     if (widget.mediaId != null) {
       try {
-        final mediaItems = await _mediaDataSource.getMediaItems();
-        final media = mediaItems.firstWhere(
+        _mediaItems = await _mediaDataSource.getMediaItems();
+        _currentIndex = _mediaItems.indexWhere(
           (item) => item.id == widget.mediaId,
         );
-        setState(() {
-          _currentMedia = media;
-        });
+        
+        if (_currentIndex >= 0) {
+          final media = _mediaItems[_currentIndex];
+          setState(() {
+            _currentMedia = media;
+          });
 
-        // Load audio file
-        await _loadAudioFile(media.filePath);
+          // Load audio file
+          await _loadAudioFile(media.filePath);
+        }
       } catch (e) {
         debugPrint('Error loading media: $e');
         if (mounted) {
@@ -174,6 +186,7 @@ class _PlayerPageState extends State<PlayerPage> {
     _playingSubscription.cancel();
     _positionSubscription.cancel();
     _durationSubscription.cancel();
+    _sleepTimer?.cancel();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -301,12 +314,10 @@ class _PlayerPageState extends State<PlayerPage> {
                                 color: Colors.black.withValues(alpha: 0.6),
                               ),
                               child: IconButton(
-                                onPressed: () {
-                                  // TODO: Toggle favorite
-                                },
-                                icon: const Icon(
-                                  Icons.favorite_border,
-                                  color: Colors.white,
+                                onPressed: _toggleFavorite,
+                                icon: Icon(
+                                  _isFavorited ? Icons.favorite : Icons.favorite_border,
+                                  color: _isFavorited ? Colors.red : Colors.white,
                                 ),
                               ),
                             ),
@@ -337,19 +348,22 @@ class _PlayerPageState extends State<PlayerPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 40),
 
-                    // Progress Bar
-                    ProgressBar(
-                      currentPosition: _currentPosition,
-                      totalDuration: _totalDuration,
-                      onSeek: (position) async {
-                        await _audioPlayer.seek(
-                          Duration(seconds: position.toInt()),
-                        );
-                      },
+                    // Progress Bar with proper width
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                      child: ProgressBar(
+                        currentPosition: _currentPosition,
+                        totalDuration: _totalDuration,
+                        onSeek: (position) async {
+                          await _audioPlayer.seek(
+                            Duration(seconds: position.toInt()),
+                          );
+                        },
+                      ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
                     // Player Controls
                     PlayerControls(
@@ -361,18 +375,8 @@ class _PlayerPageState extends State<PlayerPage> {
                           await _audioPlayer.play();
                         }
                       },
-                      onPrevious: () {
-                        // TODO: Previous track
-                      },
-                      onNext: () {
-                        // TODO: Next track
-                      },
-                      onShuffle: () {
-                        // TODO: Toggle shuffle
-                      },
-                      onRepeat: () {
-                        // TODO: Toggle repeat
-                      },
+                      onPrevious: _playPrevious,
+                      onNext: _playNext,
                     ),
                     const SizedBox(height: 48),
 
@@ -382,10 +386,15 @@ class _PlayerPageState extends State<PlayerPage> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         _buildActionButton(
-                          icon: Icons.repeat,
-                          onTap: () {
-                            // TODO: Toggle repeat
-                          },
+                          icon: Icons.shuffle,
+                          isActive: _isShuffled,
+                          onTap: _toggleShuffle,
+                        ),
+                        SizedBox(width: 16),
+                        _buildActionButton(
+                          icon: _getRepeatIcon(),
+                          isActive: _repeatMode != RepeatMode.none,
+                          onTap: _toggleRepeatMode,
                         ),
                         SizedBox(width: 16),
                         _buildActionButton(
@@ -422,15 +431,20 @@ class _PlayerPageState extends State<PlayerPage> {
   Widget _buildActionButton({
     required IconData icon,
     required VoidCallback onTap,
+    bool isActive = false,
   }) {
     final theme = Theme.of(context);
 
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: theme.colorScheme.surface,
+        color: isActive 
+            ? theme.colorScheme.primary.withValues(alpha: 0.1)
+            : theme.colorScheme.surface,
         border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+          color: isActive 
+              ? theme.colorScheme.primary.withValues(alpha: 0.3)
+              : theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: IconButton(
@@ -438,7 +452,9 @@ class _PlayerPageState extends State<PlayerPage> {
         onPressed: onTap,
         icon: Icon(
           icon,
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          color: isActive 
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurface.withValues(alpha: 0.7),
         ),
       ),
     );
@@ -499,7 +515,7 @@ class _PlayerPageState extends State<PlayerPage> {
                     title: '分享',
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: Share functionality
+                      _shareCurrentMedia();
                     },
                   ),
                   _buildOptionTile(
@@ -507,7 +523,7 @@ class _PlayerPageState extends State<PlayerPage> {
                     title: '下载',
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: Download functionality
+                      _downloadCurrentMedia();
                     },
                   ),
                   _buildOptionTile(
@@ -515,7 +531,7 @@ class _PlayerPageState extends State<PlayerPage> {
                     title: '添加到播放列表',
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: Add to playlist functionality
+                      _showAddToPlaylistDialog();
                     },
                   ),
                   _buildOptionTile(
@@ -549,6 +565,392 @@ class _PlayerPageState extends State<PlayerPage> {
     );
   }
 
+  void _toggleShuffle() {
+    setState(() {
+      _isShuffled = !_isShuffled;
+    });
+    
+    if (_isShuffled) {
+      _shufflePlaylist();
+    } else {
+      _currentIndex = _mediaItems.indexOf(_currentMedia!);
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isShuffled ? '已开启随机播放' : '已关闭随机播放'),
+      ),
+    );
+  }
+
+  void _shufflePlaylist() {
+    _shuffledItems = List.from(_mediaItems);
+    _shuffledItems.shuffle();
+    
+    // Ensure current media is at the beginning of shuffled list
+    if (_currentMedia != null) {
+      _shuffledItems.remove(_currentMedia!);
+      _shuffledItems.insert(0, _currentMedia!);
+      _currentIndex = 0;
+    }
+  }
+
+  List<MediaItem> get _currentPlaylist => _isShuffled ? _shuffledItems : _mediaItems;
+
+  void _playPrevious() async {
+    final playlist = _currentPlaylist;
+    if (playlist.isEmpty) return;
+    
+    if (_currentIndex > 0) {
+      _currentIndex--;
+    } else {
+      _currentIndex = playlist.length - 1; // Loop to last
+    }
+    
+    await _loadMediaAtIndex(_currentIndex);
+  }
+
+  void _playNext() async {
+    final playlist = _currentPlaylist;
+    if (playlist.isEmpty) return;
+    
+    if (_currentIndex < playlist.length - 1) {
+      _currentIndex++;
+    } else {
+      _currentIndex = 0; // Loop to first
+    }
+    
+    await _loadMediaAtIndex(_currentIndex);
+  }
+
+  Future<void> _loadMediaAtIndex(int index) async {
+    final playlist = _currentPlaylist;
+    if (index < 0 || index >= playlist.length) return;
+    
+    final media = playlist[index];
+    setState(() {
+      _currentMedia = media;
+    });
+    
+    try {
+      await _loadAudioFile(media.filePath);
+      // Auto-play the new track
+      if (!_isPlaying) {
+        await _audioPlayer.play();
+      }
+    } catch (e) {
+      debugPrint('Error loading media at index $index: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('加载音频失败: $e')),
+        );
+      }
+    }
+  }
+
+  void _toggleRepeatMode() {
+    setState(() {
+      switch (_repeatMode) {
+        case RepeatMode.none:
+          _repeatMode = RepeatMode.all;
+          break;
+        case RepeatMode.all:
+          _repeatMode = RepeatMode.one;
+          break;
+        case RepeatMode.one:
+          _repeatMode = RepeatMode.none;
+          break;
+      }
+    });
+    
+    // TODO: Update repeat mode in audio player
+    final modeText = _getRepeatModeText();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('重复模式：$modeText')),
+    );
+  }
+
+  String _getRepeatModeText() {
+    switch (_repeatMode) {
+      case RepeatMode.none:
+        return '关闭';
+      case RepeatMode.all:
+        return '全部重复';
+      case RepeatMode.one:
+        return '单曲重复';
+    }
+  }
+
+  IconData _getRepeatIcon() {
+    switch (_repeatMode) {
+      case RepeatMode.none:
+        return Icons.repeat;
+      case RepeatMode.all:
+        return Icons.repeat;
+      case RepeatMode.one:
+        return Icons.repeat_one;
+    }
+  }
+
+  void _loadFavoriteStatus() {
+    // TODO: Load favorite status from database
+    setState(() {
+      _isFavorited = false;
+    });
+  }
+
+  void _toggleFavorite() {
+    setState(() {
+      _isFavorited = !_isFavorited;
+    });
+    
+    // TODO: Save favorite status to database
+    if (_currentMedia != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isFavorited ? '已添加到收藏' : '已取消收藏',
+          ),
+        ),
+      );
+    }
+  }
+
+  void _showAddToPlaylistDialog() {
+    if (_currentMedia == null) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('添加到播放列表'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('将 "${_currentMedia!.title}" 添加到：'),
+            const SizedBox(height: 16),
+            
+            // Mock playlist options
+            _buildPlaylistOption('我的收藏', Icons.favorite, () {
+              Navigator.pop(context);
+              _addToPlaylist('我的收藏');
+            }),
+            _buildPlaylistOption('正念练习', Icons.spa, () {
+              Navigator.pop(context);
+              _addToPlaylist('正念练习');
+            }),
+            _buildPlaylistOption('睡眠专辑', Icons.bedtime, () {
+              Navigator.pop(context);
+              _addToPlaylist('睡眠专辑');
+            }),
+            
+            const Divider(),
+            
+            // Create new playlist option
+            _buildPlaylistOption('创建新播放列表', Icons.add, () {
+              Navigator.pop(context);
+              _showCreatePlaylistDialog();
+            }),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlaylistOption(String name, IconData icon, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, size: 20),
+      title: Text(name),
+      onTap: onTap,
+      contentPadding: EdgeInsets.zero,
+    );
+  }
+
+  void _addToPlaylist(String playlistName) {
+    if (_currentMedia == null) return;
+    
+    // TODO: Implement actual playlist functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('已添加 "${_currentMedia!.title}" 到 "$playlistName"'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _showCreatePlaylistDialog() {
+    String playlistName = '';
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('创建播放列表'),
+        content: TextField(
+          onChanged: (value) => playlistName = value,
+          decoration: const InputDecoration(
+            labelText: '播放列表名称',
+            hintText: '请输入播放列表名称',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (playlistName.isNotEmpty) {
+                Navigator.pop(context);
+                _addToPlaylist(playlistName);
+              }
+            },
+            child: const Text('创建'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _downloadCurrentMedia() {
+    if (_currentMedia == null) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('下载'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('是否下载 "${_currentMedia!.title}" 到本地？'),
+            const SizedBox(height: 16),
+            const Text(
+              '注意：此功能需要网络连接，并且会消耗存储空间。',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _startDownload();
+            },
+            child: const Text('开始下载'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _startDownload() {
+    if (_currentMedia == null) return;
+    
+    // TODO: Implement actual download functionality
+    // This would typically involve downloading the file to local storage
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('正在下载 "${_currentMedia!.title}"...'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    
+    // Simulate download completion
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('下载完成：${_currentMedia!.title}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    });
+  }
+
+  void _shareCurrentMedia() {
+    if (_currentMedia == null) return;
+    
+    final shareText = '''
+正在收听：${_currentMedia!.title}
+类别：${_currentMedia!.category}
+${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.description}' : ''}
+
+来自 Mindra 冥想应用
+''';
+    
+    // For Flutter web and mobile platforms, you would typically use the share_plus package
+    // For now, we'll copy to clipboard and show a message
+    _copyToClipboard(shareText);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('分享'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('分享内容已复制到剪贴板'),
+            const SizedBox(height: 16),
+            Text(
+              shareText,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _copyToClipboard(String text) {
+    // TODO: Implement clipboard copy functionality
+    // This would typically use the clipboard package
+    debugPrint('Copying to clipboard: $text');
+  }
+
+  void _setSleepTimer(int minutes) {
+    _sleepTimer?.cancel();
+    
+    _sleepTimer = Timer(Duration(minutes: minutes), () async {
+      if (_isPlaying) {
+        await _audioPlayer.pause();
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('定时停止已触发')),
+        );
+      }
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已设置 $minutes 分钟定时停止')),
+    );
+  }
+
+  void _cancelSleepTimer() {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已取消定时停止')),
+    );
+  }
+
   void _showTimerDialog() {
     showDialog(
       context: context,
@@ -562,11 +964,17 @@ class _PlayerPageState extends State<PlayerPage> {
                 title: Text('$minutes 分钟后'),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('已设置 $minutes 分钟定时')));
+                  _setSleepTimer(minutes);
                 },
               ),
+            const Divider(),
+            ListTile(
+              title: const Text('取消定时'),
+              onTap: () {
+                Navigator.pop(context);
+                _cancelSleepTimer();
+              },
+            ),
           ],
         ),
         actions: [

@@ -36,15 +36,9 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    
-    // Handle hover animation: transform: translate(-50%, -50%) scale(1.2)
-    _handleScaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.2,
-    ).animate(CurvedAnimation(
-      parent: _handleController,
-      curve: Curves.easeOut,
-    ));
+    _handleScaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _handleController, curve: Curves.easeOut),
+    );
   }
 
   @override
@@ -57,8 +51,8 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
     setState(() {
       _isHovered = isHovered;
     });
-    
-    if (isHovered || _isDragging) {
+
+    if (isHovered) {
       _handleController.forward();
     } else {
       _handleController.reverse();
@@ -66,41 +60,42 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
   }
 
   void _onPanStart(DragStartDetails details) {
-    setState(() {
-      _isDragging = true;
-    });
+    _isDragging = true;
     _handleController.forward();
   }
 
   void _onPanUpdate(DragUpdateDetails details, BoxConstraints constraints) {
-    if (widget.totalDuration <= 0) return;
+    if (widget.totalDuration <= 0 || !_isDragging) return;
 
     final RenderBox box = context.findRenderObject() as RenderBox;
     final Offset localPosition = box.globalToLocal(details.globalPosition);
-    final double percentage = (localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
+    final double percentage = (localPosition.dx / constraints.maxWidth).clamp(
+      0.0,
+      1.0,
+    );
     final double newPosition = percentage * widget.totalDuration;
-    
+
     widget.onSeek?.call(newPosition);
   }
 
   void _onPanEnd(DragEndDetails details) {
-    setState(() {
-      _isDragging = false;
-    });
-    
+    _isDragging = false;
     if (!_isHovered) {
       _handleController.reverse();
     }
   }
 
   void _onTap(TapUpDetails details, BoxConstraints constraints) {
-    if (widget.totalDuration <= 0) return;
+    if (widget.totalDuration <= 0 || _isDragging) return;
 
     final RenderBox box = context.findRenderObject() as RenderBox;
     final Offset localPosition = box.globalToLocal(details.globalPosition);
-    final double percentage = (localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
+    final double percentage = (localPosition.dx / constraints.maxWidth).clamp(
+      0.0,
+      1.0,
+    );
     final double newPosition = percentage * widget.totalDuration;
-    
+
     widget.onSeek?.call(newPosition);
   }
 
@@ -108,26 +103,33 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final activeColor = widget.activeColor ?? theme.colorScheme.primary;
-    final inactiveColor = widget.inactiveColor ?? 
-        theme.colorScheme.outline.withValues(alpha: 0.3);
+
+    // Use a more visible inactive color based on theme brightness
+    final inactiveColor =
+        widget.inactiveColor ??
+        (theme.brightness == Brightness.dark
+            ? Colors.white.withValues(alpha: 0.3)
+            : Colors.black.withValues(alpha: 0.15));
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final progress = widget.totalDuration > 0 
+        final progress = widget.totalDuration > 0
             ? (widget.currentPosition / widget.totalDuration).clamp(0.0, 1.0)
             : 0.0;
-        
+
         return MouseRegion(
           onEnter: (_) => _onHoverChange(true),
           onExit: (_) => _onHoverChange(false),
           child: GestureDetector(
-            onTapUp: (details) => _onTap(details, constraints),
+            behavior: HitTestBehavior.opaque,
+            onTapUp: _isDragging ? null : (details) => _onTap(details, constraints),
             onPanStart: _onPanStart,
             onPanUpdate: (details) => _onPanUpdate(details, constraints),
             onPanEnd: _onPanEnd,
             child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 0),
               width: double.infinity,
-              height: 24, // Larger touch area
+              height: 20, // Larger touch area for better interaction
               alignment: Alignment.center,
               child: Container(
                 height: widget.height,
@@ -136,40 +138,49 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
                   borderRadius: BorderRadius.circular(widget.height / 2),
                 ),
                 child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
                     // Progress fill
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                      width: constraints.maxWidth * progress,
-                      height: widget.height,
-                      decoration: BoxDecoration(
-                        color: activeColor,
-                        borderRadius: BorderRadius.circular(widget.height / 2),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        width: constraints.maxWidth * progress,
+                        height: widget.height,
+                        decoration: BoxDecoration(
+                          color: activeColor,
+                          borderRadius: BorderRadius.circular(
+                            widget.height / 2,
+                          ),
+                        ),
                       ),
                     ),
-                    
-                    // Handle
+
+                    // Handle - Always visible
                     AnimatedBuilder(
                       animation: _handleScaleAnimation,
                       builder: (context, child) {
                         return Positioned(
-                          left: (constraints.maxWidth * progress) - 8, // Center the handle
-                          top: (widget.height - 16) / 2, // Center vertically
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 150),
-                            opacity: (_isHovered || _isDragging) ? 1.0 : 0.0,
+                          left:
+                              (constraints.maxWidth * progress) -
+                              10, // Center the handle
+                          top: -8, // Center vertically
+                          child: Container(
+                            width: 20,
+                            height: 20,
+                            alignment: Alignment.center,
                             child: Transform.scale(
                               scale: _handleScaleAnimation.value,
                               child: Container(
-                                width: 16,
-                                height: 16,
+                                width: 12,
+                                height: 12,
                                 decoration: BoxDecoration(
                                   color: activeColor,
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.2),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.3,
+                                      ),
                                       blurRadius: 4,
                                       offset: const Offset(0, 2),
                                     ),
@@ -205,33 +216,29 @@ class AnimatedTimeDisplay extends StatelessWidget {
   String _formatTime(double seconds) {
     final minutes = (seconds / 60).floor();
     final remainingSeconds = (seconds % 60).floor();
-    return '${minutes}:${remainingSeconds.toString().padLeft(2, '0')}';
+    return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 0).copyWith(top: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: Text(
-              _formatTime(currentPosition),
-              key: ValueKey(currentPosition.floor()),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                fontWeight: FontWeight.w500,
-              ),
+          Text(
+            _formatTime(currentPosition),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              fontWeight: FontWeight.w500,
             ),
           ),
           Text(
             _formatTime(totalDuration),
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               fontWeight: FontWeight.w500,
             ),
           ),

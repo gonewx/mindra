@@ -7,10 +7,6 @@ class PlayerControls extends StatelessWidget {
   final VoidCallback? onPlayPause;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
-  final VoidCallback? onShuffle;
-  final VoidCallback? onRepeat;
-  final bool isShuffled;
-  final RepeatMode repeatMode;
 
   const PlayerControls({
     super.key,
@@ -18,74 +14,45 @@ class PlayerControls extends StatelessWidget {
     this.onPlayPause,
     this.onPrevious,
     this.onNext,
-    this.onShuffle,
-    this.onRepeat,
-    this.isShuffled = false,
-    this.repeatMode = RepeatMode.none,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Shuffle
-        // _AnimatedControlButton(
-        //   icon: Icons.shuffle,
-        //   isActive: isShuffled,
-        //   onPressed: onShuffle,
-        //   size: 24,
-        // ),
-
         // Previous
         _AnimatedControlButton(
           icon: Icons.skip_previous,
           onPressed: onPrevious,
-          size: 32,
+          size: 36,
         ),
+
+        const SizedBox(width: 32),
 
         // Play/Pause - Main Button
         _AnimatedPlayButton(isPlaying: isPlaying, onPressed: onPlayPause),
+
+        const SizedBox(width: 32),
 
         // Next
         _AnimatedControlButton(
           icon: Icons.skip_next,
           onPressed: onNext,
-          size: 32,
+          size: 36,
         ),
-
-        // Repeat
-        // _AnimatedControlButton(
-        //   icon: _getRepeatIcon(),
-        //   isActive: repeatMode != RepeatMode.none,
-        //   onPressed: onRepeat,
-        //   size: 24,
-        // ),
       ],
     );
-  }
-
-  IconData _getRepeatIcon() {
-    switch (repeatMode) {
-      case RepeatMode.none:
-        return Icons.repeat;
-      case RepeatMode.all:
-        return Icons.repeat;
-      case RepeatMode.one:
-        return Icons.repeat_one;
-    }
   }
 }
 
 class _AnimatedControlButton extends StatefulWidget {
   final IconData icon;
-  final bool isActive;
   final VoidCallback? onPressed;
   final double size;
 
   const _AnimatedControlButton({
     required this.icon,
-    this.isActive = false,
     this.onPressed,
     this.size = 24,
   });
@@ -129,9 +96,7 @@ class _AnimatedControlButtonState extends State<_AnimatedControlButton>
   }
 
   Color _getIconColor(ThemeData theme) {
-    if (widget.isActive) {
-      return theme.colorScheme.primary;
-    } else if (_isHovered) {
+    if (_isHovered) {
       return theme.brightness == Brightness.dark
           ? const Color(0xFF2DA6B2) // darkPrimaryHover
           : const Color(0xFF1D7480); // primaryHover
@@ -152,11 +117,22 @@ class _AnimatedControlButtonState extends State<_AnimatedControlButton>
         builder: (context, child) {
           return Transform.scale(
             scale: _scaleAnimation.value,
-            child: IconButton(
-              icon: Icon(widget.icon),
-              color: _getIconColor(theme),
-              onPressed: widget.onPressed,
-              iconSize: widget.size,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(28),
+                onTap: widget.onPressed,
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    widget.icon,
+                    color: _getIconColor(theme),
+                    size: widget.size,
+                  ),
+                ),
+              ),
             ),
           );
         },
@@ -262,8 +238,8 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 curve: Curves.easeOut,
-                width: 60,
-                height: 60,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
                   color: _getBackgroundColor(theme),
                   shape: BoxShape.circle,
@@ -278,7 +254,7 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
                 child: Icon(
                   widget.isPlaying ? Icons.pause : Icons.play_arrow,
                   color: Colors.white,
-                  size: 32,
+                  size: 36,
                 ),
               ),
             );

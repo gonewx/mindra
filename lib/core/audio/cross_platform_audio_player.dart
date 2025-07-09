@@ -7,20 +7,24 @@ import 'dart:async';
 class CrossPlatformAudioPlayer {
   AudioPlayer? _audioPlayersInstance;
   just_audio.AudioPlayer? _justAudioInstance;
-  
+
   // Manual state tracking for audioplayers
   bool _isPlaying = false;
   Duration _currentPosition = Duration.zero;
   Duration? _totalDuration;
-  
-  final StreamController<bool> _playingController = StreamController<bool>.broadcast();
-  final StreamController<Duration> _positionController = StreamController<Duration>.broadcast();
-  final StreamController<Duration?> _durationController = StreamController<Duration?>.broadcast();
-  
+
+  final StreamController<bool> _playingController =
+      StreamController<bool>.broadcast();
+  final StreamController<Duration> _positionController =
+      StreamController<Duration>.broadcast();
+  final StreamController<Duration?> _durationController =
+      StreamController<Duration?>.broadcast();
+
   Timer? _positionTimer;
-  
-  bool get _useAudioPlayers => !kIsWeb && (Platform.isAndroid || Platform.isLinux);
-  
+
+  bool get _useAudioPlayers =>
+      !kIsWeb && (Platform.isAndroid || Platform.isLinux);
+
   CrossPlatformAudioPlayer() {
     if (_useAudioPlayers) {
       _audioPlayersInstance = AudioPlayer();
@@ -29,10 +33,10 @@ class CrossPlatformAudioPlayer {
       _justAudioInstance = just_audio.AudioPlayer();
     }
   }
-  
+
   void _setupAudioPlayersListeners() {
     if (_audioPlayersInstance == null) return;
-    
+
     // Listen to player state changes
     _audioPlayersInstance!.onPlayerStateChanged.listen((state) {
       debugPrint('AudioPlayers: State changed to: $state');
@@ -58,22 +62,22 @@ class CrossPlatformAudioPlayer {
           break;
       }
     });
-    
+
     // Listen to duration changes
     _audioPlayersInstance!.onDurationChanged.listen((duration) {
-      debugPrint('AudioPlayers: Duration changed: ${duration.inSeconds}s');
+      // debugPrint('AudioPlayers: Duration changed: ${duration.inSeconds}s');
       _totalDuration = duration;
       _durationController.add(duration);
     });
-    
+
     // Listen to position changes
     _audioPlayersInstance!.onPositionChanged.listen((position) {
-      debugPrint('AudioPlayers: Position changed: ${position.inSeconds}s');
+      // debugPrint('AudioPlayers: Position changed: ${position.inSeconds}s');
       _currentPosition = position;
       _positionController.add(position);
     });
   }
-  
+
   Future<void> setFilePath(String filePath) async {
     if (_useAudioPlayers) {
       debugPrint('AudioPlayers: Setting file path: $filePath');
@@ -88,7 +92,7 @@ class CrossPlatformAudioPlayer {
       }
     }
   }
-  
+
   Future<void> setUrl(String url) async {
     if (_useAudioPlayers) {
       debugPrint('AudioPlayers: Setting URL: $url');
@@ -97,7 +101,7 @@ class CrossPlatformAudioPlayer {
       await _justAudioInstance!.setUrl(url);
     }
   }
-  
+
   Future<void> play() async {
     if (_useAudioPlayers) {
       debugPrint('AudioPlayers: Play called');
@@ -106,7 +110,7 @@ class CrossPlatformAudioPlayer {
       await _justAudioInstance?.play();
     }
   }
-  
+
   Future<void> pause() async {
     if (_useAudioPlayers) {
       debugPrint('AudioPlayers: Pause called');
@@ -115,7 +119,7 @@ class CrossPlatformAudioPlayer {
       await _justAudioInstance?.pause();
     }
   }
-  
+
   Future<void> stop() async {
     if (_useAudioPlayers) {
       debugPrint('AudioPlayers: Stop called');
@@ -124,7 +128,7 @@ class CrossPlatformAudioPlayer {
       await _justAudioInstance?.stop();
     }
   }
-  
+
   Future<void> seek(Duration position) async {
     if (_useAudioPlayers) {
       debugPrint('AudioPlayers: Seek to ${position.inSeconds}s');
@@ -133,7 +137,7 @@ class CrossPlatformAudioPlayer {
       await _justAudioInstance?.seek(position);
     }
   }
-  
+
   Future<void> setVolume(double volume) async {
     if (_useAudioPlayers) {
       await _audioPlayersInstance?.setVolume(volume);
@@ -141,7 +145,7 @@ class CrossPlatformAudioPlayer {
       await _justAudioInstance?.setVolume(volume);
     }
   }
-  
+
   Stream<Duration> get positionStream {
     if (_useAudioPlayers) {
       return _positionController.stream;
@@ -149,7 +153,7 @@ class CrossPlatformAudioPlayer {
       return _justAudioInstance?.positionStream ?? Stream.empty();
     }
   }
-  
+
   Stream<Duration?> get durationStream {
     if (_useAudioPlayers) {
       return _durationController.stream;
@@ -157,7 +161,7 @@ class CrossPlatformAudioPlayer {
       return _justAudioInstance?.durationStream ?? Stream.empty();
     }
   }
-  
+
   Stream<bool> get playingStream {
     if (_useAudioPlayers) {
       return _playingController.stream;
@@ -165,7 +169,7 @@ class CrossPlatformAudioPlayer {
       return _justAudioInstance?.playingStream ?? Stream.empty();
     }
   }
-  
+
   Future<void> dispose() async {
     _positionTimer?.cancel();
     await _audioPlayersInstance?.dispose();
