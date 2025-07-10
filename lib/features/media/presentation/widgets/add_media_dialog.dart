@@ -104,7 +104,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               decoration: BoxDecoration(
                 color: isDark
                     ? const Color(0xFF2A3441)
@@ -147,7 +147,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 20),
+                    // const SizedBox(height: 20),
 
                     // Add source selection header (隐藏在编辑模式下)
                     if (!_isEditMode) ...[
@@ -471,7 +471,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                           ),
                         ),
                       ),
-                    const SizedBox(height: 20),
+                    // const SizedBox(height: 20),
 
                     // Title
                     Text(
