@@ -13,6 +13,8 @@ import '../../../../features/media/presentation/bloc/media_bloc.dart';
 import '../../../../features/media/presentation/bloc/media_event.dart';
 import '../../../../features/media/presentation/widgets/add_media_dialog.dart';
 import '../../../../core/audio/cross_platform_audio_player.dart';
+import '../../../meditation/data/services/meditation_session_manager.dart';
+import '../../../meditation/domain/entities/meditation_session.dart';
 
 class PlayerPage extends StatefulWidget {
   final String? mediaId;
@@ -77,6 +79,9 @@ class _PlayerPageState extends State<PlayerPage> {
         setState(() {
           _isPlaying = isPlaying;
         });
+        
+        // Handle session management based on playing state
+        _handlePlayingStateChange(isPlaying);
       }
     });
 
@@ -86,6 +91,9 @@ class _PlayerPageState extends State<PlayerPage> {
         setState(() {
           _currentPosition = position.inSeconds.toDouble();
         });
+        
+        // Update session progress
+        MeditationSessionManager.updateSessionProgress(position.inSeconds);
       }
     });
 
@@ -97,6 +105,128 @@ class _PlayerPageState extends State<PlayerPage> {
         });
       }
     });
+
+    // Listen to player state changes (especially for completion)
+    _audioPlayer.playerStateStream.listen((state) {
+      if (mounted) {
+        _handlePlayerStateChange(state);
+      }
+    });
+  }
+
+  void _handlePlayingStateChange(bool isPlaying) {
+    if (isPlaying && !MeditationSessionManager.hasActiveSession && _currentMedia != null) {
+      // Start new session when playback begins
+      _startMeditationSession();
+    } else if (!isPlaying && MeditationSessionManager.hasActiveSession) {
+      // Pause session when playback pauses
+      MeditationSessionManager.pauseSession();
+    }
+  }
+
+  void _handlePlayerStateChange(CrossPlatformPlayerState state) {
+    switch (state) {
+      case CrossPlatformPlayerState.completed:
+        // Session completed naturally
+        _completeMeditationSession();
+        break;
+      case CrossPlatformPlayerState.playing:
+        // Resume session if paused
+        if (MeditationSessionManager.hasActiveSession) {
+          MeditationSessionManager.resumeSession();
+        }
+        break;
+      case CrossPlatformPlayerState.paused:
+      case CrossPlatformPlayerState.stopped:
+        // Pause or stop session
+        if (MeditationSessionManager.hasActiveSession) {
+          MeditationSessionManager.pauseSession();
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> _startMeditationSession() async {
+    if (_currentMedia == null) return;
+    
+    try {
+      final sessionType = MeditationSessionManager.getSessionTypeFromCategory(_currentMedia!.category);
+      final soundEffects = _soundEffectsService.getActiveSoundEffects();
+      
+      await MeditationSessionManager.startSession(
+        mediaItem: _currentMedia!,
+        sessionType: sessionType,
+        soundEffects: soundEffects,
+      );
+      
+      debugPrint('Started meditation session for: ${_currentMedia!.title}');
+    } catch (e) {
+      debugPrint('Error starting meditation session: $e');
+    }
+  }
+
+  Future<void> _completeMeditationSession() async {
+    if (!MeditationSessionManager.hasActiveSession) return;
+    
+    try {
+      await MeditationSessionManager.completeSession();
+      debugPrint('Completed meditation session');
+      
+      // Show completion dialog or notification
+      if (mounted) {
+        _showSessionCompletedDialog();
+      }
+    } catch (e) {
+      debugPrint('Error completing meditation session: $e');
+    }
+  }
+
+  Future<void> _stopMeditationSession() async {
+    if (!MeditationSessionManager.hasActiveSession) return;
+    
+    try {
+      await MeditationSessionManager.stopSession();
+      debugPrint('Stopped meditation session');
+    } catch (e) {
+      debugPrint('Error stopping meditation session: $e');
+    }
+  }
+
+  void _showSessionCompletedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('冥想完成'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 48),
+            const SizedBox(height: 16),
+            const Text('恭喜！您已完成了这次冥想练习。'),
+            const SizedBox(height: 16),
+            Text(
+              '练习时长：${(_totalDuration / 60).round()} 分钟',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/progress'); // 跳转到进度页面
+            },
+            child: const Text('查看进度'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('完成'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadMediaData() async {
@@ -201,6 +331,11 @@ class _PlayerPageState extends State<PlayerPage> {
 
   @override
   void dispose() {
+    // Stop any active meditation session when leaving the player
+    if (MeditationSessionManager.hasActiveSession) {
+      _stopMeditationSession();
+    }
+    
     _playingSubscription.cancel();
     _positionSubscription.cancel();
     _durationSubscription.cancel();

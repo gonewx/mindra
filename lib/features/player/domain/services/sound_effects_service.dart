@@ -134,6 +134,14 @@ class SoundEffectsService {
     },
   };
 
+  // 获取当前激活的音效列表
+  List<String> getActiveSoundEffects() {
+    return _volumes.entries
+        .where((entry) => entry.value > 0.0)
+        .map((entry) => entry.key)
+        .toList();
+  }
+
   // 释放资源
   Future<void> dispose() async {
     for (final player in _players.values) {

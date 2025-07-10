@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import '../../features/media/domain/entities/media_item.dart';
+import '../../features/meditation/domain/entities/meditation_session.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Conditional import for web-only functionality
@@ -160,5 +161,63 @@ class WebStorageHelper {
     _localStorage.remove(_mediaItemsKey);
     _localStorage.remove(_sessionsKey);
     _localStorage.remove(_preferencesKey);
+  }
+
+  // Meditation Sessions operations
+  static Future<void> insertMeditationSession(MeditationSession session) async {
+    final sessions = await getAllMeditationSessions();
+    sessions.removeWhere((existing) => existing.id == session.id);
+    sessions.add(session);
+    await _saveMeditationSessions(sessions);
+  }
+
+  static Future<List<MeditationSession>> getAllMeditationSessions() async {
+    final jsonString = _localStorage[_sessionsKey];
+    if (jsonString == null) return [];
+
+    final jsonList = json.decode(jsonString) as List;
+    return jsonList.map((json) => MeditationSession.fromMap(json)).toList();
+  }
+
+  static Future<List<MeditationSession>> getMeditationSessionsByDateRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final sessions = await getAllMeditationSessions();
+    return sessions.where((session) {
+      return session.startTime.isAfter(startDate) && session.startTime.isBefore(endDate);
+    }).toList();
+  }
+
+  static Future<void> updateMeditationSession(String id, Map<String, dynamic> updates) async {
+    final sessions = await getAllMeditationSessions();
+    final index = sessions.indexWhere((session) => session.id == id);
+    if (index >= 0) {
+      final currentSession = sessions[index];
+      final updatedSession = currentSession.copyWith(
+        title: updates['title'],
+        duration: updates['duration'],
+        actualDuration: updates['actual_duration'],
+        endTime: updates['end_time'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(updates['end_time'])
+            : null,
+        rating: updates['rating']?.toDouble(),
+        notes: updates['notes'],
+        isCompleted: updates['is_completed'] == 1,
+      );
+      sessions[index] = updatedSession;
+      await _saveMeditationSessions(sessions);
+    }
+  }
+
+  static Future<void> deleteMeditationSession(String id) async {
+    final sessions = await getAllMeditationSessions();
+    sessions.removeWhere((session) => session.id == id);
+    await _saveMeditationSessions(sessions);
+  }
+
+  static Future<void> _saveMeditationSessions(List<MeditationSession> sessions) async {
+    final jsonList = sessions.map((session) => session.toMap()).toList();
+    _localStorage[_sessionsKey] = json.encode(jsonList);
   }
 }

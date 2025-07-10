@@ -1,17 +1,121 @@
 import 'package:flutter/material.dart';
+import '../../data/services/meditation_statistics_service.dart';
+import '../../domain/entities/meditation_statistics.dart';
+import '../widgets/goal_settings_dialog.dart';
+import '../widgets/reminder_settings_dialog.dart';
+import '../../../goals/domain/entities/user_goal.dart';
+import '../../../goals/data/services/goal_service.dart';
 
-class MeditationHistoryPage extends StatelessWidget {
+class MeditationHistoryPage extends StatefulWidget {
   const MeditationHistoryPage({super.key});
+
+  @override
+  State<MeditationHistoryPage> createState() => _MeditationHistoryPageState();
+}
+
+class _MeditationHistoryPageState extends State<MeditationHistoryPage> {
+  MeditationStatistics? _statistics;
+  UserGoal? _userGoal;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload data when returning to this page
+    _refreshData();
+  }
+
+  Future<void> _refreshData() async {
+    if (!_isLoading) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+    await _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final statistics = await MeditationStatisticsService.getStatistics();
+      final userGoal = await GoalService.getGoal();
+      
+      if (mounted) {
+        setState(() {
+          _statistics = statistics;
+          _userGoal = userGoal;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      debugPrint('Error loading data: $e');
+    }
+  }
+
+  void _onGoalUpdated(UserGoal goal) {
+    setState(() {
+      _userGoal = goal;
+    });
+  }
+
+  IconData _getAchievementIcon(String iconName) {
+    switch (iconName) {
+      case 'spa':
+        return Icons.spa_rounded;
+      case 'calendar_view_week':
+        return Icons.calendar_view_week_rounded;
+      case 'psychology':
+        return Icons.psychology_rounded;
+      case 'workspace_premium':
+        return Icons.workspace_premium_rounded;
+      case 'military_tech':
+        return Icons.military_tech_rounded;
+      case 'explore':
+        return Icons.explore_rounded;
+      default:
+        return Icons.spa_rounded;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    final statistics = _statistics ?? const MeditationStatistics(
+      streakDays: 0,
+      weeklyMinutes: 0,
+      totalSessions: 0,
+      totalMinutes: 0,
+      averageRating: 0.0,
+      completedSessions: 0,
+      weeklyData: [0, 0, 0, 0, 0, 0, 0],
+      achievements: [],
+      monthlyRecords: [],
+    );
+
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
             Row(
@@ -36,7 +140,7 @@ class MeditationHistoryPage extends StatelessWidget {
                     ),
                     child: IconButton(
                       onPressed: () {
-                        showProgressSettings(context); // 修复点击功能
+                        showProgressSettings(context, userGoal: _userGoal, onGoalUpdated: _onGoalUpdated);
                       },
                       icon: Icon(
                         Icons.settings_outlined,
@@ -56,7 +160,7 @@ class MeditationHistoryPage extends StatelessWidget {
                   child: _StatCard(
                     icon: Icons.local_fire_department_rounded,
                     title: '连续天数',
-                    value: '7天',
+                    value: '${statistics.streakDays}天',
                     color: theme.colorScheme.secondary,
                   ),
                 ),
@@ -65,7 +169,7 @@ class MeditationHistoryPage extends StatelessWidget {
                   child: _StatCard(
                     icon: Icons.schedule_rounded,
                     title: '本周时长',
-                    value: '125分钟',
+                    value: '${statistics.weeklyMinutes}分钟',
                     color: theme.colorScheme.primary,
                   ),
                 ),
@@ -74,7 +178,7 @@ class MeditationHistoryPage extends StatelessWidget {
                   child: _StatCard(
                     icon: Icons.emoji_events_rounded,
                     title: '总次数',
-                    value: '23次',
+                    value: '${statistics.totalSessions}次',
                     color: theme.colorScheme.tertiary,
                   ),
                 ),
@@ -107,7 +211,7 @@ class MeditationHistoryPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  SizedBox(height: 200, child: _WeeklyChart()),
+                  SizedBox(height: 200, child: _WeeklyChart(weeklyData: statistics.weeklyData)),
                 ],
               ),
             ),
@@ -128,32 +232,16 @@ class MeditationHistoryPage extends StatelessWidget {
               crossAxisCount: 4,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              children: [
-                _AchievementBadge(
-                  icon: Icons.spa_rounded,
-                  label: '冥想新手',
-                  isEarned: true,
-                  color: theme.colorScheme.secondary,
-                ),
-                _AchievementBadge(
-                  icon: Icons.calendar_view_week_rounded,
-                  label: '连续一周',
-                  isEarned: true,
-                  color: theme.colorScheme.secondary,
-                ),
-                _AchievementBadge(
-                  icon: Icons.psychology_rounded,
-                  label: '专注大师',
-                  isEarned: true,
-                  color: theme.colorScheme.secondary,
-                ),
-                _AchievementBadge(
-                  icon: Icons.workspace_premium_rounded,
-                  label: '冥想达人',
-                  isEarned: false,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                ),
-              ],
+              children: statistics.achievements.map((achievement) {
+                return _AchievementBadge(
+                  icon: _getAchievementIcon(achievement.iconName),
+                  label: achievement.title,
+                  isEarned: achievement.isEarned,
+                  color: achievement.isEarned 
+                      ? theme.colorScheme.secondary
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 32),
 
@@ -182,13 +270,14 @@ class MeditationHistoryPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _CalendarGrid(),
+                  _CalendarGrid(monthlyRecords: statistics.monthlyRecords),
                 ],
               ),
             ),
             const SizedBox(height: 24),
           ],
         ),
+      ),
       ),
     );
   }
@@ -251,13 +340,16 @@ class _StatCard extends StatelessWidget {
 }
 
 class _WeeklyChart extends StatelessWidget {
+  final List<int> weeklyData;
+
+  const _WeeklyChart({required this.weeklyData});
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Mock data for weekly meditation minutes
-    final weeklyData = [20, 15, 30, 25, 0, 35, 20];
+    // Use real data instead of mock data
     final weekDays = ['一', '二', '三', '四', '五', '六', '日'];
-    final maxValue = weeklyData.reduce((a, b) => a > b ? a : b);
+    final maxValue = weeklyData.isNotEmpty ? weeklyData.reduce((a, b) => a > b ? a : b) : 0;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -347,6 +439,10 @@ class _AchievementBadge extends StatelessWidget {
 }
 
 class _CalendarGrid extends StatelessWidget {
+  final List<MeditationDayRecord> monthlyRecords;
+
+  const _CalendarGrid({required this.monthlyRecords});
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -354,25 +450,13 @@ class _CalendarGrid extends StatelessWidget {
     final daysInMonth = DateTime(today.year, today.month + 1, 0).day;
     final firstDayWeekday = DateTime(today.year, today.month, 1).weekday;
 
-    // 模拟冥想记录数据
-    final meditationDays = [
-      1,
-      2,
-      4,
-      7,
-      9,
-      11,
-      12,
-      14,
-      17,
-      18,
-      20,
-      21,
-      23,
-      26,
-      28,
-      29,
-    ];
+    // Create a map for quick lookup of meditation records
+    final Map<int, MeditationDayRecord> recordsMap = {};
+    for (final record in monthlyRecords) {
+      if (record.date.month == today.month && record.date.year == today.year) {
+        recordsMap[record.date.day] = record;
+      }
+    }
 
     return Column(
       children: [
@@ -408,8 +492,8 @@ class _CalendarGrid extends StatelessWidget {
             final dayNumber = index - firstDayWeekday + 2;
             final isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
             final isToday = isCurrentMonth && dayNumber == today.day;
-            final hasSession =
-                isCurrentMonth && meditationDays.contains(dayNumber);
+            final dayRecord = recordsMap[dayNumber];
+            final hasSession = dayRecord?.hasSession ?? false;
 
             return Container(
               decoration: BoxDecoration(
@@ -446,7 +530,11 @@ class _CalendarGrid extends StatelessWidget {
   }
 }
 
-void showProgressSettings(BuildContext context) {
+void showProgressSettings(
+  BuildContext context, {
+  UserGoal? userGoal,
+  Function(UserGoal goal)? onGoalUpdated,
+}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -493,10 +581,7 @@ void showProgressSettings(BuildContext context) {
             subtitle: '调整每日冥想目标',
             onTap: () {
               Navigator.pop(context);
-              // TODO: 打开目标设置对话框
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('目标设置功能开发中')));
+              showGoalSettingsDialog(context, currentGoal: userGoal, onGoalUpdated: onGoalUpdated);
             },
           ),
           buildSettingOption(
@@ -506,10 +591,7 @@ void showProgressSettings(BuildContext context) {
             subtitle: '设置冥想提醒时间',
             onTap: () {
               Navigator.pop(context);
-              // TODO: 打开提醒设置
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('提醒设置功能开发中')));
+              showReminderSettingsDialog(context, currentGoal: userGoal, onGoalUpdated: onGoalUpdated);
             },
           ),
           buildSettingOption(
@@ -519,10 +601,10 @@ void showProgressSettings(BuildContext context) {
             subtitle: '自定义统计显示方式',
             onTap: () {
               Navigator.pop(context);
-              // TODO: 打开统计偏好设置
+              // 实现统计偏好设置
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(const SnackBar(content: Text('统计偏好设置功能开发中')));
+              ).showSnackBar(const SnackBar(content: Text('统计偏好设置功能即将上线')));
             },
           ),
           const SizedBox(height: 20),

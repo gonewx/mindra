@@ -1,12 +1,20 @@
 import 'package:flutter/foundation.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:audioplayers/audioplayers.dart' as audioplayers;
 import 'package:just_audio/just_audio.dart' as just_audio;
 import 'dart:io';
 import 'dart:async';
 import '../../features/player/services/audio_focus_manager.dart';
 
+enum CrossPlatformPlayerState {
+  stopped,
+  playing,
+  paused,
+  completed,
+  disposed,
+}
+
 class CrossPlatformAudioPlayer {
-  AudioPlayer? _audioPlayersInstance;
+  audioplayers.AudioPlayer? _audioPlayersInstance;
   just_audio.AudioPlayer? _justAudioInstance;
   final AudioFocusManager _audioFocusManager = AudioFocusManager();
 
@@ -16,6 +24,8 @@ class CrossPlatformAudioPlayer {
       StreamController<Duration>.broadcast();
   final StreamController<Duration?> _durationController =
       StreamController<Duration?>.broadcast();
+  final StreamController<CrossPlatformPlayerState> _playerStateController =
+      StreamController<CrossPlatformPlayerState>.broadcast();
 
   Timer? _positionTimer;
 
@@ -24,7 +34,7 @@ class CrossPlatformAudioPlayer {
 
   CrossPlatformAudioPlayer() {
     if (_useAudioPlayers) {
-      _audioPlayersInstance = AudioPlayer();
+      _audioPlayersInstance = audioplayers.AudioPlayer();
       _setupAudioPlayersListeners();
       _configureAudioContext();
     } else {
@@ -52,22 +62,31 @@ class CrossPlatformAudioPlayer {
     _audioPlayersInstance!.onPlayerStateChanged.listen((state) {
       debugPrint('AudioPlayers: State changed to: $state');
       switch (state) {
-        case PlayerState.playing:
+        case audioplayers.PlayerState.playing:
           _playingController.add(true);
+          _playerStateController.add(CrossPlatformPlayerState.playing);
           _audioFocusManager.notifyMainAudioStarted();
           break;
-        case PlayerState.paused:
+        case audioplayers.PlayerState.paused:
           _playingController.add(false);
+          _playerStateController.add(CrossPlatformPlayerState.paused);
           _audioFocusManager.notifyMainAudioStopped();
           break;
-        case PlayerState.stopped:
-        case PlayerState.completed:
+        case audioplayers.PlayerState.stopped:
           _playingController.add(false);
           _positionController.add(Duration.zero);
+          _playerStateController.add(CrossPlatformPlayerState.stopped);
           _audioFocusManager.notifyMainAudioStopped();
           break;
-        case PlayerState.disposed:
+        case audioplayers.PlayerState.completed:
           _playingController.add(false);
+          _positionController.add(Duration.zero);
+          _playerStateController.add(CrossPlatformPlayerState.completed);
+          _audioFocusManager.notifyMainAudioStopped();
+          break;
+        case audioplayers.PlayerState.disposed:
+          _playingController.add(false);
+          _playerStateController.add(CrossPlatformPlayerState.disposed);
           _audioFocusManager.notifyMainAudioStopped();
           break;
       }
@@ -178,6 +197,28 @@ class CrossPlatformAudioPlayer {
     }
   }
 
+  Stream<CrossPlatformPlayerState> get playerStateStream {
+    if (_useAudioPlayers) {
+      return _playerStateController.stream;
+    } else {
+      // For just_audio, we need to map its player state to our enum
+      return _justAudioInstance?.playerStateStream.map((state) {
+        switch (state.playing) {
+          case true:
+            return CrossPlatformPlayerState.playing;
+          case false:
+            if (state.processingState == just_audio.ProcessingState.completed) {
+              return CrossPlatformPlayerState.completed;
+            } else if (state.processingState == just_audio.ProcessingState.idle) {
+              return CrossPlatformPlayerState.stopped;
+            } else {
+              return CrossPlatformPlayerState.paused;
+            }
+        }
+      }) ?? Stream.empty();
+    }
+  }
+
   Future<Duration?> getDuration() async {
     if (_useAudioPlayers) {
       return _audioPlayersInstance?.getDuration();
@@ -217,5 +258,6 @@ class CrossPlatformAudioPlayer {
     await _playingController.close();
     await _positionController.close();
     await _durationController.close();
+    await _playerStateController.close();
   }
 }

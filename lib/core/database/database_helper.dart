@@ -185,6 +185,11 @@ class DatabaseHelper {
     return await db.query(_meditationSessionsTable, orderBy: 'start_time DESC');
   }
 
+  static Future<List<Map<String, dynamic>>> getAllMeditationSessions() async {
+    final db = await database;
+    return await db.query(_meditationSessionsTable, orderBy: 'start_time DESC');
+  }
+
   static Future<List<Map<String, dynamic>>> getMeditationSessionsByDateRange(
     DateTime startDate,
     DateTime endDate,
