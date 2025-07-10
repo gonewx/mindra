@@ -74,9 +74,13 @@ class MediaLocalDataSource {
 
   Future<void> toggleFavorite(String id, bool isFavorite) async {
     if (kIsWeb) {
-      await WebStorageHelper.updateMediaItem(id, {'is_favorite': isFavorite ? 1 : 0});
+      await WebStorageHelper.updateMediaItem(id, {
+        'is_favorite': isFavorite ? 1 : 0,
+      });
     } else {
-      await DatabaseHelper.updateMediaItem(id, {'is_favorite': isFavorite ? 1 : 0});
+      await DatabaseHelper.updateMediaItem(id, {
+        'is_favorite': isFavorite ? 1 : 0,
+      });
     }
   }
 
@@ -94,7 +98,7 @@ class MediaLocalDataSource {
       final items = await DatabaseHelper.getMediaItems();
       final item = items.firstWhere((item) => item['id'] == id);
       final currentCount = item['play_count'] ?? 0;
-      
+
       await DatabaseHelper.updateMediaItem(id, {
         'play_count': currentCount + 1,
         'last_played_at': DateTime.now().millisecondsSinceEpoch,

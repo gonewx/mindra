@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/theme_provider.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -11,13 +12,15 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _soundEffectsEnabled = true;
-  double _defaultVolume = 0.7;
+  bool _notificationsEnabled = true;
+  bool _dailyReminderEnabled = true;
+  bool _sessionReminderEnabled = true;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final localizations = AppLocalizations.of(context)!;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -27,7 +30,7 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             // Header
             Text(
-              '个人中心',
+              localizations.personalCenter,
               style: theme.textTheme.headlineLarge?.copyWith(
                 color: theme.colorScheme.primary,
                 fontWeight: FontWeight.bold,
@@ -39,91 +42,85 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 32),
 
             // Profile Section
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.colorScheme.primary,
-                    theme.colorScheme.secondary,
+            SizedBox(
+              width: double.infinity,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.colorScheme.primary,
+                      theme.colorScheme.secondary,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Avatar
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.2),
+                child: Column(
+                  children: [
+                    // Avatar
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.2),
+                      ),
+                      child: const Icon(
+                        Icons.self_improvement,
+                        size: 40,
+                        color: Colors.white,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.person,
-                      size: 40,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // User Info
-                  Text(
-                    '冥想者',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                    // User Info
+                    Text(
+                      localizations.meditator,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '已冥想 23 次',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 32),
 
             // Settings Sections
             _buildSettingsSection(
-              title: '个性化设置',
+              title: localizations.personalizationSettings,
               items: [
                 _SettingItem(
                   icon: Icons.palette,
-                  title: '主题设置',
+                  title: localizations.themeSettings,
                   onTap: () => _showThemeDialog(themeProvider),
                 ),
                 _SettingItem(
                   icon: Icons.language,
-                  title: '语言设置',
+                  title: localizations.languageSettings,
                   onTap: () => _showLanguageDialog(themeProvider),
                 ),
                 _SettingItem(
                   icon: Icons.notifications,
-                  title: '通知设置',
+                  title: localizations.notificationSettings,
                   onTap: _showNotificationDialog,
                 ),
                 _SettingItem(
                   icon: Icons.view_module,
-                  title: '卡片间距',
+                  title: localizations.cardSpacing,
                   onTap: () => _showCardSpacingDialog(themeProvider),
                 ),
                 _SettingItem(
                   icon: Icons.padding,
-                  title: '卡片内边距',
+                  title: localizations.cardPadding,
                   onTap: () => _showCardPaddingDialog(themeProvider),
                 ),
               ],
@@ -131,38 +128,11 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 24),
 
             _buildSettingsSection(
-              title: '应用设置',
+              title: localizations.about,
               items: [
-                _SettingItem(
-                  icon: Icons.security,
-                  title: '隐私设置',
-                  onTap: _showComingSoonDialog,
-                ),
-                _SettingItem(
-                  icon: Icons.storage,
-                  title: '存储管理',
-                  onTap: _showComingSoonDialog,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            _buildSettingsSection(
-              title: '帮助与支持',
-              items: [
-                _SettingItem(
-                  icon: Icons.help_center,
-                  title: '帮助中心',
-                  onTap: _showComingSoonDialog,
-                ),
-                _SettingItem(
-                  icon: Icons.feedback,
-                  title: '意见反馈',
-                  onTap: _showComingSoonDialog,
-                ),
                 _SettingItem(
                   icon: Icons.info,
-                  title: '关于应用',
+                  title: localizations.aboutApp,
                   onTap: _showAboutDialog,
                 ),
               ],
@@ -174,292 +144,268 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildSettingCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: theme.shadowColor.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 32, color: theme.colorScheme.primary),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    final theme = Theme.of(context);
-
-    return Row(
-      children: [
-        Icon(icon, color: theme.colorScheme.primary),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: theme.colorScheme.primary,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOptionTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    bool isDestructive = false,
-  }) {
-    final theme = Theme.of(context);
-    final iconColor = isDestructive ? Colors.red : theme.colorScheme.primary;
-    final titleColor = isDestructive ? Colors.red : theme.colorScheme.onSurface;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(icon, color: iconColor),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: titleColor,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.chevron_right,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showVolumeDialog() {
+  void _showNotificationDialog() {
+    final localizations = AppLocalizations.of(context)!;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('调节音量'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('当前音量: ${(_defaultVolume * 100).round()}%'),
-            const SizedBox(height: 16),
-            Slider(
-              value: _defaultVolume,
-              onChanged: (value) {
-                setState(() {
-                  _defaultVolume = value;
-                });
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(
+            localizations.notificationSettingsTitle,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.8,
+              maxHeight: MediaQuery.of(context).size.height * 0.6,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SwitchListTile(
+                    title: Text(
+                      localizations.pushNotifications,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    subtitle: Text(
+                      localizations.pushNotificationsDesc,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    value: _notificationsEnabled,
+                    onChanged: (value) {
+                      setState(() {
+                        _notificationsEnabled = value;
+                      });
+                      this.setState(() {});
+                    },
+                  ),
+                  SwitchListTile(
+                    title: Text(
+                      localizations.dailyReminder,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    subtitle: Text(
+                      localizations.dailyReminderDesc,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    value: _dailyReminderEnabled,
+                    onChanged: (value) {
+                      setState(() {
+                        _dailyReminderEnabled = value;
+                      });
+                      this.setState(() {});
+                    },
+                  ),
+                  SwitchListTile(
+                    title: Text(
+                      localizations.sessionReminder,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    subtitle: Text(
+                      localizations.sessionReminderDesc,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    value: _sessionReminderEnabled,
+                    onChanged: (value) {
+                      setState(() {
+                        _sessionReminderEnabled = value;
+                      });
+                      this.setState(() {});
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(localizations.cancel),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(localizations.notificationSettingsSaved),
+                  ),
+                );
               },
+              child: Text(localizations.confirm),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('确定'),
-          ),
-        ],
       ),
     );
-  }
-
-  void _showNotificationDialog() {
-    // Simple toggle - in real app this would open notification settings
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('通知设置已更新')));
   }
 
   void _showThemeDialog(ThemeProvider themeProvider) {
+    final localizations = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('选择主题'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: AppThemeMode.values.map((theme) {
-            return RadioListTile<AppThemeMode>(
-              title: Text(theme.displayName),
-              value: theme,
-              groupValue: themeProvider.themeMode,
-              onChanged: (value) {
-                if (value != null) {
-                  themeProvider.setThemeMode(value);
-                }
-                Navigator.pop(context);
-              },
-            );
-          }).toList(),
+        title: Text(
+          localizations.selectTheme,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.8,
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: AppThemeMode.values.map((theme) {
+                return RadioListTile<AppThemeMode>(
+                  title: Text(
+                    theme.displayName,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  value: theme,
+                  groupValue: themeProvider.themeMode,
+                  onChanged: (value) {
+                    if (value != null) {
+                      themeProvider.setThemeMode(value);
+                    }
+                    Navigator.pop(context);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
         ),
       ),
     );
   }
 
   void _showLanguageDialog(ThemeProvider themeProvider) {
+    final localizations = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('选择语言'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<Locale>(
-              title: const Text('简体中文'),
-              value: const Locale('zh', 'CN'),
-              groupValue: themeProvider.locale,
-              onChanged: (value) {
-                if (value != null) {
-                  themeProvider.setLocale(value);
-                }
-                Navigator.pop(context);
-              },
+        title: Text(
+          localizations.selectLanguage,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.8,
+            maxHeight: MediaQuery.of(context).size.height * 0.4,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RadioListTile<Locale>(
+                  title: Text(
+                    localizations.simplifiedChinese,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  value: const Locale('zh', 'CN'),
+                  groupValue: themeProvider.locale,
+                  onChanged: (value) {
+                    if (value != null) {
+                      themeProvider.setLocale(value);
+                    }
+                    Navigator.pop(context);
+                  },
+                ),
+                RadioListTile<Locale>(
+                  title: Text(
+                    localizations.english,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  value: const Locale('en', 'US'),
+                  groupValue: themeProvider.locale,
+                  onChanged: (value) {
+                    if (value != null) {
+                      themeProvider.setLocale(value);
+                    }
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
             ),
-            RadioListTile<Locale>(
-              title: const Text('English'),
-              value: const Locale('en', 'US'),
-              groupValue: themeProvider.locale,
-              onChanged: (value) {
-                if (value != null) {
-                  themeProvider.setLocale(value);
-                }
-                Navigator.pop(context);
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   void _showCardSpacingDialog(ThemeProvider themeProvider) {
+    final localizations = AppLocalizations.of(context)!;
     double tempSpacing = themeProvider.cardSpacing;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('调整卡片间距'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '当前间距: ${tempSpacing.round()}px',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              Slider(
-                value: tempSpacing,
-                min: 8.0,
-                max: 32.0,
-                divisions:
-                    12, // 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32
-                label: '${tempSpacing.round()}px',
-                onChanged: (value) {
-                  setState(() {
-                    tempSpacing = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          title: Text(
+            localizations.adjustCardSpacing,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.8,
+              maxHeight: MediaQuery.of(context).size.height * 0.4,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '紧凑 (8px)',
-                    style: Theme.of(context).textTheme.bodySmall,
+                    localizations.currentSpacing(tempSpacing.round()),
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
-                  Text(
-                    '宽松 (32px)',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  const SizedBox(height: 16),
+                  Slider(
+                    value: tempSpacing,
+                    min: 8.0,
+                    max: 32.0,
+                    divisions: 12,
+                    label: '${tempSpacing.round()}px',
+                    onChanged: (value) {
+                      setState(() {
+                        tempSpacing = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          localizations.compact8px,
+                          style: Theme.of(context).textTheme.bodySmall,
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          localizations.loose32px,
+                          style: Theme.of(context).textTheme.bodySmall,
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
+              child: Text(localizations.cancel),
             ),
             TextButton(
               onPressed: () {
@@ -467,12 +413,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('卡片间距已设置为 ${tempSpacing.round()}px'),
+                    content: Text(
+                      localizations.cardSpacingSet(tempSpacing.round()),
+                    ),
                     duration: const Duration(seconds: 2),
                   ),
                 );
               },
-              child: const Text('确定'),
+              child: Text(localizations.confirm),
             ),
           ],
         ),
@@ -481,53 +429,71 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showCardPaddingDialog(ThemeProvider themeProvider) {
+    final localizations = AppLocalizations.of(context)!;
     double tempPadding = themeProvider.cardPadding;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('调整卡片内边距'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '当前内边距: ${tempPadding.round()}px',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              Slider(
-                value: tempPadding,
-                min: 12.0,
-                max: 32.0,
-                divisions: 10, // 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32
-                label: '${tempPadding.round()}px',
-                onChanged: (value) {
-                  setState(() {
-                    tempPadding = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          title: Text(
+            localizations.adjustCardPadding,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.8,
+              maxHeight: MediaQuery.of(context).size.height * 0.4,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '紧凑 (12px)',
-                    style: Theme.of(context).textTheme.bodySmall,
+                    localizations.currentPadding(tempPadding.round()),
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
-                  Text(
-                    '宽松 (32px)',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  const SizedBox(height: 16),
+                  Slider(
+                    value: tempPadding,
+                    min: 12.0,
+                    max: 32.0,
+                    divisions: 10,
+                    label: '${tempPadding.round()}px',
+                    onChanged: (value) {
+                      setState(() {
+                        tempPadding = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          localizations.compact12px,
+                          style: Theme.of(context).textTheme.bodySmall,
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          localizations.loose32px,
+                          style: Theme.of(context).textTheme.bodySmall,
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
+              child: Text(localizations.cancel),
             ),
             TextButton(
               onPressed: () {
@@ -535,67 +501,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('卡片内边距已设置为 ${tempPadding.round()}px'),
+                    content: Text(
+                      localizations.cardPaddingSet(tempPadding.round()),
+                    ),
                     duration: const Duration(seconds: 2),
                   ),
                 );
               },
-              child: const Text('确定'),
+              child: Text(localizations.confirm),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showReminderDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('设置提醒时间'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (String time in ['08:00', '12:00', '18:00', '20:00'])
-              ListTile(
-                title: Text(time),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('已设置提醒时间：$time')));
-                  // TODO: Set reminder
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showClearDataDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('清除数据'),
-        content: const Text('确定要删除所有本地数据吗？此操作不可恢复。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Clear all data
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('数据已清除')));
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('确认删除'),
-          ),
-        ],
       ),
     );
   }
@@ -607,22 +523,6 @@ class _SettingsPageState extends State<SettingsPage> {
       applicationVersion: '1.0.0',
       applicationIcon: const Icon(Icons.self_improvement, size: 48),
       children: [const Text('Mindra 是一款专注于冥想和正念练习的应用，帮助您缓解压力，提升专注力。')],
-    );
-  }
-
-  void _showComingSoonDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('即将推出'),
-        content: const Text('此功能正在开发中，敬请期待。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('知道了'),
-          ),
-        ],
-      ),
     );
   }
 

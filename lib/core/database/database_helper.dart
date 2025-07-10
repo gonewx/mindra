@@ -13,7 +13,7 @@ class DatabaseHelper {
 
   static Future<Database> get database async {
     if (_database != null) return _database!;
-    
+
     _database = await _initDatabase();
     return _database!;
   }
@@ -22,7 +22,7 @@ class DatabaseHelper {
     try {
       // Get the database factory (should be set in main.dart)
       var factory = databaseFactory;
-      
+
       // For web platform, use in-memory database path
       String path;
       if (kIsWeb) {
@@ -97,17 +97,21 @@ class DatabaseHelper {
     await db.execute('''
       CREATE INDEX idx_media_items_created_at ON $_mediaItemsTable(created_at)
     ''');
-    
+
     await db.execute('''
       CREATE INDEX idx_media_items_category ON $_mediaItemsTable(category)
     ''');
-    
+
     await db.execute('''
       CREATE INDEX idx_meditation_sessions_start_time ON $_meditationSessionsTable(start_time)
     ''');
   }
 
-  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  static Future<void> _onUpgrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
     // Handle database upgrades here when needed
     if (oldVersion < newVersion) {
       // Add migration logic here
@@ -117,7 +121,11 @@ class DatabaseHelper {
   // Media Items operations
   static Future<void> insertMediaItem(Map<String, dynamic> item) async {
     final db = await database;
-    await db.insert(_mediaItemsTable, item, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+      _mediaItemsTable,
+      item,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   static Future<List<Map<String, dynamic>>> getMediaItems() async {
@@ -125,7 +133,9 @@ class DatabaseHelper {
     return await db.query(_mediaItemsTable, orderBy: 'created_at DESC');
   }
 
-  static Future<List<Map<String, dynamic>>> getMediaItemsByCategory(String category) async {
+  static Future<List<Map<String, dynamic>>> getMediaItemsByCategory(
+    String category,
+  ) async {
     final db = await database;
     return await db.query(
       _mediaItemsTable,
@@ -145,7 +155,9 @@ class DatabaseHelper {
     );
   }
 
-  static Future<List<Map<String, dynamic>>> getRecentMediaItems(int limit) async {
+  static Future<List<Map<String, dynamic>>> getRecentMediaItems(
+    int limit,
+  ) async {
     final db = await database;
     return await db.query(
       _mediaItemsTable,
@@ -155,7 +167,10 @@ class DatabaseHelper {
     );
   }
 
-  static Future<void> updateMediaItem(String id, Map<String, dynamic> updates) async {
+  static Future<void> updateMediaItem(
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
     final db = await database;
     await db.update(
       _mediaItemsTable,
@@ -167,17 +182,19 @@ class DatabaseHelper {
 
   static Future<void> deleteMediaItem(String id) async {
     final db = await database;
-    await db.delete(
-      _mediaItemsTable,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete(_mediaItemsTable, where: 'id = ?', whereArgs: [id]);
   }
 
   // Meditation Sessions operations
-  static Future<void> insertMeditationSession(Map<String, dynamic> session) async {
+  static Future<void> insertMeditationSession(
+    Map<String, dynamic> session,
+  ) async {
     final db = await database;
-    await db.insert(_meditationSessionsTable, session, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+      _meditationSessionsTable,
+      session,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   static Future<List<Map<String, dynamic>>> getMeditationSessions() async {
@@ -198,7 +215,10 @@ class DatabaseHelper {
     return await db.query(
       _meditationSessionsTable,
       where: 'start_time >= ? AND start_time <= ?',
-      whereArgs: [startDate.millisecondsSinceEpoch, endDate.millisecondsSinceEpoch],
+      whereArgs: [
+        startDate.millisecondsSinceEpoch,
+        endDate.millisecondsSinceEpoch,
+      ],
       orderBy: 'start_time DESC',
     );
   }
@@ -213,11 +233,14 @@ class DatabaseHelper {
         COUNT(CASE WHEN is_completed = 1 THEN 1 END) as completed_sessions
       FROM $_meditationSessionsTable
     ''');
-    
+
     return result.isNotEmpty ? result.first : null;
   }
 
-  static Future<void> updateMeditationSession(String id, Map<String, dynamic> updates) async {
+  static Future<void> updateMeditationSession(
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
     final db = await database;
     await db.update(
       _meditationSessionsTable,
@@ -229,21 +252,16 @@ class DatabaseHelper {
 
   static Future<void> deleteMeditationSession(String id) async {
     final db = await database;
-    await db.delete(
-      _meditationSessionsTable,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete(_meditationSessionsTable, where: 'id = ?', whereArgs: [id]);
   }
 
   // User Preferences operations
   static Future<void> setPreference(String key, String value) async {
     final db = await database;
-    await db.insert(
-      _userPreferencesTable,
-      {'key': key, 'value': value},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert(_userPreferencesTable, {
+      'key': key,
+      'value': value,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   static Future<String?> getPreference(String key) async {
@@ -253,17 +271,13 @@ class DatabaseHelper {
       where: 'key = ?',
       whereArgs: [key],
     );
-    
+
     return result.isNotEmpty ? result.first['value'] as String? : null;
   }
 
   static Future<void> deletePreference(String key) async {
     final db = await database;
-    await db.delete(
-      _userPreferencesTable,
-      where: 'key = ?',
-      whereArgs: [key],
-    );
+    await db.delete(_userPreferencesTable, where: 'key = ?', whereArgs: [key]);
   }
 
   // Utility methods

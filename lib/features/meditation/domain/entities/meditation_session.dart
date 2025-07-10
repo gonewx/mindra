@@ -88,7 +88,8 @@ class MeditationSession extends Equatable {
           ? DateTime.fromMillisecondsSinceEpoch(map['end_time'])
           : null,
       type: SessionType.values.firstWhere((e) => e.name == map['type']),
-      soundEffects: map['sound_effects'] != null && map['sound_effects'].isNotEmpty
+      soundEffects:
+          map['sound_effects'] != null && map['sound_effects'].isNotEmpty
           ? map['sound_effects'].split(',')
           : [],
       rating: map['rating']?.toDouble() ?? 0.0,
@@ -99,28 +100,22 @@ class MeditationSession extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        mediaItemId,
-        title,
-        duration,
-        actualDuration,
-        startTime,
-        endTime,
-        type,
-        soundEffects,
-        rating,
-        notes,
-        isCompleted,
-      ];
+    id,
+    mediaItemId,
+    title,
+    duration,
+    actualDuration,
+    startTime,
+    endTime,
+    type,
+    soundEffects,
+    rating,
+    notes,
+    isCompleted,
+  ];
 }
 
-enum SessionType {
-  meditation,
-  breathing,
-  sleep,
-  focus,
-  relaxation,
-}
+enum SessionType { meditation, breathing, sleep, focus, relaxation }
 
 extension SessionTypeExtension on SessionType {
   String get displayName {

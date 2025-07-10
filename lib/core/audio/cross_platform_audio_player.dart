@@ -5,13 +5,7 @@ import 'dart:io';
 import 'dart:async';
 import '../../features/player/services/audio_focus_manager.dart';
 
-enum CrossPlatformPlayerState {
-  stopped,
-  playing,
-  paused,
-  completed,
-  disposed,
-}
+enum CrossPlatformPlayerState { stopped, playing, paused, completed, disposed }
 
 class CrossPlatformAudioPlayer {
   audioplayers.AudioPlayer? _audioPlayersInstance;
@@ -203,19 +197,22 @@ class CrossPlatformAudioPlayer {
     } else {
       // For just_audio, we need to map its player state to our enum
       return _justAudioInstance?.playerStateStream.map((state) {
-        switch (state.playing) {
-          case true:
-            return CrossPlatformPlayerState.playing;
-          case false:
-            if (state.processingState == just_audio.ProcessingState.completed) {
-              return CrossPlatformPlayerState.completed;
-            } else if (state.processingState == just_audio.ProcessingState.idle) {
-              return CrossPlatformPlayerState.stopped;
-            } else {
-              return CrossPlatformPlayerState.paused;
+            switch (state.playing) {
+              case true:
+                return CrossPlatformPlayerState.playing;
+              case false:
+                if (state.processingState ==
+                    just_audio.ProcessingState.completed) {
+                  return CrossPlatformPlayerState.completed;
+                } else if (state.processingState ==
+                    just_audio.ProcessingState.idle) {
+                  return CrossPlatformPlayerState.stopped;
+                } else {
+                  return CrossPlatformPlayerState.paused;
+                }
             }
-        }
-      }) ?? Stream.empty();
+          }) ??
+          Stream.empty();
     }
   }
 
@@ -231,19 +228,19 @@ class CrossPlatformAudioPlayer {
   static Future<Duration?> getMediaDuration(String filePath) async {
     try {
       final tempPlayer = CrossPlatformAudioPlayer();
-      
+
       if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
         await tempPlayer.setUrl(filePath);
       } else {
         await tempPlayer.setFilePath(filePath);
       }
-      
+
       // Wait a bit for the duration to be loaded
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       final duration = await tempPlayer.getDuration();
       await tempPlayer.dispose();
-      
+
       return duration;
     } catch (e) {
       debugPrint('Failed to get media duration: $e');

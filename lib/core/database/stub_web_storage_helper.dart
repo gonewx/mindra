@@ -11,7 +11,9 @@ class WebStorageHelper {
     throw UnsupportedError('WebStorageHelper is only available on web');
   }
 
-  static Future<List<MediaItem>> getMediaItemsByCategory(String category) async {
+  static Future<List<MediaItem>> getMediaItemsByCategory(
+    String category,
+  ) async {
     throw UnsupportedError('WebStorageHelper is only available on web');
   }
 
@@ -19,7 +21,10 @@ class WebStorageHelper {
     throw UnsupportedError('WebStorageHelper is only available on web');
   }
 
-  static Future<void> updateMediaItem(String id, Map<String, dynamic> updates) async {
+  static Future<void> updateMediaItem(
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
     throw UnsupportedError('WebStorageHelper is only available on web');
   }
 

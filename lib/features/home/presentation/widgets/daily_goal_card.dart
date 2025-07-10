@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../../meditation/presentation/widgets/goal_settings_dialog.dart';
 import '../../../../features/goals/data/services/goal_service.dart';
 import '../../../../features/goals/domain/entities/user_goal.dart';
+import '../../../../features/meditation/data/services/meditation_statistics_service.dart';
+import '../../../../features/meditation/domain/entities/meditation_statistics.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class DailyGoalCard extends StatefulWidget {
   final double? cardPadding; // 卡片内边距控制
@@ -19,24 +22,74 @@ class DailyGoalCard extends StatefulWidget {
 
 class _DailyGoalCardState extends State<DailyGoalCard> {
   UserGoal? _currentGoal;
+  MeditationStatistics? _statistics;
+  double _progressValue = 0.0;
+  String _progressText = '0%';
 
   @override
   void initState() {
     super.initState();
-    _loadGoal();
+    _loadGoalAndProgress();
   }
 
-  Future<void> _loadGoal() async {
+  Future<void> _loadGoalAndProgress() async {
     try {
       final goal = await GoalService.getGoal();
+      final statistics = await MeditationStatisticsService.getStatistics();
+
       if (mounted) {
         setState(() {
           _currentGoal = goal;
+          _statistics = statistics;
+          _calculateProgress();
         });
       }
     } catch (e) {
-      debugPrint('Error loading goal: $e');
+      debugPrint('Error loading goal and progress: $e');
     }
+  }
+
+  void _calculateProgress() {
+    if (_currentGoal == null || _statistics == null) {
+      _progressValue = 0.0;
+      _progressText = '0%';
+      return;
+    }
+
+    // 解析每日目标时长（分钟）
+    final goalText = _currentGoal!.dailyGoal;
+    final goalMinutes = int.tryParse(goalText.replaceAll('分钟', '')) ?? 20;
+
+    // 获取今日实际冥想时长
+    final today = DateTime.now();
+    final todayMinutes = _getTodayMinutes(today);
+
+    // 计算进度
+    _progressValue = (todayMinutes / goalMinutes).clamp(0.0, 1.0);
+    _progressText = '${(_progressValue * 100).round()}%';
+  }
+
+  int _getTodayMinutes(DateTime today) {
+    if (_statistics == null || _statistics!.monthlyRecords.isEmpty) return 0;
+
+    // 获取今日冥想时长
+    final todayKey =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    // 从月度记录中查找今日数据
+    try {
+      final todayRecord = _statistics!.monthlyRecords.firstWhere(
+        (record) => _getDateKey(record.date) == todayKey,
+      );
+      return todayRecord.totalMinutes;
+    } catch (e) {
+      // 如果找不到今日记录，返回0
+      return 0;
+    }
+  }
+
+  String _getDateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   Future<void> _showGoalDialog() async {
@@ -46,6 +99,7 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
       onGoalUpdated: (goal) {
         setState(() {
           _currentGoal = goal;
+          _calculateProgress();
         });
       },
     );
@@ -54,6 +108,7 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final localizations = AppLocalizations.of(context)!;
 
     // 使用可配置的参数，如果没有提供则使用默认值
     final effectivePadding = widget.cardPadding ?? 20.0; // 默认 20px 匹配原型
@@ -92,7 +147,7 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
                   children: [
                     Flexible(
                       child: Text(
-                        '今日目标',
+                        localizations.dailyGoalTitle,
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: Colors.white,
                           // 移除额外的fontWeight，使用主题默认的w500
@@ -105,8 +160,8 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
                     Flexible(
                       child: Text(
                         _currentGoal != null
-                            ? '${_currentGoal!.dailyGoal}冥想'
-                            : '20分钟冥想',
+                            ? '${_currentGoal!.dailyGoal}${localizations.dailyGoalMeditationSuffix}'
+                            : localizations.dailyGoalDefault,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: Colors.white.withValues(alpha: 0.9),
                         ),
@@ -132,7 +187,7 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
                       width: 52,
                       height: 52,
                       child: CircularProgressIndicator(
-                        value: 0.75, // 75% progress
+                        value: _progressValue,
                         strokeWidth: 4,
                         backgroundColor: Colors.white.withValues(alpha: 0.3),
                         valueColor: const AlwaysStoppedAnimation<Color>(
@@ -141,7 +196,7 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
                       ),
                     ),
                     Text(
-                      '75%',
+                      _progressText,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/simple_sound_effects_player.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class SoundEffectsPanel extends StatefulWidget {
   const SoundEffectsPanel({super.key});
@@ -36,10 +37,10 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
         debugPrint('Sound effects player not initialized, initializing now...');
         await _soundPlayer.initialize();
       }
-      
+
       // 同步当前音效状态
       _syncCurrentState();
-      
+
       if (mounted) {
         setState(() {
           _isInitialized = true;
@@ -60,7 +61,7 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
   void _syncCurrentState() {
     final currentVolumes = _soundPlayer.currentVolumes;
     final currentMasterVolume = _soundPlayer.masterVolume;
-    
+
     setState(() {
       // 同步各个音效的音量状态
       for (final entry in currentVolumes.entries) {
@@ -68,11 +69,11 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
           _effectVolumes[entry.key] = entry.value;
         }
       }
-      
+
       // 同步主音量
       _masterVolume = currentMasterVolume;
     });
-    
+
     debugPrint('Synced sound effects state: $_effectVolumes');
     debugPrint('Synced master volume: $_masterVolume');
   }
@@ -85,29 +86,33 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
   }
 
   // 音效配置
-  final List<Map<String, dynamic>> _effects = [
-    {'id': 'rain', 'name': '雨声', 'icon': Icons.grain},
-    {'id': 'ocean', 'name': '海浪', 'icon': Icons.waves},
-    {'id': 'wind_chimes', 'name': '风铃', 'icon': Icons.air},
-    {'id': 'birds', 'name': '鸟鸣', 'icon': Icons.flutter_dash},
-  ];
+  List<Map<String, dynamic>> _getEffects(AppLocalizations localizations) {
+    return [
+      {'id': 'rain', 'name': localizations.soundEffectsRain, 'icon': Icons.grain},
+      {'id': 'ocean', 'name': localizations.soundEffectsOcean, 'icon': Icons.waves},
+      {'id': 'wind_chimes', 'name': localizations.soundEffectsWindChimes, 'icon': Icons.air},
+      {'id': 'birds', 'name': localizations.soundEffectsBirds, 'icon': Icons.flutter_dash},
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final localizations = AppLocalizations.of(context)!;
+    final effects = _getEffects(localizations);
 
     // 显示加载状态
     if (!_isInitialized) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(40.0),
+          padding: const EdgeInsets.all(40.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('正在加载音效...'),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(localizations.soundEffectsLoading),
             ],
           ),
         ),
@@ -119,7 +124,7 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
       children: [
         // Background Sound Effects Section
         Text(
-          '背景音效',
+          localizations.soundEffectsBackgroundTitle,
           style: theme.textTheme.titleMedium?.copyWith(
             color: isDark ? Colors.white : theme.colorScheme.onSurface,
             fontWeight: FontWeight.w500,
@@ -127,41 +132,49 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
         ),
         const SizedBox(height: 4),
         Text(
-          '轻柔的背景音效，不会干扰主要音频',
+          localizations.soundEffectsBackgroundDescription,
           style: theme.textTheme.bodySmall?.copyWith(
             color: isDark ? Colors.white70 : Colors.grey[600],
           ),
         ),
         const SizedBox(height: 16),
 
-        // Sound Effects Grid - 2x2 layout to match screenshot
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 3.0,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemCount: _effects.length,
-          itemBuilder: (context, index) {
-            final effect = _effects[index];
-            final effectId = effect['id'] as String;
-            final isActive = (_effectVolumes[effectId] ?? 0.0) > 0;
-            return _SoundEffectButton(
-              effect: effectId,
-              name: effect['name'] as String,
-              icon: effect['icon'] as IconData,
-              isActive: isActive,
-              onTap: () async {
-                final newVolume = isActive ? 0.0 : 0.5;
-                setState(() {
-                  _effectVolumes[effectId] = newVolume;
-                });
+        // Sound Effects Grid - responsive layout
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // 根据屏幕宽度调整列数
+            int crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
+            double childAspectRatio = constraints.maxWidth > 600 ? 2.5 : 2.8;
+            
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                childAspectRatio: childAspectRatio,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: effects.length,
+              itemBuilder: (context, index) {
+                final effect = effects[index];
+                final effectId = effect['id'] as String;
+                final isActive = (_effectVolumes[effectId] ?? 0.0) > 0;
+                return _SoundEffectButton(
+                  effect: effectId,
+                  name: effect['name'] as String,
+                  icon: effect['icon'] as IconData,
+                  isActive: isActive,
+                  onTap: () async {
+                    final newVolume = isActive ? 0.0 : 0.5;
+                    setState(() {
+                      _effectVolumes[effectId] = newVolume;
+                    });
 
-                // 实际播放音效
-                await _soundPlayer.toggleEffect(effectId, newVolume);
+                    // 实际播放音效
+                    await _soundPlayer.toggleEffect(effectId, newVolume);
+                  },
+                );
               },
             );
           },
@@ -170,7 +183,7 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
 
         // Volume Control Section
         Text(
-          '音量控制',
+          localizations.soundEffectsVolumeControl,
           style: theme.textTheme.titleMedium?.copyWith(
             color: isDark ? Colors.white : theme.colorScheme.onSurface,
             fontWeight: FontWeight.w500,
@@ -212,17 +225,19 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
           child: ElevatedButton(
             onPressed: () {
               // 确定时保持当前音效设置，不停止播放
-              debugPrint('Sound effects confirmed with settings: $_effectVolumes');
+              debugPrint(
+                'Sound effects confirmed with settings: $_effectVolumes',
+              );
               debugPrint('Master volume: $_masterVolume');
-              
+
               // 显示确认消息
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('背景音效设置已保存'),
-                  duration: Duration(seconds: 2),
+                SnackBar(
+                  content: Text(localizations.soundEffectsSettingsSaved),
+                  duration: const Duration(seconds: 2),
                 ),
               );
-              
+
               Navigator.of(context).pop();
             },
             style: ElevatedButton.styleFrom(
@@ -233,9 +248,9 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text(
-              '确定',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            child: Text(
+              localizations.actionConfirm,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ),
         ),
@@ -269,6 +284,10 @@ class _SoundEffectButton extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
+          constraints: BoxConstraints(
+            minWidth: 100,
+            maxWidth: 140,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: isActive
@@ -288,6 +307,7 @@ class _SoundEffectButton extends StatelessWidget {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
@@ -297,14 +317,19 @@ class _SoundEffectButton extends StatelessWidget {
                 size: 16,
               ),
               const SizedBox(width: 6),
-              Text(
-                name,
-                style: TextStyle(
-                  color: isActive
-                      ? Colors.white
-                      : (isDark ? Colors.white70 : Colors.grey[600]),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    color: isActive
+                        ? Colors.white
+                        : (isDark ? Colors.white70 : Colors.grey[600]),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

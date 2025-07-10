@@ -20,7 +20,7 @@ class MeditationSessionManager {
     try {
       final sessionId = _uuid.v4();
       final startTime = DateTime.now();
-      
+
       _currentSession = MeditationSession(
         id: sessionId,
         mediaItemId: mediaItem.id,
@@ -32,13 +32,13 @@ class MeditationSessionManager {
         soundEffects: soundEffects,
         isCompleted: false,
       );
-      
+
       _sessionStartTime = startTime;
       _actualDuration = 0;
-      
+
       // 立即保存会话记录（状态为未完成）
       await _saveSessionToDatabase(_currentSession!);
-      
+
       debugPrint('Started meditation session: ${_currentSession!.id}');
       return sessionId;
     } catch (e) {
@@ -62,7 +62,7 @@ class MeditationSessionManager {
         final updatedSession = _currentSession!.copyWith(
           actualDuration: _actualDuration,
         );
-        
+
         await _updateSessionInDatabase(updatedSession);
         debugPrint('Paused meditation session: ${_currentSession!.id}');
       } catch (e) {
@@ -93,16 +93,17 @@ class MeditationSessionManager {
           notes: notes,
           isCompleted: true,
         );
-        
+
         await _updateSessionInDatabase(completedSession);
-        
-        debugPrint('Completed meditation session: ${completedSession.id}, duration: ${_actualDuration}s');
-        
+
+        debugPrint(
+          'Completed meditation session: ${completedSession.id}, duration: ${_actualDuration}s',
+        );
+
         // 清理当前会话状态
         _currentSession = null;
         _sessionStartTime = null;
         _actualDuration = 0;
-        
       } catch (e) {
         debugPrint('Error completing meditation session: $e');
         throw Exception('Failed to complete meditation session: $e');
@@ -111,10 +112,7 @@ class MeditationSessionManager {
   }
 
   /// 停止会话（未完成但保存进度）
-  static Future<void> stopSession({
-    double rating = 0.0,
-    String? notes,
-  }) async {
+  static Future<void> stopSession({double rating = 0.0, String? notes}) async {
     if (_currentSession != null && _sessionStartTime != null) {
       try {
         final endTime = DateTime.now();
@@ -125,16 +123,17 @@ class MeditationSessionManager {
           notes: notes,
           isCompleted: false, // 标记为未完成
         );
-        
+
         await _updateSessionInDatabase(stoppedSession);
-        
-        debugPrint('Stopped meditation session: ${stoppedSession.id}, duration: ${_actualDuration}s');
-        
+
+        debugPrint(
+          'Stopped meditation session: ${stoppedSession.id}, duration: ${_actualDuration}s',
+        );
+
         // 清理当前会话状态
         _currentSession = null;
         _sessionStartTime = null;
         _actualDuration = 0;
-        
       } catch (e) {
         debugPrint('Error stopping meditation session: $e');
         throw Exception('Failed to stop meditation session: $e');
@@ -166,14 +165,22 @@ class MeditationSessionManager {
   }
 
   /// 更新数据库中的会话
-  static Future<void> _updateSessionInDatabase(MeditationSession session) async {
+  static Future<void> _updateSessionInDatabase(
+    MeditationSession session,
+  ) async {
     try {
       if (kIsWeb) {
-        await WebStorageHelper.updateMeditationSession(session.id, session.toMap());
+        await WebStorageHelper.updateMeditationSession(
+          session.id,
+          session.toMap(),
+        );
       } else {
-        await DatabaseHelper.updateMeditationSession(session.id, session.toMap());
+        await DatabaseHelper.updateMeditationSession(
+          session.id,
+          session.toMap(),
+        );
       }
-      
+
       // 更新当前会话状态
       _currentSession = session;
     } catch (e) {
@@ -184,21 +191,22 @@ class MeditationSessionManager {
 
   /// 获取会话类型基于媒体类别
   static SessionType getSessionTypeFromCategory(String category) {
-    switch (category.toLowerCase()) {
-      case '呼吸练习':
-      case 'breathing':
-        return SessionType.breathing;
-      case '睡眠引导':
-      case 'sleep':
-        return SessionType.sleep;
-      case '专注训练':
-      case 'focus':
-        return SessionType.focus;
-      case '放松冥想':
-      case 'relaxation':
-        return SessionType.relaxation;
-      default:
-        return SessionType.meditation;
+    final lowerCategory = category.toLowerCase();
+    
+    // 支持中文和英文
+    if (lowerCategory.contains('呼吸') || lowerCategory.contains('breathing')) {
+      return SessionType.breathing;
+    } else if (lowerCategory.contains('睡眠') || lowerCategory.contains('睡前') || 
+               lowerCategory.contains('sleep') || lowerCategory.contains('bedtime')) {
+      return SessionType.sleep;
+    } else if (lowerCategory.contains('专注') || lowerCategory.contains('focus') ||
+               lowerCategory.contains('学习') || lowerCategory.contains('study')) {
+      return SessionType.focus;
+    } else if (lowerCategory.contains('放松') || lowerCategory.contains('舒缓') ||
+               lowerCategory.contains('relaxation') || lowerCategory.contains('relax')) {
+      return SessionType.relaxation;
+    } else {
+      return SessionType.meditation;
     }
   }
 

@@ -15,7 +15,7 @@ class _FloatingPlayerState extends State<FloatingPlayer>
   late GlobalPlayerService _playerService;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  
+
   bool _isDragging = false;
   Offset _position = const Offset(0, 0); // 初始位置，将在 initState 中设置
   bool _isInitialized = false;
@@ -24,24 +24,20 @@ class _FloatingPlayerState extends State<FloatingPlayer>
   void initState() {
     super.initState();
     _playerService = getIt<GlobalPlayerService>();
-    
+
     // 创建动画控制器
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.9,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
     // 监听播放器状态变化
     _playerService.addListener(_onPlayerServiceChanged);
-    
+
     // 异步初始化位置
     _initializePosition();
   }
@@ -58,7 +54,7 @@ class _FloatingPlayerState extends State<FloatingPlayer>
       final prefs = await SharedPreferences.getInstance();
       final savedX = prefs.getDouble('floating_player_x');
       final savedY = prefs.getDouble('floating_player_y');
-      
+
       if (savedX != null && savedY != null) {
         // 直接设置保存的位置，不需要 setState，因为这在 initState 期间调用
         _position = Offset(savedX, savedY);
@@ -86,12 +82,13 @@ class _FloatingPlayerState extends State<FloatingPlayer>
     final screenSize = MediaQuery.of(context).size;
     // 右下角位置，距离底部导航栏(约80px)上面20px，距离右边20px
     final defaultX = screenSize.width - 80.0; // 60(浮动球宽度) + 20(边距)
-    final defaultY = screenSize.height - 160.0; // 80(导航栏高度) + 20(间距) + 60(浮动球高度)
-    
+    final defaultY =
+        screenSize.height - 160.0; // 80(导航栏高度) + 20(间距) + 60(浮动球高度)
+
     setState(() {
       _position = Offset(defaultX, defaultY);
     });
-    
+
     // 保存默认位置，这样下次就不需要重新计算了
     _savePosition();
     debugPrint('Set and saved default floating player position: $_position');
@@ -130,7 +127,7 @@ class _FloatingPlayerState extends State<FloatingPlayer>
 
     final screenSize = MediaQuery.of(context).size;
     final theme = Theme.of(context);
-    
+
     return Positioned(
       left: _position.dx,
       top: _position.dy,
@@ -144,7 +141,7 @@ class _FloatingPlayerState extends State<FloatingPlayer>
         onPanUpdate: (details) {
           setState(() {
             _position += details.delta;
-            
+
             // 限制在屏幕边界内
             _position = Offset(
               _position.dx.clamp(0, screenSize.width - 60),
@@ -157,15 +154,15 @@ class _FloatingPlayerState extends State<FloatingPlayer>
             _isDragging = false;
           });
           _animationController.reverse();
-          
+
           // 自动吸附到屏幕边缘
           final centerX = screenSize.width / 2;
           final targetX = _position.dx < centerX ? 0.0 : screenSize.width - 60;
-          
+
           setState(() {
             _position = Offset(targetX, _position.dy);
           });
-          
+
           // 保存新位置（包括吸附后的位置）
           _savePosition();
         },
@@ -194,18 +191,23 @@ class _FloatingPlayerState extends State<FloatingPlayer>
                     // 播放/暂停按钮
                     Center(
                       child: Icon(
-                        _playerService.isPlaying ? Icons.pause : Icons.play_arrow,
+                        _playerService.isPlaying
+                            ? Icons.pause
+                            : Icons.play_arrow,
                         color: theme.colorScheme.onPrimary,
                         size: 28,
                       ),
                     ),
-                    
+
                     // 进度环
                     if (_playerService.totalDuration > 0)
                       Positioned.fill(
                         child: CircularProgressIndicator(
-                          value: _playerService.currentPosition / _playerService.totalDuration,
-                          backgroundColor: theme.colorScheme.onPrimary.withValues(alpha: 0.3),
+                          value:
+                              _playerService.currentPosition /
+                              _playerService.totalDuration,
+                          backgroundColor: theme.colorScheme.onPrimary
+                              .withValues(alpha: 0.3),
                           valueColor: AlwaysStoppedAnimation<Color>(
                             theme.colorScheme.onPrimary,
                           ),
@@ -237,19 +239,11 @@ class _FloatingPlayerState extends State<FloatingPlayer>
 
 class FloatingPlayerOverlay extends StatelessWidget {
   final Widget child;
-  
-  const FloatingPlayerOverlay({
-    super.key,
-    required this.child,
-  });
+
+  const FloatingPlayerOverlay({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        child,
-        const FloatingPlayer(),
-      ],
-    );
+    return Stack(children: [child, const FloatingPlayer()]);
   }
 }

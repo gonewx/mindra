@@ -5,6 +5,7 @@ import '../widgets/goal_settings_dialog.dart';
 import '../widgets/reminder_settings_dialog.dart';
 import '../../../goals/domain/entities/user_goal.dart';
 import '../../../goals/data/services/goal_service.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class MeditationHistoryPage extends StatefulWidget {
   const MeditationHistoryPage({super.key});
@@ -42,9 +43,12 @@ class _MeditationHistoryPageState extends State<MeditationHistoryPage> {
 
   Future<void> _loadData() async {
     try {
-      final statistics = await MeditationStatisticsService.getStatistics();
+      final localizations = AppLocalizations.of(context)!;
+      final statistics = await MeditationStatisticsService.getStatistics(
+        localizations,
+      );
       final userGoal = await GoalService.getGoal();
-      
+
       if (mounted) {
         setState(() {
           _statistics = statistics;
@@ -90,24 +94,25 @@ class _MeditationHistoryPageState extends State<MeditationHistoryPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final localizations = AppLocalizations.of(context)!;
 
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
-    final statistics = _statistics ?? const MeditationStatistics(
-      streakDays: 0,
-      weeklyMinutes: 0,
-      totalSessions: 0,
-      totalMinutes: 0,
-      averageRating: 0.0,
-      completedSessions: 0,
-      weeklyData: [0, 0, 0, 0, 0, 0, 0],
-      achievements: [],
-      monthlyRecords: [],
-    );
+    final statistics =
+        _statistics ??
+        const MeditationStatistics(
+          streakDays: 0,
+          weeklyMinutes: 0,
+          totalSessions: 0,
+          totalMinutes: 0,
+          averageRating: 0.0,
+          completedSessions: 0,
+          weeklyData: [0, 0, 0, 0, 0, 0, 0],
+          achievements: [],
+          monthlyRecords: [],
+        );
 
     return RefreshIndicator(
       onRefresh: _refreshData,
@@ -116,168 +121,184 @@ class _MeditationHistoryPageState extends State<MeditationHistoryPage> {
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '我的进度',
-                  style: theme.textTheme.headlineLarge?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                MouseRegion(
-                  cursor: SystemMouseCursors.click, // 添加手形光标
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: theme.colorScheme.surface,
-                      border: Border.all(
-                        color: theme.colorScheme.outline.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: IconButton(
-                      onPressed: () {
-                        showProgressSettings(context, userGoal: _userGoal, onGoalUpdated: _onGoalUpdated);
-                      },
-                      icon: Icon(
-                        Icons.settings_outlined,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // Stats Overview
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.local_fire_department_rounded,
-                    title: '连续天数',
-                    value: '${statistics.streakDays}天',
-                    color: theme.colorScheme.secondary,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.schedule_rounded,
-                    title: '本周时长',
-                    value: '${statistics.weeklyMinutes}分钟',
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.emoji_events_rounded,
-                    title: '总次数',
-                    value: '${statistics.totalSessions}次',
-                    color: theme.colorScheme.tertiary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // Weekly Chart
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.shadowColor.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '本周冥想时长',
-                    style: theme.textTheme.titleLarge?.copyWith(
+                    localizations.progressMyProgress,
+                    style: theme.textTheme.headlineLarge?.copyWith(
                       color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  SizedBox(height: 200, child: _WeeklyChart(weeklyData: statistics.weeklyData)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Achievements
-            Text(
-              '成就徽章',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 4,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              children: statistics.achievements.map((achievement) {
-                return _AchievementBadge(
-                  icon: _getAchievementIcon(achievement.iconName),
-                  label: achievement.title,
-                  isEarned: achievement.isEarned,
-                  color: achievement.isEarned 
-                      ? theme.colorScheme.secondary
-                      : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 32),
-
-            // Calendar View
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.shadowColor.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click, // 添加手形光标
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.colorScheme.surface,
+                        border: Border.all(
+                          color: theme.colorScheme.outline.withValues(
+                            alpha: 0.2,
+                          ),
+                        ),
+                      ),
+                      child: IconButton(
+                        onPressed: () {
+                          showProgressSettings(
+                            context,
+                            userGoal: _userGoal,
+                            onGoalUpdated: _onGoalUpdated,
+                          );
+                        },
+                        icon: Icon(
+                          Icons.settings_outlined,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 32),
+
+              // Stats Overview
+              Row(
                 children: [
-                  Text(
-                    '冥想历史',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: _StatCard(
+                      icon: Icons.local_fire_department_rounded,
+                      title: localizations.statsConsecutiveDays,
+                      value: localizations.statsDaysFormat(
+                        statistics.streakDays,
+                      ),
+                      color: theme.colorScheme.secondary,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  _CalendarGrid(monthlyRecords: statistics.monthlyRecords),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _StatCard(
+                      icon: Icons.schedule_rounded,
+                      title: localizations.statsWeeklyDuration,
+                      value: localizations.statsMinutesFormat(
+                        statistics.weeklyMinutes,
+                      ),
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _StatCard(
+                      icon: Icons.emoji_events_rounded,
+                      title: localizations.statsTotalSessions,
+                      value: localizations.statsTimesFormat(
+                        statistics.totalSessions,
+                      ),
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
-          ],
+              const SizedBox(height: 32),
+
+              // Weekly Chart
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.shadowColor.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      localizations.statsWeeklyMeditationDuration,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 200,
+                      child: _WeeklyChart(weeklyData: statistics.weeklyData),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Achievements
+              Text(
+                localizations.achievementsTitle,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 4, // 改为3列，给更多空间显示文字
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 0.85, // 调整宽高比，给文字更多空间
+                children: statistics.achievements.map((achievement) {
+                  return _AchievementBadge(
+                    icon: _getAchievementIcon(achievement.iconName),
+                    label: achievement.title,
+                    isEarned: achievement.isEarned,
+                    color: achievement.isEarned
+                        ? theme.colorScheme.secondary
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 32),
+
+              // Calendar View
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.shadowColor.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      localizations.historyMeditationHistory,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _CalendarGrid(monthlyRecords: statistics.monthlyRecords),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -347,9 +368,20 @@ class _WeeklyChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final localizations = AppLocalizations.of(context)!;
     // Use real data instead of mock data
-    final weekDays = ['一', '二', '三', '四', '五', '六', '日'];
-    final maxValue = weeklyData.isNotEmpty ? weeklyData.reduce((a, b) => a > b ? a : b) : 0;
+    final weekDays = [
+      localizations.calendarMonday,
+      localizations.calendarTuesday,
+      localizations.calendarWednesday,
+      localizations.calendarThursday,
+      localizations.calendarFriday,
+      localizations.calendarSaturday,
+      localizations.calendarSunday,
+    ];
+    final maxValue = weeklyData.isNotEmpty
+        ? weeklyData.reduce((a, b) => a > b ? a : b)
+        : 0;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -427,9 +459,10 @@ class _AchievementBadge extends StatelessWidget {
                   ? Colors.white
                   : theme.colorScheme.onSurface.withValues(alpha: 0.7),
               fontWeight: FontWeight.w500,
+              fontSize: 11, // 稍微减小字体以适应更多文字
             ),
             textAlign: TextAlign.center,
-            maxLines: 1,
+            maxLines: 2, // 允许2行文字
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -446,6 +479,7 @@ class _CalendarGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final localizations = AppLocalizations.of(context)!;
     final today = DateTime.now();
     final daysInMonth = DateTime(today.year, today.month + 1, 0).day;
     final firstDayWeekday = DateTime(today.year, today.month, 1).weekday;
@@ -463,18 +497,27 @@ class _CalendarGrid extends StatelessWidget {
         // 星期标题
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: ['日', '一', '二', '三', '四', '五', '六'].map((day) {
-            return Expanded(
-              child: Text(
-                day,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            );
-          }).toList(),
+          children:
+              [
+                localizations.calendarSunday,
+                localizations.calendarMonday,
+                localizations.calendarTuesday,
+                localizations.calendarWednesday,
+                localizations.calendarThursday,
+                localizations.calendarFriday,
+                localizations.calendarSaturday,
+              ].map((day) {
+                return Expanded(
+                  child: Text(
+                    day,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                );
+              }).toList(),
         ),
         const SizedBox(height: 12),
 
@@ -535,6 +578,8 @@ void showProgressSettings(
   UserGoal? userGoal,
   Function(UserGoal goal)? onGoalUpdated,
 }) {
+  final localizations = AppLocalizations.of(context)!;
+
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -566,7 +611,7 @@ void showProgressSettings(
 
           // Title
           Text(
-            '进度设置',
+            localizations.progressSettings,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: Theme.of(context).colorScheme.primary,
             ),
@@ -577,21 +622,29 @@ void showProgressSettings(
           buildSettingOption(
             context,
             icon: Icons.track_changes,
-            title: '设置目标',
-            subtitle: '调整每日冥想目标',
+            title: localizations.goalsSetGoals,
+            subtitle: localizations.goalsAdjustDailyGoal,
             onTap: () {
               Navigator.pop(context);
-              showGoalSettingsDialog(context, currentGoal: userGoal, onGoalUpdated: onGoalUpdated);
+              showGoalSettingsDialog(
+                context,
+                currentGoal: userGoal,
+                onGoalUpdated: onGoalUpdated,
+              );
             },
           ),
           buildSettingOption(
             context,
             icon: Icons.notifications,
-            title: '提醒设置',
-            subtitle: '设置冥想提醒时间',
+            title: localizations.remindersSettings,
+            subtitle: localizations.remindersSetReminderTime,
             onTap: () {
               Navigator.pop(context);
-              showReminderSettingsDialog(context, currentGoal: userGoal, onGoalUpdated: onGoalUpdated);
+              showReminderSettingsDialog(
+                context,
+                currentGoal: userGoal,
+                onGoalUpdated: onGoalUpdated,
+              );
             },
           ),
           const SizedBox(height: 20),

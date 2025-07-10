@@ -14,6 +14,7 @@ import '../../../../features/media/presentation/bloc/media_event.dart';
 import '../../../../features/media/presentation/widgets/add_media_dialog.dart';
 import '../../../meditation/data/services/meditation_session_manager.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class PlayerPage extends StatefulWidget {
   final String? mediaId;
@@ -51,10 +52,10 @@ class _PlayerPageState extends State<PlayerPage> {
       if (!_playerService.isInitialized) {
         await _playerService.initialize();
       }
-      
+
       // Listen for service changes first
       _playerService.addListener(_onPlayerServiceChanged);
-      
+
       // Load media if specified, otherwise check if service already has media
       if (widget.mediaId != null) {
         await _playerService.loadMedia(widget.mediaId!);
@@ -65,9 +66,10 @@ class _PlayerPageState extends State<PlayerPage> {
     } catch (e) {
       debugPrint('Error initializing player: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('初始化播放器失败: $e')),
-        );
+        final localizations = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(localizations.playerInitializationFailed(e.toString()))));
       }
     }
   }
@@ -79,19 +81,20 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   void _showSessionCompletedDialog() {
+    final localizations = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('冥想完成'),
+        title: Text(localizations.meditationCompleted),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.check_circle, color: Colors.green, size: 48),
             const SizedBox(height: 16),
-            const Text('恭喜！您已完成了这次冥想练习。'),
+            Text(localizations.meditationCongratulations),
             const SizedBox(height: 16),
             Text(
-              '练习时长：${(_playerService.totalDuration / 60).round()} 分钟',
+              localizations.meditationPracticeDuration((_playerService.totalDuration / 60).round()),
               style: Theme.of(context).textTheme.bodyLarge,
             ),
           ],
@@ -102,11 +105,11 @@ class _PlayerPageState extends State<PlayerPage> {
               Navigator.of(context).pop();
               context.go('/meditation-history'); // 跳转到进度页面
             },
-            child: const Text('查看进度'),
+            child: Text(localizations.navigationViewProgress),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('完成'),
+            child: Text(localizations.actionComplete),
           ),
         ],
       ),
@@ -141,27 +144,28 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   Widget _buildDefaultCover(ThemeData theme) {
+    final localizations = AppLocalizations.of(context)!;
     // 根据类别选择不同的图标和颜色
     IconData iconData;
     List<Color> gradientColors;
 
     final category = _currentMedia?.category ?? '';
-    if (category.contains('冥想') || category.contains('正念')) {
+    if (category.contains(localizations.categoryMeditation) || category.contains(localizations.categoryMindfulness)) {
       iconData = Icons.self_improvement;
       gradientColors = [const Color(0xFF6B73FF), const Color(0xFF9B59B6)];
-    } else if (category.contains('睡前') || category.contains('睡眠')) {
+    } else if (category.contains(localizations.categoryBedtime) || category.contains(localizations.categorySleep)) {
       iconData = Icons.bedtime;
       gradientColors = [const Color(0xFF667eea), const Color(0xFF764ba2)];
-    } else if (category.contains('专注') || category.contains('学习')) {
+    } else if (category.contains(localizations.categoryFocus) || category.contains(localizations.categoryStudy)) {
       iconData = Icons.psychology;
       gradientColors = [const Color(0xFF11998e), const Color(0xFF38ef7d)];
-    } else if (category.contains('放松') || category.contains('舒缓')) {
+    } else if (category.contains(localizations.categoryRelax) || category.contains(localizations.categorySoothing)) {
       iconData = Icons.spa;
       gradientColors = [const Color(0xFFa8edea), const Color(0xFFfed6e3)];
-    } else if (category.contains('自然') || category.contains('环境')) {
+    } else if (category.contains(localizations.categoryNature) || category.contains(localizations.categoryEnvironment)) {
       iconData = Icons.nature;
       gradientColors = [const Color(0xFF56ab2f), const Color(0xFFa8e6cf)];
-    } else if (category.contains('呼吸')) {
+    } else if (category.contains(localizations.categoryBreathing)) {
       iconData = Icons.air;
       gradientColors = [const Color(0xFF9B59B6), const Color(0xFF8E44AD)];
     } else {
@@ -187,6 +191,7 @@ class _PlayerPageState extends State<PlayerPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final localizations = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -201,7 +206,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 children: [
                   const SizedBox(width: 48), // 占位符，保持标题居中
                   Text(
-                    '播放中',
+                    localizations.playerNowPlaying,
                     style: theme.textTheme.headlineMedium?.copyWith(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.bold,
@@ -235,7 +240,7 @@ class _PlayerPageState extends State<PlayerPage> {
             // Content
             Expanded(
               child: _currentMedia == null
-                  ? _buildEmptyState(theme)
+                  ? _buildEmptyState(theme, localizations)
                   : _buildPlayerContent(theme),
             ),
           ],
@@ -244,7 +249,7 @@ class _PlayerPageState extends State<PlayerPage> {
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme) {
+  Widget _buildEmptyState(ThemeData theme, AppLocalizations localizations) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -268,7 +273,7 @@ class _PlayerPageState extends State<PlayerPage> {
           ),
           const SizedBox(height: 32),
           Text(
-            '未选择素材',
+            localizations.playerNoMaterialSelected,
             style: theme.textTheme.headlineMedium?.copyWith(
               color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.w600,
@@ -276,7 +281,7 @@ class _PlayerPageState extends State<PlayerPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            '请先在媒体库中选择一个音频或视频素材',
+            localizations.playerSelectMaterialMessage,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -286,7 +291,7 @@ class _PlayerPageState extends State<PlayerPage> {
           ElevatedButton.icon(
             onPressed: () => context.go('/media'),
             icon: const Icon(Icons.library_music),
-            label: const Text('前往媒体库'),
+            label: Text(localizations.navigationGoToMediaLibrary),
           ),
         ],
       ),
@@ -400,9 +405,12 @@ class _PlayerPageState extends State<PlayerPage> {
                 icon: Icons.shuffle,
                 isActive: _isShuffled,
                 onTap: () {
+                  final localizations = AppLocalizations.of(context)!;
                   _playerService.toggleShuffle();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(_isShuffled ? '已开启随机播放' : '已关闭随机播放')),
+                    SnackBar(
+                      content: Text(_isShuffled ? localizations.playerShuffleEnabled : localizations.playerShuffleDisabled),
+                    ),
                   );
                 },
               ),
@@ -411,11 +419,12 @@ class _PlayerPageState extends State<PlayerPage> {
                 icon: _getRepeatIcon(),
                 isActive: _repeatMode != RepeatMode.none,
                 onTap: () {
+                  final localizations = AppLocalizations.of(context)!;
                   _playerService.toggleRepeatMode();
-                  final modeText = _playerService.getRepeatModeText();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('重复模式：$modeText')),
-                  );
+                  final modeText = _getRepeatModeText(localizations);
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(localizations.playerRepeatMode(modeText))));
                 },
               ),
               const SizedBox(width: 16),
@@ -468,6 +477,8 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   void _showMoreOptions() {
+    final localizations = AppLocalizations.of(context)!;
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -499,7 +510,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '更多选项',
+                    localizations.actionMoreOptions,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -519,7 +530,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 children: [
                   _buildOptionTile(
                     icon: Icons.edit,
-                    title: '编辑',
+                    title: localizations.actionEdit,
                     onTap: () {
                       Navigator.pop(context);
                       _editCurrentMedia();
@@ -527,7 +538,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   ),
                   _buildOptionTile(
                     icon: Icons.share,
-                    title: '分享',
+                    title: localizations.actionShare,
                     onTap: () {
                       Navigator.pop(context);
                       _shareCurrentMedia();
@@ -535,7 +546,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   ),
                   _buildOptionTile(
                     icon: Icons.download,
-                    title: '下载',
+                    title: localizations.actionDownload,
                     onTap: () {
                       Navigator.pop(context);
                       _downloadCurrentMedia();
@@ -543,7 +554,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   ),
                   _buildOptionTile(
                     icon: Icons.playlist_add,
-                    title: '添加到播放列表',
+                    title: localizations.actionAddToPlaylist,
                     onTap: () {
                       Navigator.pop(context);
                       _showAddToPlaylistDialog();
@@ -551,7 +562,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   ),
                   _buildOptionTile(
                     icon: Icons.flag,
-                    title: '举报',
+                    title: localizations.actionReport,
                     onTap: () {
                       Navigator.pop(context);
                       // TODO: Report functionality
@@ -580,6 +591,19 @@ class _PlayerPageState extends State<PlayerPage> {
     );
   }
 
+  String _getRepeatModeText(AppLocalizations localizations) {
+    switch (_repeatMode) {
+      case RepeatMode.none:
+        return localizations.repeatModeOff;
+      case RepeatMode.all:
+        return localizations.repeatModeAll;
+      case RepeatMode.one:
+        return localizations.repeatModeOne;
+      default:
+        return localizations.repeatModeOff;
+    }
+  }
+
   IconData _getRepeatIcon() {
     switch (_repeatMode) {
       case RepeatMode.none:
@@ -600,47 +624,51 @@ class _PlayerPageState extends State<PlayerPage> {
 
     // Use MediaBloc to update favorite status in database
     if (mounted) {
+      final localizations = AppLocalizations.of(context)!;
+      
       context.read<MediaBloc>().add(
         ToggleFavorite(_currentMedia!.id, _isFavorited),
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isFavorited ? '已添加到收藏' : '已取消收藏')),
+        SnackBar(content: Text(_isFavorited ? localizations.favoritesAdded : localizations.favoritesRemoved)),
       );
     }
   }
 
   void _showAddToPlaylistDialog() {
     if (_currentMedia == null) return;
+    
+    final localizations = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('添加到播放列表'),
+        title: Text(localizations.actionAddToPlaylist),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('将 "${_currentMedia!.title}" 添加到：'),
+            Text(localizations.playlistAddMediaMessage(_currentMedia!.title)),
             const SizedBox(height: 16),
 
             // Mock playlist options
-            _buildPlaylistOption('我的收藏', Icons.favorite, () {
+            _buildPlaylistOption(localizations.playlistMyFavorites, Icons.favorite, () {
               Navigator.pop(context);
-              _addToPlaylist('我的收藏');
+              _addToPlaylist(localizations.playlistMyFavorites);
             }),
-            _buildPlaylistOption('正念练习', Icons.spa, () {
+            _buildPlaylistOption(localizations.playlistMindfulnessPractice, Icons.spa, () {
               Navigator.pop(context);
-              _addToPlaylist('正念练习');
+              _addToPlaylist(localizations.playlistMindfulnessPractice);
             }),
-            _buildPlaylistOption('睡眠专辑', Icons.bedtime, () {
+            _buildPlaylistOption(localizations.playlistSleepAlbum, Icons.bedtime, () {
               Navigator.pop(context);
-              _addToPlaylist('睡眠专辑');
+              _addToPlaylist(localizations.playlistSleepAlbum);
             }),
 
             const Divider(),
 
             // Create new playlist option
-            _buildPlaylistOption('创建新播放列表', Icons.add, () {
+            _buildPlaylistOption(localizations.playlistCreateNew, Icons.add, () {
               Navigator.pop(context);
               _showCreatePlaylistDialog();
             }),
@@ -649,7 +677,7 @@ class _PlayerPageState extends State<PlayerPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(localizations.actionCancel),
           ),
         ],
       ),
@@ -667,11 +695,13 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _addToPlaylist(String playlistName) {
     if (_currentMedia == null) return;
+    
+    final localizations = AppLocalizations.of(context)!;
 
     // TODO: Implement actual playlist functionality
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('已添加 "${_currentMedia!.title}" 到 "$playlistName"'),
+        content: Text(localizations.playlistAddedToPlaylist(_currentMedia!.title, playlistName)),
         backgroundColor: Colors.green,
       ),
     );
@@ -679,22 +709,23 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _showCreatePlaylistDialog() {
     String playlistName = '';
+    final localizations = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('创建播放列表'),
+        title: Text(localizations.playlistCreatePlaylist),
         content: TextField(
           onChanged: (value) => playlistName = value,
-          decoration: const InputDecoration(
-            labelText: '播放列表名称',
-            hintText: '请输入播放列表名称',
+          decoration: InputDecoration(
+            labelText: localizations.playlistNameLabel,
+            hintText: localizations.playlistNameHint,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(localizations.actionCancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -703,7 +734,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 _addToPlaylist(playlistName);
               }
             },
-            child: const Text('创建'),
+            child: Text(localizations.actionCreate),
           ),
         ],
       ),
@@ -712,33 +743,35 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _downloadCurrentMedia() {
     if (_currentMedia == null) return;
+    
+    final localizations = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('下载'),
+        title: Text(localizations.actionDownload),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('是否下载 "${_currentMedia!.title}" 到本地？'),
+            Text(localizations.downloadConfirmMessage(_currentMedia!.title)),
             const SizedBox(height: 16),
-            const Text(
-              '注意：此功能需要网络连接，并且会消耗存储空间。',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            Text(
+              localizations.downloadWarning,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(localizations.actionCancel),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               _startDownload();
             },
-            child: const Text('开始下载'),
+            child: Text(localizations.downloadStart),
           ),
         ],
       ),
@@ -747,12 +780,14 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _startDownload() {
     if (_currentMedia == null) return;
+    
+    final localizations = AppLocalizations.of(context)!;
 
     // TODO: Implement actual download functionality
     // This would typically involve downloading the file to local storage
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('正在下载 "${_currentMedia!.title}"...'),
+        content: Text(localizations.downloadDownloading(_currentMedia!.title)),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -760,9 +795,10 @@ class _PlayerPageState extends State<PlayerPage> {
     // Simulate download completion
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
+        final localizations = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('下载完成：${_currentMedia!.title}'),
+            content: Text(localizations.downloadCompleted(_currentMedia!.title)),
             backgroundColor: Colors.green,
           ),
         );
@@ -772,13 +808,15 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _shareCurrentMedia() {
     if (_currentMedia == null) return;
+    
+    final localizations = AppLocalizations.of(context)!;
 
     final shareText = '''
-正在收听：${_currentMedia!.title}
-类别：${_currentMedia!.category}
-${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.description}' : ''}
+${localizations.shareListeningTo(_currentMedia!.title)}
+${localizations.shareCategory(_currentMedia!.category)}
+${_currentMedia!.description?.isNotEmpty == true ? localizations.shareDescription(_currentMedia!.description!) : ''}
 
-来自 Mindra 冥想应用
+${localizations.shareAppSignature}
 ''';
 
     // For Flutter web and mobile platforms, you would typically use the share_plus package
@@ -788,11 +826,11 @@ ${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.de
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('分享'),
+        title: Text(localizations.actionShare),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('分享内容已复制到剪贴板'),
+            Text(localizations.shareCopiedToClipboard),
             const SizedBox(height: 16),
             Text(shareText, style: Theme.of(context).textTheme.bodySmall),
           ],
@@ -800,7 +838,7 @@ ${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.de
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('确定'),
+            child: Text(localizations.actionConfirm),
           ),
         ],
       ),
@@ -823,33 +861,35 @@ ${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.de
   }
 
   void _showTimerDialog() {
+    final localizations = AppLocalizations.of(context)!;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('定时设置'),
+        title: Text(localizations.timerSettings),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             for (int minutes in [5, 10, 15, 30, 45, 60])
               ListTile(
-                title: Text('$minutes 分钟后'),
+                title: Text(localizations.timerMinutesAfter(minutes)),
                 onTap: () {
                   Navigator.pop(context);
                   _playerService.setSleepTimer(minutes);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('已设置 $minutes 分钟定时停止')),
+                    SnackBar(content: Text(localizations.timerSetMessage(minutes))),
                   );
                 },
               ),
             const Divider(),
             ListTile(
-              title: const Text('取消定时'),
+              title: Text(localizations.timerCancel),
               onTap: () {
                 Navigator.pop(context);
                 _playerService.cancelSleepTimer();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('已取消定时停止')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(localizations.timerCancelled)));
               },
             ),
           ],
@@ -857,7 +897,7 @@ ${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.de
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(localizations.actionCancel),
           ),
         ],
       ),
@@ -867,6 +907,7 @@ ${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.de
   void _showSoundEffectsDialog() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final localizations = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
@@ -898,7 +939,7 @@ ${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.de
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '音效设置',
+                      localizations.soundEffectsSettings,
                       style: theme.textTheme.titleLarge?.copyWith(
                         color: isDark
                             ? const Color(0xFF32B8C6)

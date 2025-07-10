@@ -9,12 +9,13 @@ import 'core/router/app_router.dart';
 import 'core/di/injection_container.dart';
 import 'core/database/database_helper.dart';
 import 'core/services/reminder_scheduler_service.dart';
+import 'core/localization/app_localizations.dart';
 import 'features/player/services/simple_sound_effects_player.dart';
 import 'features/player/services/global_player_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     // Initialize sqflite factory for different platforms
     if (kIsWeb) {
@@ -30,7 +31,7 @@ void main() async {
         // If Platform is not available, assume desktop
         isMobile = false;
       }
-      
+
       if (isMobile) {
         // For mobile platforms - use standard sqflite (no FFI needed)
         print('Running on mobile platform - using standard sqflite');
@@ -46,18 +47,18 @@ void main() async {
         await DatabaseHelper.database;
       }
     }
-    
+
     // Initialize dependencies
     await configureDependencies();
-    
+
     // Initialize global player service
     final globalPlayerService = getIt<GlobalPlayerService>();
     await globalPlayerService.initialize();
-    
+
     // Initialize theme provider
     final themeProvider = ThemeProvider();
     await themeProvider.initialize();
-    
+
     // Initialize sound effects service
     try {
       await SimpleSoundEffectsPlayer().initialize();
@@ -65,7 +66,7 @@ void main() async {
     } catch (e) {
       debugPrint('Failed to initialize sound effects service: $e');
     }
-    
+
     // Initialize reminder scheduler service
     try {
       final reminderService = ReminderSchedulerService();
@@ -74,7 +75,7 @@ void main() async {
     } catch (e) {
       debugPrint('Failed to initialize reminder scheduler service: $e');
     }
-    
+
     runApp(MindraApp(themeProvider: themeProvider));
   } catch (e) {
     print('Initialization error: $e');
@@ -85,7 +86,7 @@ void main() async {
 
 class MindraApp extends StatelessWidget {
   final ThemeProvider themeProvider;
-  
+
   const MindraApp({super.key, required this.themeProvider});
 
   @override
@@ -97,10 +98,10 @@ class MindraApp extends StatelessWidget {
           return MaterialApp.router(
             title: 'Mindra',
             debugShowCheckedModeBanner: false,
-            
+
             // Theme
             theme: themeProvider.themeData,
-            
+
             // Localization
             locale: themeProvider.locale,
             supportedLocales: const [
@@ -108,11 +109,12 @@ class MindraApp extends StatelessWidget {
               Locale('en', 'US'), // English
             ],
             localizationsDelegates: const [
+              AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            
+
             // Routing
             routerConfig: AppRouter.router,
           );
@@ -124,9 +126,9 @@ class MindraApp extends StatelessWidget {
 
 class ErrorApp extends StatelessWidget {
   final String error;
-  
+
   const ErrorApp({super.key, required this.error});
-  
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -137,18 +139,11 @@ class ErrorApp extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red,
-                ),
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
                 const Text(
                   '应用初始化失败',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 Text(

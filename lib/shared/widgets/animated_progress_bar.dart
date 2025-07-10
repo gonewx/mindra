@@ -122,7 +122,9 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
           onExit: (_) => _onHoverChange(false),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTapUp: _isDragging ? null : (details) => _onTap(details, constraints),
+            onTapUp: _isDragging
+                ? null
+                : (details) => _onTap(details, constraints),
             onPanStart: _onPanStart,
             onPanUpdate: (details) => _onPanUpdate(details, constraints),
             onPanEnd: _onPanEnd,

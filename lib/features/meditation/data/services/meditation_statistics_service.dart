@@ -1,22 +1,25 @@
 import 'package:flutter/foundation.dart';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/database/web_storage_helper.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../domain/entities/meditation_session.dart';
 import '../../domain/entities/meditation_statistics.dart';
 
 class MeditationStatisticsService {
   /// 获取用户的冥想统计数据
-  static Future<MeditationStatistics> getStatistics() async {
+  static Future<MeditationStatistics> getStatistics([AppLocalizations? localizations]) async {
     try {
       // 获取所有会话记录
       List<MeditationSession> sessions;
-      
+
       if (kIsWeb) {
         sessions = await WebStorageHelper.getAllMeditationSessions();
       } else {
         // 从数据库获取原始数据并转换为实体
         final rawSessions = await DatabaseHelper.getAllMeditationSessions();
-        sessions = rawSessions.map((data) => MeditationSession.fromMap(data)).toList();
+        sessions = rawSessions
+            .map((data) => MeditationSession.fromMap(data))
+            .toList();
       }
 
       // 计算统计数据
@@ -28,21 +31,39 @@ class MeditationStatisticsService {
       final streakDays = _calculateStreakDays(sessions);
 
       // 计算本周时长
-      final weeklyMinutes = _calculateWeeklyMinutes(sessions, weekStart, weekEnd);
+      final weeklyMinutes = _calculateWeeklyMinutes(
+        sessions,
+        weekStart,
+        weekEnd,
+      );
 
       // 计算总统计
       final totalSessions = sessions.length;
-      final totalMinutes = sessions.fold<int>(0, (sum, session) => sum + (session.actualDuration ~/ 60));
+      final totalMinutes = sessions.fold<int>(
+        0,
+        (sum, session) => sum + (session.actualDuration ~/ 60),
+      );
       final averageRating = sessions.isNotEmpty
-          ? sessions.fold<double>(0, (sum, session) => sum + session.rating) / sessions.length
+          ? sessions.fold<double>(0, (sum, session) => sum + session.rating) /
+                sessions.length
           : 0.0;
-      final completedSessions = sessions.where((session) => session.isCompleted).length;
+      final completedSessions = sessions
+          .where((session) => session.isCompleted)
+          .length;
 
       // 计算本周每天的数据
       final weeklyData = _calculateWeeklyData(sessions, weekStart);
 
       // 生成成就
-      final achievements = _generateAchievements(sessions, streakDays, totalMinutes, completedSessions);
+      final achievements = localizations != null 
+          ? _generateAchievements(
+              sessions,
+              streakDays,
+              totalMinutes,
+              completedSessions,
+              localizations,
+            )
+          : <Achievement>[];
 
       // 生成月度记录
       final monthlyRecords = _generateMonthlyRecords(sessions, now);
@@ -70,7 +91,9 @@ class MeditationStatisticsService {
     if (sessions.isEmpty) return 0;
 
     final now = DateTime.now();
-    final completedSessions = sessions.where((session) => session.isCompleted).toList();
+    final completedSessions = sessions
+        .where((session) => session.isCompleted)
+        .toList();
     if (completedSessions.isEmpty) return 0;
 
     // 按日期分组
@@ -84,7 +107,7 @@ class MeditationStatisticsService {
     // 计算连续天数
     int streakDays = 0;
     var currentDate = now;
-    
+
     while (true) {
       final dateKey = _getDateKey(currentDate);
       if (sessionsByDate.containsKey(dateKey)) {
@@ -99,31 +122,57 @@ class MeditationStatisticsService {
   }
 
   /// 计算本周时长
-  static int _calculateWeeklyMinutes(List<MeditationSession> sessions, DateTime weekStart, DateTime weekEnd) {
+  static int _calculateWeeklyMinutes(
+    List<MeditationSession> sessions,
+    DateTime weekStart,
+    DateTime weekEnd,
+  ) {
     final weeklySessions = sessions.where((session) {
-      final sessionDate = DateTime(session.startTime.year, session.startTime.month, session.startTime.day);
-      final startDate = DateTime(weekStart.year, weekStart.month, weekStart.day);
+      final sessionDate = DateTime(
+        session.startTime.year,
+        session.startTime.month,
+        session.startTime.day,
+      );
+      final startDate = DateTime(
+        weekStart.year,
+        weekStart.month,
+        weekStart.day,
+      );
       final endDate = DateTime(weekEnd.year, weekEnd.month, weekEnd.day);
       return !sessionDate.isBefore(startDate) && !sessionDate.isAfter(endDate);
     }).toList();
 
-    return weeklySessions.fold<int>(0, (sum, session) => sum + (session.actualDuration ~/ 60));
+    return weeklySessions.fold<int>(
+      0,
+      (sum, session) => sum + (session.actualDuration ~/ 60),
+    );
   }
 
   /// 计算本周每天的数据
-  static List<int> _calculateWeeklyData(List<MeditationSession> sessions, DateTime weekStart) {
+  static List<int> _calculateWeeklyData(
+    List<MeditationSession> sessions,
+    DateTime weekStart,
+  ) {
     final weeklyData = List<int>.filled(7, 0);
-    
+
     for (final session in sessions) {
-      final sessionDate = DateTime(session.startTime.year, session.startTime.month, session.startTime.day);
-      final startDate = DateTime(weekStart.year, weekStart.month, weekStart.day);
+      final sessionDate = DateTime(
+        session.startTime.year,
+        session.startTime.month,
+        session.startTime.day,
+      );
+      final startDate = DateTime(
+        weekStart.year,
+        weekStart.month,
+        weekStart.day,
+      );
       final dayIndex = sessionDate.difference(startDate).inDays;
-      
+
       if (dayIndex >= 0 && dayIndex < 7) {
         weeklyData[dayIndex] += session.actualDuration ~/ 60;
       }
     }
-    
+
     return weeklyData;
   }
 
@@ -133,14 +182,18 @@ class MeditationStatisticsService {
     int streakDays,
     int totalMinutes,
     int completedSessions,
+    AppLocalizations localizations,
   ) {
     final achievements = <Achievement>[];
     final sessionTypes = sessions.map((s) => s.type).toSet();
     final maxSessionDuration = sessions.isNotEmpty
-        ? sessions.map((s) => s.actualDuration).reduce((a, b) => a > b ? a : b) ~/ 60
+        ? sessions
+                  .map((s) => s.actualDuration)
+                  .reduce((a, b) => a > b ? a : b) ~/
+              60
         : 0;
 
-    for (final achievement in AchievementDefinitions.defaultAchievements) {
+    for (final achievement in AchievementDefinitions.getDefaultAchievements(localizations)) {
       bool isEarned = false;
       DateTime? earnedDate;
 
@@ -166,17 +219,19 @@ class MeditationStatisticsService {
           break;
       }
 
-      achievements.add(achievement.copyWith(
-        isEarned: isEarned,
-        earnedDate: earnedDate,
-      ));
+      achievements.add(
+        achievement.copyWith(isEarned: isEarned, earnedDate: earnedDate),
+      );
     }
 
     return achievements;
   }
 
   /// 生成月度记录
-  static List<MeditationDayRecord> _generateMonthlyRecords(List<MeditationSession> sessions, DateTime now) {
+  static List<MeditationDayRecord> _generateMonthlyRecords(
+    List<MeditationSession> sessions,
+    DateTime now,
+  ) {
     final records = <MeditationDayRecord>[];
     final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
 
@@ -194,12 +249,17 @@ class MeditationStatisticsService {
       final dateKey = _getDateKey(date);
       final daySessions = sessionsByDate[dateKey] ?? [];
 
-      records.add(MeditationDayRecord(
-        date: date,
-        sessionCount: daySessions.length,
-        totalMinutes: daySessions.fold<int>(0, (sum, session) => sum + (session.actualDuration ~/ 60)),
-        hasSession: daySessions.isNotEmpty,
-      ));
+      records.add(
+        MeditationDayRecord(
+          date: date,
+          sessionCount: daySessions.length,
+          totalMinutes: daySessions.fold<int>(
+            0,
+            (sum, session) => sum + (session.actualDuration ~/ 60),
+          ),
+          hasSession: daySessions.isNotEmpty,
+        ),
+      );
     }
 
     return records;
@@ -236,33 +296,53 @@ class MeditationStatisticsService {
   }
 
   /// 获取特定日期范围的统计数据
-  static Future<MeditationStatistics> getStatisticsForDateRange(DateTime start, DateTime end) async {
+  static Future<MeditationStatistics> getStatisticsForDateRange(
+    DateTime start,
+    DateTime end,
+    [AppLocalizations? localizations]
+  ) async {
     try {
       List<MeditationSession> allSessions;
-      
+
       if (kIsWeb) {
         allSessions = await WebStorageHelper.getAllMeditationSessions();
       } else {
         // 从数据库获取原始数据并转换为实体
         final rawSessions = await DatabaseHelper.getAllMeditationSessions();
-        allSessions = rawSessions.map((data) => MeditationSession.fromMap(data)).toList();
+        allSessions = rawSessions
+            .map((data) => MeditationSession.fromMap(data))
+            .toList();
       }
 
       // 过滤指定日期范围的会话
       final filteredSessions = allSessions.where((session) {
-        final sessionDate = DateTime(session.startTime.year, session.startTime.month, session.startTime.day);
+        final sessionDate = DateTime(
+          session.startTime.year,
+          session.startTime.month,
+          session.startTime.day,
+        );
         final startDate = DateTime(start.year, start.month, start.day);
         final endDate = DateTime(end.year, end.month, end.day);
-        return !sessionDate.isBefore(startDate) && !sessionDate.isAfter(endDate);
+        return !sessionDate.isBefore(startDate) &&
+            !sessionDate.isAfter(endDate);
       }).toList();
 
       // 基于过滤后的会话计算统计数据
       final totalSessions = filteredSessions.length;
-      final totalMinutes = filteredSessions.fold<int>(0, (sum, session) => sum + (session.actualDuration ~/ 60));
+      final totalMinutes = filteredSessions.fold<int>(
+        0,
+        (sum, session) => sum + (session.actualDuration ~/ 60),
+      );
       final averageRating = filteredSessions.isNotEmpty
-          ? filteredSessions.fold<double>(0, (sum, session) => sum + session.rating) / filteredSessions.length
+          ? filteredSessions.fold<double>(
+                  0,
+                  (sum, session) => sum + session.rating,
+                ) /
+                filteredSessions.length
           : 0.0;
-      final completedSessions = filteredSessions.where((session) => session.isCompleted).length;
+      final completedSessions = filteredSessions
+          .where((session) => session.isCompleted)
+          .length;
 
       return MeditationStatistics(
         streakDays: _calculateStreakDays(filteredSessions),
@@ -272,7 +352,15 @@ class MeditationStatisticsService {
         averageRating: averageRating,
         completedSessions: completedSessions,
         weeklyData: _calculateWeeklyData(filteredSessions, start),
-        achievements: _generateAchievements(filteredSessions, 0, totalMinutes, completedSessions),
+        achievements: localizations != null 
+            ? _generateAchievements(
+                filteredSessions,
+                0,
+                totalMinutes,
+                completedSessions,
+                localizations,
+              )
+            : <Achievement>[],
         monthlyRecords: _generateMonthlyRecords(filteredSessions, end),
       );
     } catch (e) {

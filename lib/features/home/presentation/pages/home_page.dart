@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/theme_provider.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../widgets/daily_goal_card.dart';
 import '../widgets/quick_actions_grid.dart';
 
@@ -11,14 +12,15 @@ import '../widgets/recent_sessions_list.dart';
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  String _getGreeting() {
+  String _getGreeting(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     final hour = DateTime.now().hour;
     if (hour < 12) {
-      return '早上好！';
+      return localizations.goodMorning;
     } else if (hour < 18) {
-      return '下午好！';
+      return localizations.goodAfternoon;
     } else {
-      return '晚上好！';
+      return localizations.goodEvening;
     }
   }
 
@@ -26,6 +28,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final localizations = AppLocalizations.of(context)!;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -42,7 +45,7 @@ class HomePage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _getGreeting(),
+                        _getGreeting(context),
                         style: theme.textTheme.headlineLarge?.copyWith(
                           color: theme.colorScheme.primary,
                           // 移除额外的fontWeight，使用主题默认的w600
@@ -50,7 +53,7 @@ class HomePage extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '准备好开始今天的冥想之旅吗？',
+                        localizations.readyToStartMeditation,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: theme.colorScheme.onSurface.withValues(
                             alpha: 0.7,
@@ -87,7 +90,7 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 32), // --space-32: 32px
             // Recent Sessions
             Text(
-              '最近播放',
+              localizations.recentSessions,
               style: theme.textTheme.titleLarge?.copyWith(
                 color: theme.colorScheme.primary,
                 // 移除额外的fontWeight，使用主题默认的w500

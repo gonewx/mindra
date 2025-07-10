@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../goals/domain/entities/user_goal.dart';
 import '../../../goals/data/services/goal_service.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class GoalSettingsDialog extends StatefulWidget {
   final UserGoal? currentGoal;
   final Function(UserGoal goal)? onGoalUpdated;
 
-  const GoalSettingsDialog({
-    super.key,
-    this.currentGoal,
-    this.onGoalUpdated,
-  });
+  const GoalSettingsDialog({super.key, this.currentGoal, this.onGoalUpdated});
 
   @override
   State<GoalSettingsDialog> createState() => _GoalSettingsDialogState();
@@ -31,11 +28,10 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
@@ -47,91 +43,102 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            // 标题
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '目标设置',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.bold,
+              // 标题
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    l10n.goalsSettingsTitle,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: Icon(
-                    Icons.close,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // 每日目标
-            _buildSectionTitle('每日目标', Icons.today_outlined, theme),
-            const SizedBox(height: 12),
-            _buildGoalSelector(
-              '每日目标',
-              _selectedDailyGoal,
-              GoalService.getDailyGoalOptions(),
-              (value) => setState(() => _selectedDailyGoal = value),
-              theme,
-            ),
-            const SizedBox(height: 24),
-
-            // 每周目标
-            _buildSectionTitle('每周目标', Icons.calendar_view_week_outlined, theme),
-            const SizedBox(height: 12),
-            _buildGoalSelector(
-              '每周目标',
-              _selectedWeeklyGoal,
-              GoalService.getWeeklyGoalOptions(),
-              (value) => setState(() => _selectedWeeklyGoal = value),
-              theme,
-            ),
-            const SizedBox(height: 32),
-
-            // 操作按钮
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    '取消',
-                    style: TextStyle(
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icon(
+                      Icons.close,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _saveGoals,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // 每日目标
+              _buildSectionTitle(l10n.goalsDailyGoal, Icons.today_outlined, theme),
+              const SizedBox(height: 12),
+              _buildGoalSelector(
+                l10n.goalsDailyGoal,
+                _selectedDailyGoal,
+                GoalService.getDailyGoalOptions(),
+                (value) => setState(() => _selectedDailyGoal = value),
+                theme,
+                l10n,
+              ),
+              const SizedBox(height: 24),
+
+              // 每周目标
+              _buildSectionTitle(
+                l10n.goalsWeeklyGoal,
+                Icons.calendar_view_week_outlined,
+                theme,
+              ),
+              const SizedBox(height: 12),
+              _buildGoalSelector(
+                l10n.goalsWeeklyGoal,
+                _selectedWeeklyGoal,
+                GoalService.getWeeklyGoalOptions(),
+                (value) => setState(() => _selectedWeeklyGoal = value),
+                theme,
+                l10n,
+              ),
+              const SizedBox(height: 32),
+
+              // 操作按钮
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(
+                      l10n.cancel,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
+                      ),
                     ),
                   ),
-                  child: _isLoading
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              theme.colorScheme.onPrimary,
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _saveGoals,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                theme.colorScheme.onPrimary,
+                              ),
                             ),
-                          ),
-                        )
-                      : const Text('保存'),
-                ),
-              ],
-            ),
+                          )
+                        : Text(l10n.actionSave),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -161,6 +168,7 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
     List<String> options,
     Function(String) onChanged,
     ThemeData theme,
+    AppLocalizations l10n,
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -175,7 +183,7 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '选择$label',
+            l10n.goalsSelectLabel(label),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -190,7 +198,10 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
                 onTap: () => onChanged(option),
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? theme.colorScheme.primary
@@ -208,7 +219,9 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
                       color: isSelected
                           ? theme.colorScheme.onPrimary
                           : theme.colorScheme.onSurface,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -222,6 +235,7 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
 
   Future<void> _saveGoals() async {
     if (_isLoading) return;
+    final l10n = AppLocalizations.of(context)!;
 
     setState(() {
       _isLoading = true;
@@ -230,7 +244,7 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
     try {
       // 验证输入
       if (!GoalService.isValidGoal(_selectedDailyGoal, _selectedWeeklyGoal)) {
-        throw Exception('目标设置格式不正确');
+        throw Exception(l10n.goalsInvalidFormat);
       }
 
       // 更新目标（不包括提醒时间）
@@ -249,7 +263,7 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('目标设置已保存'),
+            content: Text(l10n.goalsSettingsSaved),
             backgroundColor: Theme.of(context).colorScheme.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -263,7 +277,7 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('保存失败: ${e.toString()}'),
+            content: Text(l10n.goalsSaveFailed(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(

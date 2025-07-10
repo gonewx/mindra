@@ -416,11 +416,11 @@ class GlobalPlayerService extends ChangeNotifier {
     await _positionSubscription?.cancel();
     await _durationSubscription?.cancel();
     await _playerStateSubscription?.cancel();
-    
+
     if (MeditationSessionManager.hasActiveSession) {
       await MeditationSessionManager.stopSession();
     }
-    
+
     await _audioPlayer.dispose();
     _soundEffectsService.dispose();
     _isInitialized = false;

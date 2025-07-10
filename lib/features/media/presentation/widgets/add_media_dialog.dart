@@ -7,6 +7,7 @@ import '../bloc/media_bloc.dart';
 import '../bloc/media_event.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/audio/cross_platform_audio_player.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class AddMediaDialog extends StatefulWidget {
   final MediaItem? editingMedia; // 如果不为null，则为编辑模式
@@ -95,11 +96,15 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.9,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF2A3441) : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
@@ -121,15 +126,19 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _isEditMode ? '编辑媒体信息' : '添加冥想素材',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: isDark
-                          ? const Color(0xFF32B8C6)
-                          : theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      _isEditMode ? l10n.dialogEditMediaTitle : l10n.dialogAddMediaTitle,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: isDark
+                            ? const Color(0xFF32B8C6)
+                            : theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 8),
                   IconButton(
                     icon: Icon(
                       Icons.close,
@@ -157,7 +166,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                     // Add source selection header (隐藏在编辑模式下)
                     if (!_isEditMode) ...[
                       Text(
-                        '添加方式',
+                        l10n.dialogAddMethod,
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: isDark
                               ? Colors.white
@@ -214,7 +223,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        '本地导入',
+                                        l10n.dialogLocalImport,
                                         style: theme.textTheme.bodyMedium
                                             ?.copyWith(
                                               color: _isFromFile
@@ -279,7 +288,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        '网络链接',
+                                        l10n.dialogNetworkLink,
                                         style: theme.textTheme.bodyMedium
                                             ?.copyWith(
                                               color: !_isFromFile
@@ -308,7 +317,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                       OutlinedButton.icon(
                         onPressed: _pickFile,
                         icon: const Icon(Icons.folder_open),
-                        label: const Text('选择文件'),
+                        label: Text(l10n.dialogSelectFile),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 56),
                           side: BorderSide(
@@ -363,7 +372,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      '已选择文件',
+                                      l10n.dialogFileSelected,
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                             color: isDark
@@ -420,7 +429,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                               : theme.colorScheme.onSurface,
                         ),
                         decoration: InputDecoration(
-                          labelText: '媒体链接',
+                          labelText: l10n.dialogMediaLink,
                           labelStyle: TextStyle(
                             color: isDark
                                 ? Colors.white70
@@ -428,7 +437,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                                     alpha: 0.7,
                                   ),
                           ),
-                          hintText: '请输入音频或视频的网络链接',
+                          hintText: l10n.dialogMediaLinkHint,
                           hintStyle: TextStyle(
                             color: isDark
                                 ? Colors.white54
@@ -480,7 +489,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
                     // Title
                     Text(
-                      '标题',
+                      l10n.dialogTitle,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: isDark
                             ? Colors.white
@@ -497,7 +506,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                             : theme.colorScheme.onSurface,
                       ),
                       decoration: InputDecoration(
-                        hintText: '请输入素材标题',
+                        hintText: l10n.dialogTitleHint,
                         hintStyle: TextStyle(
                           color: isDark
                               ? Colors.white54
@@ -543,7 +552,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
                     // Duration
                     Text(
-                      '时长',
+                      l10n.dialogDuration,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: isDark
                             ? Colors.white
@@ -562,7 +571,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                             : theme.colorScheme.onSurface,
                       ),
                       decoration: InputDecoration(
-                        hintText: _isLoadingDuration ? '正在获取时长...' : '请输入时长（秒）',
+                        hintText: _isLoadingDuration ? l10n.dialogDurationLoading : l10n.dialogDurationHint,
                         hintStyle: TextStyle(
                           color: isDark
                               ? Colors.white54
@@ -620,7 +629,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
                     // Category
                     Text(
-                      '分类',
+                      l10n.dialogCategory,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: isDark
                             ? Colors.white
@@ -686,7 +695,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
                     // Description
                     Text(
-                      '描述',
+                      l10n.dialogDescription,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: isDark
                             ? Colors.white
@@ -703,7 +712,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                             : theme.colorScheme.onSurface,
                       ),
                       decoration: InputDecoration(
-                        hintText: '请输入描述',
+                        hintText: l10n.dialogDescriptionHint,
                         hintStyle: TextStyle(
                           color: isDark
                               ? Colors.white54
@@ -751,7 +760,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
                     // Thumbnail URL
                     Text(
-                      '封面图片',
+                      l10n.dialogThumbnail,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: isDark
                             ? Colors.white
@@ -768,7 +777,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                             : theme.colorScheme.onSurface,
                       ),
                       decoration: InputDecoration(
-                        hintText: '请输入封面图片链接（可选）',
+                        hintText: l10n.dialogThumbnailHint,
                         hintStyle: TextStyle(
                           color: isDark
                               ? Colors.white54
@@ -860,7 +869,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('取消'),
+                      child: Text(l10n.cancel),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -877,7 +886,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Text(_isEditMode ? '更新' : '保存'),
+                      child: Text(_isEditMode ? l10n.dialogUpdate : l10n.dialogSave),
                     ),
                   ),
                 ],
@@ -890,6 +899,8 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
   }
 
   void _pickFile() async {
+    final l10n = AppLocalizations.of(context)!;
+    
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -929,14 +940,14 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('已选择文件: ${file.name}')));
+          ).showSnackBar(SnackBar(content: Text(l10n.dialogFileSelectedSuccess(file.name))));
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('文件选择失败: ${e.toString()}')));
+        ).showSnackBar(SnackBar(content: Text(l10n.dialogFileSelectionFailed(e.toString()))));
       }
     }
   }
@@ -950,13 +961,15 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
       });
 
       Duration? duration;
-      
+
       if (kIsWeb) {
         // For web, try to get duration using HTML5 Audio/Video
         duration = await _getWebDuration();
       } else {
         // For desktop/mobile platforms
-        duration = await CrossPlatformAudioPlayer.getMediaDuration(_selectedFilePath!);
+        duration = await CrossPlatformAudioPlayer.getMediaDuration(
+          _selectedFilePath!,
+        );
       }
 
       if (mounted) {
@@ -980,7 +993,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
   Future<Duration?> _getWebDuration() async {
     if (!kIsWeb || _selectedFileBytes == null) return null;
-    
+
     try {
       // Skip web duration detection for now
       // This would require creating a blob URL and using HTML5 Audio/Video
@@ -993,24 +1006,26 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
   }
 
   void _addMedia() {
+    final l10n = AppLocalizations.of(context)!;
+    
     if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请输入标题')));
+      ).showSnackBar(SnackBar(content: Text(l10n.dialogTitleRequired)));
       return;
     }
 
     if (_isFromFile && _selectedFilePath == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请选择文件')));
+      ).showSnackBar(SnackBar(content: Text(l10n.dialogFileRequired)));
       return;
     }
 
     if (!_isFromFile && _urlController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请输入媒体链接')));
+      ).showSnackBar(SnackBar(content: Text(l10n.dialogUrlRequired)));
       return;
     }
 
@@ -1022,7 +1037,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
       } catch (e) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('请输入有效的时长（秒）')));
+        ).showSnackBar(SnackBar(content: Text(l10n.dialogDurationInvalid)));
         return;
       }
     }
@@ -1061,26 +1076,29 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
     Navigator.pop(context);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('素材添加成功')));
+    ).showSnackBar(SnackBar(content: Text(l10n.dialogMaterialAdded)));
   }
 
   void _updateMedia() {
+    final l10n = AppLocalizations.of(context)!;
+    
     if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请输入标题')));
+      ).showSnackBar(SnackBar(content: Text(l10n.dialogTitleRequired)));
       return;
     }
 
     // Parse duration from input
-    int duration = widget.editingMedia!.duration; // Keep existing duration as default
+    int duration =
+        widget.editingMedia!.duration; // Keep existing duration as default
     if (_durationController.text.isNotEmpty) {
       try {
         duration = int.parse(_durationController.text);
       } catch (e) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('请输入有效的时长（秒）')));
+        ).showSnackBar(SnackBar(content: Text(l10n.dialogDurationInvalid)));
         return;
       }
     }
@@ -1103,6 +1121,6 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
     Navigator.pop(context);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('媒体信息更新成功')));
+    ).showSnackBar(SnackBar(content: Text(l10n.dialogMediaUpdated)));
   }
 }

@@ -12,6 +12,7 @@ import '../../features/media/presentation/bloc/media_bloc.dart';
 import '../../shared/widgets/animated_bottom_navigation.dart';
 import '../../features/player/presentation/widgets/floating_player.dart';
 import '../di/injection_container.dart';
+import '../localization/app_localizations.dart';
 
 class AppRouter {
   static const String splash = '/splash';
@@ -74,25 +75,28 @@ class AppRouter {
         ],
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64),
-            const SizedBox(height: 16),
-            Text('页面不存在', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 8),
-            Text('请检查链接或返回首页', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => context.go(home),
-              child: const Text('返回首页'),
-            ),
-          ],
+    errorBuilder: (context, state) {
+      final localizations = AppLocalizations.of(context)!;
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64),
+              const SizedBox(height: 16),
+              Text(localizations.pageNotFound, style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 8),
+              Text(localizations.pageNotFoundDesc, style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => context.go(home),
+                child: Text(localizations.backToHome),
+              ),
+            ],
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }
 
@@ -134,7 +138,8 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget build(BuildContext context) {
     final currentRoute = GoRouterState.of(context).matchedLocation;
     final showFloatingPlayer = currentRoute != AppRouter.player; // 在非播放页面显示浮动球
-    
+    final localizations = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -147,26 +152,26 @@ class _MainScaffoldState extends State<MainScaffold> {
         onTap: (index) {
           context.go(_routes[index]);
         },
-        items: const [
+        items: [
           AnimatedBottomNavigationItem(
             icon: Icons.home, // fas fa-home (实心)
-            label: '首页',
+            label: localizations.home,
           ),
           AnimatedBottomNavigationItem(
             icon: Icons.music_note, // fas fa-music (实心)
-            label: '素材库',
+            label: localizations.mediaLibrary,
           ),
           AnimatedBottomNavigationItem(
             icon: Icons.play_circle, // fas fa-play-circle (实心)
-            label: '播放',
+            label: localizations.play,
           ),
           AnimatedBottomNavigationItem(
             icon: Icons.show_chart, // fas fa-chart-line (实心)
-            label: '进度',
+            label: localizations.progress,
           ),
           AnimatedBottomNavigationItem(
             icon: Icons.person, // fas fa-user (实心)
-            label: '我的',
+            label: localizations.profile,
           ),
         ],
       ),

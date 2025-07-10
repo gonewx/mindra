@@ -26,8 +26,9 @@ class AudioFocusManager {
         contentType: AndroidContentType.music,
         usageType: AndroidUsageType.media,
         // 主音频使用 gainTransient，不使用 duck
-        audioFocus: _isSoundEffectsEnabled 
-            ? AndroidAudioFocus.gainTransient // 如果有背景音效，使用临时焦点
+        audioFocus: _isSoundEffectsEnabled
+            ? AndroidAudioFocus
+                  .gainTransient // 如果有背景音效，使用临时焦点
             : AndroidAudioFocus.gain, // 如果没有背景音效，使用完全焦点
       ),
     );
@@ -68,7 +69,9 @@ class AudioFocusManager {
   /// 通知背景音效状态改变
   void notifySoundEffectsChanged(bool enabled) {
     _isSoundEffectsEnabled = enabled;
-    debugPrint('AudioFocusManager: Sound effects ${enabled ? "enabled" : "disabled"}');
+    debugPrint(
+      'AudioFocusManager: Sound effects ${enabled ? "enabled" : "disabled"}',
+    );
   }
 
   /// 检查是否可以播放背景音效

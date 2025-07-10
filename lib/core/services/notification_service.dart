@@ -30,17 +30,17 @@ class NotificationService {
     // iOS 初始化设置
     const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        );
 
     // 初始化设置
     const InitializationSettings initializationSettings =
         InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
 
     // 初始化插件
     await _flutterLocalNotificationsPlugin.initialize(
@@ -70,44 +70,43 @@ class NotificationService {
       if (Platform.isAndroid) {
         // 检查并请求通知权限
         final notificationStatus = await Permission.notification.request();
-        
+
         // 请求精确闹钟权限（Android 12+）
         final alarmStatus = await Permission.scheduleExactAlarm.request();
-        
+
         // Android 13+ 需要特殊处理
         if (Platform.isAndroid) {
           final androidInfo = await _flutterLocalNotificationsPlugin
               .resolvePlatformSpecificImplementation<
-                  AndroidFlutterLocalNotificationsPlugin>()
+                AndroidFlutterLocalNotificationsPlugin
+              >()
               ?.requestNotificationsPermission();
-          
+
           debugPrint('Android notification permission: $androidInfo');
           debugPrint('Notification status: $notificationStatus');
           debugPrint('Alarm status: $alarmStatus');
-          
-          return androidInfo == true && 
-                 notificationStatus == PermissionStatus.granted &&
-                 (alarmStatus == PermissionStatus.granted || alarmStatus == PermissionStatus.limited);
+
+          return androidInfo == true &&
+              notificationStatus == PermissionStatus.granted &&
+              (alarmStatus == PermissionStatus.granted ||
+                  alarmStatus == PermissionStatus.limited);
         }
-        
+
         return notificationStatus == PermissionStatus.granted;
       }
-      
+
       // iOS 权限处理
       if (Platform.isIOS) {
         final bool? result = await _flutterLocalNotificationsPlugin
             .resolvePlatformSpecificImplementation<
-                IOSFlutterLocalNotificationsPlugin>()
-            ?.requestPermissions(
-              alert: true,
-              badge: true,
-              sound: true,
-            );
-        
+              IOSFlutterLocalNotificationsPlugin
+            >()
+            ?.requestPermissions(alert: true, badge: true, sound: true);
+
         debugPrint('iOS notification permission: $result');
         return result == true;
       }
-      
+
       return true;
     } catch (e) {
       debugPrint('Error requesting notification permissions: $e');
@@ -118,28 +117,32 @@ class NotificationService {
   /// 检查通知权限状态
   Future<bool> areNotificationsEnabled() async {
     if (kIsWeb) return false;
-    
+
     try {
       if (Platform.isAndroid) {
         final notificationStatus = await Permission.notification.status;
         final alarmStatus = await Permission.scheduleExactAlarm.status;
-        
-        debugPrint('Checking permissions - Notification: $notificationStatus, Alarm: $alarmStatus');
-        
+
+        debugPrint(
+          'Checking permissions - Notification: $notificationStatus, Alarm: $alarmStatus',
+        );
+
         return notificationStatus == PermissionStatus.granted &&
-               (alarmStatus == PermissionStatus.granted || alarmStatus == PermissionStatus.limited);
+            (alarmStatus == PermissionStatus.granted ||
+                alarmStatus == PermissionStatus.limited);
       }
-      
+
       if (Platform.isIOS) {
         final bool? result = await _flutterLocalNotificationsPlugin
             .resolvePlatformSpecificImplementation<
-                IOSFlutterLocalNotificationsPlugin>()
+              IOSFlutterLocalNotificationsPlugin
+            >()
             ?.checkPermissions()
             .then((permissions) => permissions?.isEnabled);
-        
+
         return result == true;
       }
-      
+
       return true;
     } catch (e) {
       debugPrint('Error checking notification permissions: $e');
@@ -232,7 +235,7 @@ class NotificationService {
       for (int i = 0; i < weekdays.length; i++) {
         final weekday = weekdays[i];
         final notificationId = id + i;
-        
+
         // 计算下一个指定工作日的时间
         final now = DateTime.now();
         DateTime scheduledDate = DateTime(
@@ -242,12 +245,12 @@ class NotificationService {
           time.hour,
           time.minute,
         );
-        
+
         // 调整到指定的工作日
         while (scheduledDate.weekday != weekday) {
           scheduledDate = scheduledDate.add(const Duration(days: 1));
         }
-        
+
         // 如果时间已过，推迟到下周
         if (scheduledDate.isBefore(now)) {
           scheduledDate = scheduledDate.add(const Duration(days: 7));
@@ -265,7 +268,7 @@ class NotificationService {
           matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
         );
       }
-      
+
       debugPrint('Repeating notifications scheduled for weekdays: $weekdays');
     } catch (e) {
       debugPrint('Error scheduling repeating notification: $e');
@@ -295,7 +298,8 @@ class NotificationService {
   /// 获取待发送的通知列表
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
     try {
-      return await _flutterLocalNotificationsPlugin.pendingNotificationRequests();
+      return await _flutterLocalNotificationsPlugin
+          .pendingNotificationRequests();
     } catch (e) {
       debugPrint('Error getting pending notifications: $e');
       return [];
@@ -325,10 +329,7 @@ class NotificationService {
       sound: 'default',
     );
 
-    return const NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+    return const NotificationDetails(android: androidDetails, iOS: iosDetails);
   }
 
   /// 创建冥想提醒通知详情
@@ -357,10 +358,7 @@ class NotificationService {
       sound: enableSound ? 'default' : null,
     );
 
-    return NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+    return NotificationDetails(android: androidDetails, iOS: iosDetails);
   }
 
   /// 获取系统时区

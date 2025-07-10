@@ -158,7 +158,8 @@ class SimpleSoundEffectsPlayer {
     try {
       if (volume > 0) {
         // 开启音效 - 使用音频焦点管理器建议的音量
-        final suggestedVolume = _audioFocusManager.getSuggestedSoundEffectVolume();
+        final suggestedVolume = _audioFocusManager
+            .getSuggestedSoundEffectVolume();
         final finalVolume = (volume * _masterVolume * suggestedVolume).clamp(
           0.0,
           0.5,
@@ -229,7 +230,7 @@ class SimpleSoundEffectsPlayer {
 
       // 保存状态更改
       await _saveSettings();
-      
+
       // 通知音频焦点管理器背景音效状态变化
       _audioFocusManager.notifySoundEffectsChanged(hasActiveEffects());
     } catch (e) {
@@ -297,10 +298,8 @@ class SimpleSoundEffectsPlayer {
         if (player != null) {
           // 使用建议的音量计算，确保不影响主音频
           final effectVolume = _volumes[effectId]!;
-          final finalVolume = (effectVolume * _masterVolume * suggestedVolume).clamp(
-            0.0,
-            0.5,
-          ); // 限制最大音量为0.5，避免过响
+          final finalVolume = (effectVolume * _masterVolume * suggestedVolume)
+              .clamp(0.0, 0.5); // 限制最大音量为0.5，避免过响
           await player.setVolume(finalVolume);
         }
       }

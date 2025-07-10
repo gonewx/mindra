@@ -185,11 +185,15 @@ class WebStorageHelper {
   ) async {
     final sessions = await getAllMeditationSessions();
     return sessions.where((session) {
-      return session.startTime.isAfter(startDate) && session.startTime.isBefore(endDate);
+      return session.startTime.isAfter(startDate) &&
+          session.startTime.isBefore(endDate);
     }).toList();
   }
 
-  static Future<void> updateMeditationSession(String id, Map<String, dynamic> updates) async {
+  static Future<void> updateMeditationSession(
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
     final sessions = await getAllMeditationSessions();
     final index = sessions.indexWhere((session) => session.id == id);
     if (index >= 0) {
@@ -216,7 +220,9 @@ class WebStorageHelper {
     await _saveMeditationSessions(sessions);
   }
 
-  static Future<void> _saveMeditationSessions(List<MeditationSession> sessions) async {
+  static Future<void> _saveMeditationSessions(
+    List<MeditationSession> sessions,
+  ) async {
     final jsonList = sessions.map((session) => session.toMap()).toList();
     _localStorage[_sessionsKey] = json.encode(jsonList);
   }

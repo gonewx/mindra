@@ -10,9 +10,7 @@ final getIt = GetIt.instance;
 
 Future<void> configureDependencies() async {
   // Services
-  getIt.registerLazySingleton<GlobalPlayerService>(
-    () => GlobalPlayerService(),
-  );
+  getIt.registerLazySingleton<GlobalPlayerService>(() => GlobalPlayerService());
 
   // Data sources
   getIt.registerLazySingleton<MediaLocalDataSource>(

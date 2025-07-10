@@ -90,7 +90,8 @@ class UserGoal extends Equatable {
         minute: map['reminder_minute'] ?? 0,
       ),
       isReminderEnabled: map['is_reminder_enabled'] ?? false,
-      reminderDays: (map['reminder_days'] as String? ?? '周一,周二,周三,周四,周五,周六,周日').split(','),
+      reminderDays: (map['reminder_days'] as String? ?? '周一,周二,周三,周四,周五,周六,周日')
+          .split(','),
       enableSound: map['enable_sound'] ?? true,
       enableVibration: map['enable_vibration'] ?? true,
       createdAt: DateTime.fromMillisecondsSinceEpoch(
@@ -141,21 +142,30 @@ class UserGoal extends Equatable {
       } else if (trimmed.startsWith('"weekly_goal":')) {
         weeklyGoal = trimmed.split('"')[3];
       } else if (trimmed.startsWith('"reminder_hour":')) {
-        reminderHour = int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ?? 9;
+        reminderHour =
+            int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ?? 9;
       } else if (trimmed.startsWith('"reminder_minute":')) {
-        reminderMinute = int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ?? 0;
+        reminderMinute =
+            int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ?? 0;
       } else if (trimmed.startsWith('"is_reminder_enabled":')) {
-        isReminderEnabled = trimmed.split(':')[1].replaceAll(',', '').trim() == 'true';
+        isReminderEnabled =
+            trimmed.split(':')[1].replaceAll(',', '').trim() == 'true';
       } else if (trimmed.startsWith('"reminder_days":')) {
         reminderDaysString = trimmed.split('"')[3];
       } else if (trimmed.startsWith('"enable_sound":')) {
-        enableSound = trimmed.split(':')[1].replaceAll(',', '').trim() == 'true';
+        enableSound =
+            trimmed.split(':')[1].replaceAll(',', '').trim() == 'true';
       } else if (trimmed.startsWith('"enable_vibration":')) {
-        enableVibration = trimmed.split(':')[1].replaceAll(',', '').trim() == 'true';
+        enableVibration =
+            trimmed.split(':')[1].replaceAll(',', '').trim() == 'true';
       } else if (trimmed.startsWith('"created_at":')) {
-        createdAt = int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ?? DateTime.now().millisecondsSinceEpoch;
+        createdAt =
+            int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ??
+            DateTime.now().millisecondsSinceEpoch;
       } else if (trimmed.startsWith('"updated_at":')) {
-        updatedAt = int.tryParse(trimmed.split(':')[1].trim()) ?? DateTime.now().millisecondsSinceEpoch;
+        updatedAt =
+            int.tryParse(trimmed.split(':')[1].trim()) ??
+            DateTime.now().millisecondsSinceEpoch;
       }
     }
 
@@ -193,16 +203,16 @@ class UserGoal extends Equatable {
 
   @override
   List<Object?> get props => [
-        dailyGoal,
-        weeklyGoal,
-        reminderTime,
-        isReminderEnabled,
-        reminderDays,
-        enableSound,
-        enableVibration,
-        createdAt,
-        updatedAt,
-      ];
+    dailyGoal,
+    weeklyGoal,
+    reminderTime,
+    isReminderEnabled,
+    reminderDays,
+    enableSound,
+    enableVibration,
+    createdAt,
+    updatedAt,
+  ];
 
   @override
   String toString() {

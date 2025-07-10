@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class MeditationStatistics extends Equatable {
   final int streakDays;
@@ -49,16 +50,16 @@ class MeditationStatistics extends Equatable {
 
   @override
   List<Object?> get props => [
-        streakDays,
-        weeklyMinutes,
-        totalSessions,
-        totalMinutes,
-        averageRating,
-        completedSessions,
-        weeklyData,
-        achievements,
-        monthlyRecords,
-      ];
+    streakDays,
+    weeklyMinutes,
+    totalSessions,
+    totalMinutes,
+    averageRating,
+    completedSessions,
+    weeklyData,
+    achievements,
+    monthlyRecords,
+  ];
 }
 
 class Achievement extends Equatable {
@@ -97,7 +98,14 @@ class Achievement extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, title, description, iconName, isEarned, earnedDate];
+  List<Object?> get props => [
+    id,
+    title,
+    description,
+    iconName,
+    isEarned,
+    earnedDate,
+  ];
 }
 
 class MeditationDayRecord extends Equatable {
@@ -133,48 +141,50 @@ class MeditationDayRecord extends Equatable {
 
 // 预定义的成就
 class AchievementDefinitions {
-  static const List<Achievement> defaultAchievements = [
-    Achievement(
-      id: 'first_meditation',
-      title: '冥想新手',
-      description: '完成第一次冥想',
-      iconName: 'spa',
-      isEarned: false,
-    ),
-    Achievement(
-      id: 'week_streak',
-      title: '连续一周',
-      description: '连续7天进行冥想',
-      iconName: 'calendar_view_week',
-      isEarned: false,
-    ),
-    Achievement(
-      id: 'focus_master',
-      title: '专注大师',
-      description: '完成30分钟以上的冥想',
-      iconName: 'psychology',
-      isEarned: false,
-    ),
-    Achievement(
-      id: 'meditation_expert',
-      title: '冥想达人',
-      description: '累计冥想时长达到10小时',
-      iconName: 'workspace_premium',
-      isEarned: false,
-    ),
-    Achievement(
-      id: 'consistency_champion',
-      title: '坚持之王',
-      description: '连续30天进行冥想',
-      iconName: 'military_tech',
-      isEarned: false,
-    ),
-    Achievement(
-      id: 'variety_seeker',
-      title: '多样体验',
-      description: '尝试5种不同类型的冥想',
-      iconName: 'explore',
-      isEarned: false,
-    ),
-  ];
+  static List<Achievement> getDefaultAchievements(AppLocalizations localizations) {
+    return [
+      Achievement(
+        id: 'first_meditation',
+        title: localizations.achievementsFirstMeditationTitle,
+        description: localizations.achievementsFirstMeditationDescription,
+        iconName: 'spa',
+        isEarned: false,
+      ),
+      Achievement(
+        id: 'week_streak',
+        title: localizations.achievementsWeekStreakTitle,
+        description: localizations.achievementsWeekStreakDescription,
+        iconName: 'calendar_view_week',
+        isEarned: false,
+      ),
+      Achievement(
+        id: 'focus_master',
+        title: localizations.achievementsFocusMasterTitle,
+        description: localizations.achievementsFocusMasterDescription,
+        iconName: 'psychology',
+        isEarned: false,
+      ),
+      Achievement(
+        id: 'meditation_expert',
+        title: localizations.achievementsMeditationExpertTitle,
+        description: localizations.achievementsMeditationExpertDescription,
+        iconName: 'workspace_premium',
+        isEarned: false,
+      ),
+      Achievement(
+        id: 'consistency_champion',
+        title: localizations.achievementsConsistencyChampionTitle,
+        description: localizations.achievementsConsistencyChampionDescription,
+        iconName: 'military_tech',
+        isEarned: false,
+      ),
+      Achievement(
+        id: 'variety_seeker',
+        title: localizations.achievementsVarietySeekerTitle,
+        description: localizations.achievementsVarietySeekerDescription,
+        iconName: 'explore',
+        isEarned: false,
+      ),
+    ];
+  }
 }

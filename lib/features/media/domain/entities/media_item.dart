@@ -101,8 +101,8 @@ class MediaItem extends Equatable {
           ? DateTime.fromMillisecondsSinceEpoch(map['last_played_at'])
           : null,
       playCount: map['play_count'] ?? 0,
-      tags: map['tags'] != null && map['tags'].isNotEmpty 
-          ? map['tags'].split(',') 
+      tags: map['tags'] != null && map['tags'].isNotEmpty
+          ? map['tags'].split(',')
           : [],
       isFavorite: map['is_favorite'] == 1,
       sourceUrl: map['source_url'],
@@ -111,27 +111,24 @@ class MediaItem extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        title,
-        description,
-        filePath,
-        thumbnailPath,
-        type,
-        category,
-        duration,
-        createdAt,
-        lastPlayedAt,
-        playCount,
-        tags,
-        isFavorite,
-        sourceUrl,
-      ];
+    id,
+    title,
+    description,
+    filePath,
+    thumbnailPath,
+    type,
+    category,
+    duration,
+    createdAt,
+    lastPlayedAt,
+    playCount,
+    tags,
+    isFavorite,
+    sourceUrl,
+  ];
 }
 
-enum MediaType {
-  audio,
-  video,
-}
+enum MediaType { audio, video }
 
 extension MediaTypeExtension on MediaType {
   String get displayName {
