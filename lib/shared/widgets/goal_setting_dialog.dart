@@ -65,9 +65,10 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
           color: isDark ? const Color(0xFF2A3441) : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12), // --radius-lg: 12px
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Header
             Container(
               padding: const EdgeInsets.all(20),
@@ -384,6 +385,7 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

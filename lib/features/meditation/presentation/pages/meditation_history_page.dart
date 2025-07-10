@@ -594,19 +594,6 @@ void showProgressSettings(
               showReminderSettingsDialog(context, currentGoal: userGoal, onGoalUpdated: onGoalUpdated);
             },
           ),
-          buildSettingOption(
-            context,
-            icon: Icons.analytics,
-            title: '统计偏好',
-            subtitle: '自定义统计显示方式',
-            onTap: () {
-              Navigator.pop(context);
-              // 实现统计偏好设置
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('统计偏好设置功能即将上线')));
-            },
-          ),
           const SizedBox(height: 20),
         ],
       ),

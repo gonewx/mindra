@@ -42,10 +42,11 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // 标题
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -131,7 +132,8 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
                 ),
               ],
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
