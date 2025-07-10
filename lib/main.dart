@@ -9,6 +9,7 @@ import 'core/router/app_router.dart';
 import 'core/di/injection_container.dart';
 import 'core/database/database_helper.dart';
 import 'features/player/services/simple_sound_effects_player.dart';
+import 'features/player/services/global_player_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,6 +48,10 @@ void main() async {
     
     // Initialize dependencies
     await configureDependencies();
+    
+    // Initialize global player service
+    final globalPlayerService = getIt<GlobalPlayerService>();
+    await globalPlayerService.initialize();
     
     // Initialize theme provider
     final themeProvider = ThemeProvider();

@@ -2,19 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
 import '../widgets/player_controls.dart';
 import '../widgets/progress_bar.dart';
 import '../widgets/sound_effects_panel.dart';
-import '../../domain/services/sound_effects_service.dart';
-import '../../../../features/media/data/datasources/media_local_datasource.dart';
+import '../../services/global_player_service.dart';
 import '../../../../features/media/domain/entities/media_item.dart';
 import '../../../../features/media/presentation/bloc/media_bloc.dart';
 import '../../../../features/media/presentation/bloc/media_event.dart';
 import '../../../../features/media/presentation/widgets/add_media_dialog.dart';
-import '../../../../core/audio/cross_platform_audio_player.dart';
 import '../../../meditation/data/services/meditation_session_manager.dart';
-import '../../../meditation/domain/entities/meditation_session.dart';
+import '../../../../core/di/injection_container.dart';
 
 class PlayerPage extends StatefulWidget {
   final String? mediaId;
@@ -26,177 +25,56 @@ class PlayerPage extends StatefulWidget {
 }
 
 class _PlayerPageState extends State<PlayerPage> {
-  late CrossPlatformAudioPlayer _audioPlayer;
-  final SoundEffectsService _soundEffectsService = SoundEffectsService();
-  bool _isPlaying = false;
+  late GlobalPlayerService _playerService;
+  Timer? _sessionCompleteTimer;
 
-  bool _isFavorited = false;
-  bool _isShuffled = false;
-  RepeatMode _repeatMode = RepeatMode.none;
-  Timer? _sleepTimer;
-  double _currentPosition = 0.0;
-  double _totalDuration = 0.0;
-
-  // Subscription management
-  late StreamSubscription _playingSubscription;
-  late StreamSubscription _positionSubscription;
-  late StreamSubscription _durationSubscription;
-
-  // Media data
-  MediaItem? _currentMedia;
-  List<MediaItem> _mediaItems = [];
-  List<MediaItem> _shuffledItems = [];
-  int _currentIndex = 0;
-  final MediaLocalDataSource _mediaDataSource = MediaLocalDataSource();
-
-  // Media data getters
-  String get _title =>
-      widget.mediaId == null ? '未选择素材' : (_currentMedia?.title ?? '加载中...');
-  String get _category =>
-      widget.mediaId == null ? '' : (_currentMedia?.category ?? '未知');
+  // Media data getters that use the global service
+  String get _title => _playerService.title;
+  String get _category => _playerService.category;
+  bool get _isPlaying => _playerService.isPlaying;
+  bool get _isFavorited => _playerService.isFavorited;
+  bool get _isShuffled => _playerService.isShuffled;
+  RepeatMode get _repeatMode => _playerService.repeatMode;
+  double get _currentPosition => _playerService.currentPosition;
+  double get _totalDuration => _playerService.totalDuration;
+  MediaItem? get _currentMedia => _playerService.currentMedia;
 
   @override
   void initState() {
     super.initState();
-    _audioPlayer = CrossPlatformAudioPlayer();
-    _setupAudioPlayer();
-    _loadMediaData();
-    _loadFavoriteStatus();
-    _initializeSoundEffects();
+    _playerService = getIt<GlobalPlayerService>();
+    _initializePlayer();
   }
 
-  void _initializeSoundEffects() async {
+  Future<void> _initializePlayer() async {
     try {
-      await _soundEffectsService.initialize();
-      debugPrint('Sound effects service initialized successfully');
-    } catch (e) {
-      debugPrint('Failed to initialize sound effects service: $e');
-    }
-  }
-
-  void _setupAudioPlayer() {
-    // Listen to playing state changes
-    _playingSubscription = _audioPlayer.playingStream.listen((isPlaying) {
-      if (mounted) {
-        setState(() {
-          _isPlaying = isPlaying;
-        });
-
-        // Handle session management based on playing state
-        _handlePlayingStateChange(isPlaying);
+      if (!_playerService.isInitialized) {
+        await _playerService.initialize();
       }
-    });
-
-    // Listen to position changes
-    _positionSubscription = _audioPlayer.positionStream.listen((position) {
-      if (mounted) {
-        setState(() {
-          _currentPosition = position.inSeconds.toDouble();
-        });
-
-        // Update session progress
-        MeditationSessionManager.updateSessionProgress(position.inSeconds);
-      }
-    });
-
-    // Listen to duration changes
-    _durationSubscription = _audioPlayer.durationStream.listen((duration) {
-      if (duration != null && mounted) {
-        setState(() {
-          _totalDuration = duration.inSeconds.toDouble();
-        });
-      }
-    });
-
-    // Listen to player state changes (especially for completion)
-    _audioPlayer.playerStateStream.listen((state) {
-      if (mounted) {
-        _handlePlayerStateChange(state);
-      }
-    });
-  }
-
-  void _handlePlayingStateChange(bool isPlaying) {
-    if (isPlaying &&
-        !MeditationSessionManager.hasActiveSession &&
-        _currentMedia != null) {
-      // Start new session when playback begins
-      _startMeditationSession();
-    } else if (!isPlaying && MeditationSessionManager.hasActiveSession) {
-      // Pause session when playback pauses
-      MeditationSessionManager.pauseSession();
-    }
-  }
-
-  void _handlePlayerStateChange(CrossPlatformPlayerState state) {
-    switch (state) {
-      case CrossPlatformPlayerState.completed:
-        // Session completed naturally
-        _completeMeditationSession();
-        break;
-      case CrossPlatformPlayerState.playing:
-        // Resume session if paused
-        if (MeditationSessionManager.hasActiveSession) {
-          MeditationSessionManager.resumeSession();
-        }
-        break;
-      case CrossPlatformPlayerState.paused:
-      case CrossPlatformPlayerState.stopped:
-        // Pause or stop session
-        if (MeditationSessionManager.hasActiveSession) {
-          MeditationSessionManager.pauseSession();
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  Future<void> _startMeditationSession() async {
-    if (_currentMedia == null) return;
-
-    try {
-      final sessionType = MeditationSessionManager.getSessionTypeFromCategory(
-        _currentMedia!.category,
-      );
-      final soundEffects = _soundEffectsService.getActiveSoundEffects();
-
-      await MeditationSessionManager.startSession(
-        mediaItem: _currentMedia!,
-        sessionType: sessionType,
-        soundEffects: soundEffects,
-      );
-
-      debugPrint('Started meditation session for: ${_currentMedia!.title}');
-    } catch (e) {
-      debugPrint('Error starting meditation session: $e');
-    }
-  }
-
-  Future<void> _completeMeditationSession() async {
-    if (!MeditationSessionManager.hasActiveSession) return;
-
-    try {
-      await MeditationSessionManager.completeSession();
-      debugPrint('Completed meditation session');
-
-      // Show completion dialog or notification
-      if (mounted) {
-        _showSessionCompletedDialog();
+      
+      // Listen for service changes first
+      _playerService.addListener(_onPlayerServiceChanged);
+      
+      // Load media if specified, otherwise check if service already has media
+      if (widget.mediaId != null) {
+        await _playerService.loadMedia(widget.mediaId!);
+      } else if (_playerService.currentMedia != null) {
+        // Service already has media loaded, just trigger a rebuild
+        setState(() {});
       }
     } catch (e) {
-      debugPrint('Error completing meditation session: $e');
+      debugPrint('Error initializing player: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('初始化播放器失败: $e')),
+        );
+      }
     }
   }
 
-  Future<void> _stopMeditationSession() async {
-    if (!MeditationSessionManager.hasActiveSession) return;
-
-    try {
-      await MeditationSessionManager.stopSession();
-      debugPrint('Stopped meditation session');
-    } catch (e) {
-      debugPrint('Error stopping meditation session: $e');
+  void _onPlayerServiceChanged() {
+    if (mounted) {
+      setState(() {}); // Trigger rebuild when player service state changes
     }
   }
 
@@ -213,7 +91,7 @@ class _PlayerPageState extends State<PlayerPage> {
             const Text('恭喜！您已完成了这次冥想练习。'),
             const SizedBox(height: 16),
             Text(
-              '练习时长：${(_totalDuration / 60).round()} 分钟',
+              '练习时长：${(_playerService.totalDuration / 60).round()} 分钟',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
           ],
@@ -235,119 +113,11 @@ class _PlayerPageState extends State<PlayerPage> {
     );
   }
 
-  Future<void> _loadMediaData() async {
-    if (widget.mediaId != null) {
-      try {
-        _mediaItems = await _mediaDataSource.getMediaItems();
-        _currentIndex = _mediaItems.indexWhere(
-          (item) => item.id == widget.mediaId,
-        );
-
-        if (_currentIndex >= 0) {
-          final media = _mediaItems[_currentIndex];
-          setState(() {
-            _currentMedia = media;
-          });
-
-          // Load favorite status
-          _loadFavoriteStatus();
-
-          // Load audio file
-          await _loadAudioFile(media.filePath);
-        }
-      } catch (e) {
-        debugPrint('Error loading media: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('加载媒体失败: $e')));
-        }
-      }
-    }
-  }
-
-  Future<void> _loadAudioFile(String filePath) async {
-    try {
-      if (kIsWeb && filePath.startsWith('web://')) {
-        // For web platform, create blob URL from stored bytes
-        if (_currentMedia != null) {
-          debugPrint('Loading web audio for media ID: ${_currentMedia!.id}');
-          final mimeType = _getMimeType(_currentMedia!.filePath);
-          debugPrint('Using MIME type: $mimeType');
-
-          final blobUrl = _mediaDataSource.createAudioBlobUrl(
-            _currentMedia!.id,
-            mimeType,
-          );
-
-          if (blobUrl != null) {
-            debugPrint(
-              'Successfully created blob URL, attempting to load audio',
-            );
-            await _audioPlayer.setUrl(blobUrl);
-            debugPrint('Web audio loaded from blob URL successfully');
-            return;
-          } else {
-            debugPrint(
-              'Failed to create blob URL for media ID: ${_currentMedia!.id}',
-            );
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('无法创建音频播放链接，请检查文件是否正确上传')),
-            );
-            return;
-          }
-        } else {
-          debugPrint('No current media available for web playback');
-        }
-      }
-
-      // For desktop platforms, load from file path
-      debugPrint('Loading desktop audio from file path: $filePath');
-      await _audioPlayer.setFilePath(filePath);
-      debugPrint('Audio file loaded: $filePath');
-    } catch (e) {
-      debugPrint('Error loading audio file: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载音频文件失败: $e')));
-      }
-    }
-  }
-
-  String _getMimeType(String filePath) {
-    final extension = filePath.split('.').last.toLowerCase();
-    switch (extension) {
-      case 'mp3':
-        return 'audio/mpeg';
-      case 'wav':
-        return 'audio/wav';
-      case 'aac':
-        return 'audio/aac';
-      case 'm4a':
-        return 'audio/mp4';
-      case 'ogg':
-        return 'audio/ogg';
-      case 'flac':
-        return 'audio/flac';
-      default:
-        return 'audio/mpeg'; // Default to mp3
-    }
-  }
-
   @override
   void dispose() {
-    // Stop any active meditation session when leaving the player
-    if (MeditationSessionManager.hasActiveSession) {
-      _stopMeditationSession();
-    }
-
-    _playingSubscription.cancel();
-    _positionSubscription.cancel();
-    _durationSubscription.cancel();
-    _sleepTimer?.cancel();
-    _audioPlayer.dispose();
-    _soundEffectsService.dispose();
+    _sessionCompleteTimer?.cancel();
+    _playerService.removeListener(_onPlayerServiceChanged);
+    // Don't dispose the global player service here as it should persist
     super.dispose();
   }
 
@@ -437,7 +207,7 @@ class _PlayerPageState extends State<PlayerPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (widget.mediaId != null)
+                  if (_currentMedia != null)
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
@@ -464,7 +234,7 @@ class _PlayerPageState extends State<PlayerPage> {
 
             // Content
             Expanded(
-              child: widget.mediaId == null
+              child: _currentMedia == null
                   ? _buildEmptyState(theme)
                   : _buildPlayerContent(theme),
             ),
@@ -600,7 +370,7 @@ class _PlayerPageState extends State<PlayerPage> {
               currentPosition: _currentPosition,
               totalDuration: _totalDuration,
               onSeek: (position) async {
-                await _audioPlayer.seek(Duration(seconds: position.toInt()));
+                await _playerService.seek(Duration(seconds: position.toInt()));
               },
             ),
           ),
@@ -611,13 +381,13 @@ class _PlayerPageState extends State<PlayerPage> {
             isPlaying: _isPlaying,
             onPlayPause: () async {
               if (_isPlaying) {
-                await _audioPlayer.pause();
+                await _playerService.pause();
               } else {
-                await _audioPlayer.play();
+                await _playerService.play();
               }
             },
-            onPrevious: _playPrevious,
-            onNext: _playNext,
+            onPrevious: () => _playerService.playPrevious(),
+            onNext: () => _playerService.playNext(),
           ),
           const SizedBox(height: 24),
 
@@ -629,20 +399,31 @@ class _PlayerPageState extends State<PlayerPage> {
               _buildActionButton(
                 icon: Icons.shuffle,
                 isActive: _isShuffled,
-                onTap: _toggleShuffle,
+                onTap: () {
+                  _playerService.toggleShuffle();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(_isShuffled ? '已开启随机播放' : '已关闭随机播放')),
+                  );
+                },
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               _buildActionButton(
                 icon: _getRepeatIcon(),
                 isActive: _repeatMode != RepeatMode.none,
-                onTap: _toggleRepeatMode,
+                onTap: () {
+                  _playerService.toggleRepeatMode();
+                  final modeText = _playerService.getRepeatModeText();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('重复模式：$modeText')),
+                  );
+                },
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               _buildActionButton(icon: Icons.timer, onTap: _showTimerDialog),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               _buildActionButton(
                 icon: Icons.equalizer,
-                onTap: _showSoundEffectsDialog,
+                onTap: () => _showSoundEffectsDialog(),
               ),
             ],
           ),
@@ -799,121 +580,6 @@ class _PlayerPageState extends State<PlayerPage> {
     );
   }
 
-  void _toggleShuffle() {
-    setState(() {
-      _isShuffled = !_isShuffled;
-    });
-
-    if (_isShuffled) {
-      _shufflePlaylist();
-    } else {
-      _currentIndex = _mediaItems.indexOf(_currentMedia!);
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_isShuffled ? '已开启随机播放' : '已关闭随机播放')),
-    );
-  }
-
-  void _shufflePlaylist() {
-    _shuffledItems = List.from(_mediaItems);
-    _shuffledItems.shuffle();
-
-    // Ensure current media is at the beginning of shuffled list
-    if (_currentMedia != null) {
-      _shuffledItems.remove(_currentMedia!);
-      _shuffledItems.insert(0, _currentMedia!);
-      _currentIndex = 0;
-    }
-  }
-
-  List<MediaItem> get _currentPlaylist =>
-      _isShuffled ? _shuffledItems : _mediaItems;
-
-  void _playPrevious() async {
-    final playlist = _currentPlaylist;
-    if (playlist.isEmpty) return;
-
-    if (_currentIndex > 0) {
-      _currentIndex--;
-    } else {
-      _currentIndex = playlist.length - 1; // Loop to last
-    }
-
-    await _loadMediaAtIndex(_currentIndex);
-  }
-
-  void _playNext() async {
-    final playlist = _currentPlaylist;
-    if (playlist.isEmpty) return;
-
-    if (_currentIndex < playlist.length - 1) {
-      _currentIndex++;
-    } else {
-      _currentIndex = 0; // Loop to first
-    }
-
-    await _loadMediaAtIndex(_currentIndex);
-  }
-
-  Future<void> _loadMediaAtIndex(int index) async {
-    final playlist = _currentPlaylist;
-    if (index < 0 || index >= playlist.length) return;
-
-    final media = playlist[index];
-    setState(() {
-      _currentMedia = media;
-    });
-
-    try {
-      await _loadAudioFile(media.filePath);
-      // Auto-play the new track
-      if (!_isPlaying) {
-        await _audioPlayer.play();
-      }
-    } catch (e) {
-      debugPrint('Error loading media at index $index: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载音频失败: $e')));
-      }
-    }
-  }
-
-  void _toggleRepeatMode() {
-    setState(() {
-      switch (_repeatMode) {
-        case RepeatMode.none:
-          _repeatMode = RepeatMode.all;
-          break;
-        case RepeatMode.all:
-          _repeatMode = RepeatMode.one;
-          break;
-        case RepeatMode.one:
-          _repeatMode = RepeatMode.none;
-          break;
-      }
-    });
-
-    // TODO: Update repeat mode in audio player
-    final modeText = _getRepeatModeText();
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('重复模式：$modeText')));
-  }
-
-  String _getRepeatModeText() {
-    switch (_repeatMode) {
-      case RepeatMode.none:
-        return '关闭';
-      case RepeatMode.all:
-        return '全部重复';
-      case RepeatMode.one:
-        return '单曲重复';
-    }
-  }
-
   IconData _getRepeatIcon() {
     switch (_repeatMode) {
       case RepeatMode.none:
@@ -922,36 +588,26 @@ class _PlayerPageState extends State<PlayerPage> {
         return Icons.repeat;
       case RepeatMode.one:
         return Icons.repeat_one;
+      default:
+        return Icons.repeat;
     }
   }
 
-  void _loadFavoriteStatus() {
-    if (_currentMedia != null) {
-      setState(() {
-        _isFavorited = _currentMedia!.isFavorite;
-      });
-    }
-  }
-
-  void _toggleFavorite() {
+  void _toggleFavorite() async {
     if (_currentMedia == null) return;
 
-    final newFavoriteStatus = !_isFavorited;
+    await _playerService.toggleFavorite();
 
-    // 立即更新本地状态
-    setState(() {
-      _isFavorited = newFavoriteStatus;
-      _currentMedia = _currentMedia!.copyWith(isFavorite: newFavoriteStatus);
-    });
+    // Use MediaBloc to update favorite status in database
+    if (mounted) {
+      context.read<MediaBloc>().add(
+        ToggleFavorite(_currentMedia!.id, _isFavorited),
+      );
 
-    // 使用MediaBloc更新收藏状态
-    context.read<MediaBloc>().add(
-      ToggleFavorite(_currentMedia!.id, newFavoriteStatus),
-    );
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(_isFavorited ? '已添加到收藏' : '已取消收藏')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_isFavorited ? '已添加到收藏' : '已取消收藏')),
+      );
+    }
   }
 
   void _showAddToPlaylistDialog() {
@@ -1117,8 +773,7 @@ class _PlayerPageState extends State<PlayerPage> {
   void _shareCurrentMedia() {
     if (_currentMedia == null) return;
 
-    final shareText =
-        '''
+    final shareText = '''
 正在收听：${_currentMedia!.title}
 类别：${_currentMedia!.category}
 ${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.description}' : ''}
@@ -1163,37 +818,8 @@ ${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.de
 
     AddMediaDialog.showEdit(context, _currentMedia!).then((_) {
       // 重新加载媒体数据以获取更新后的信息
-      _loadMediaData();
+      _initializePlayer();
     });
-  }
-
-  void _setSleepTimer(int minutes) {
-    _sleepTimer?.cancel();
-
-    _sleepTimer = Timer(Duration(minutes: minutes), () async {
-      if (_isPlaying) {
-        await _audioPlayer.pause();
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('定时停止已触发')));
-      }
-    });
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('已设置 $minutes 分钟定时停止')));
-  }
-
-  void _cancelSleepTimer() {
-    _sleepTimer?.cancel();
-    _sleepTimer = null;
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('已取消定时停止')));
   }
 
   void _showTimerDialog() {
@@ -1209,7 +835,10 @@ ${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.de
                 title: Text('$minutes 分钟后'),
                 onTap: () {
                   Navigator.pop(context);
-                  _setSleepTimer(minutes);
+                  _playerService.setSleepTimer(minutes);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('已设置 $minutes 分钟定时停止')),
+                  );
                 },
               ),
             const Divider(),
@@ -1217,7 +846,10 @@ ${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.de
               title: const Text('取消定时'),
               onTap: () {
                 Navigator.pop(context);
-                _cancelSleepTimer();
+                _playerService.cancelSleepTimer();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('已取消定时停止')),
+                );
               },
             ),
           ],

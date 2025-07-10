@@ -4,10 +4,16 @@ import '../../features/media/data/repositories/media_repository_impl.dart';
 import '../../features/media/domain/repositories/media_repository.dart';
 import '../../features/media/domain/usecases/media_usecases.dart';
 import '../../features/media/presentation/bloc/media_bloc.dart';
+import '../../features/player/services/global_player_service.dart';
 
 final getIt = GetIt.instance;
 
 Future<void> configureDependencies() async {
+  // Services
+  getIt.registerLazySingleton<GlobalPlayerService>(
+    () => GlobalPlayerService(),
+  );
+
   // Data sources
   getIt.registerLazySingleton<MediaLocalDataSource>(
     () => MediaLocalDataSource(),

@@ -10,6 +10,7 @@ import '../../features/meditation/presentation/pages/meditation_history_page.dar
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/media/presentation/bloc/media_bloc.dart';
 import '../../shared/widgets/animated_bottom_navigation.dart';
+import '../../features/player/presentation/widgets/floating_player.dart';
 import '../di/injection_container.dart';
 
 class AppRouter {
@@ -131,8 +132,16 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    final currentRoute = GoRouterState.of(context).matchedLocation;
+    final showFloatingPlayer = currentRoute != AppRouter.player; // 在非播放页面显示浮动球
+    
     return Scaffold(
-      body: widget.child,
+      body: Stack(
+        children: [
+          widget.child,
+          if (showFloatingPlayer) const FloatingPlayer(),
+        ],
+      ),
       bottomNavigationBar: AnimatedBottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
