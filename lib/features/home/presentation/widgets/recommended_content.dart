@@ -104,8 +104,6 @@ class RecommendedContent extends StatelessWidget {
           duration: item['duration']!,
           imageUrl: item['image']!,
           isListView: false,
-          showActions: false,
-          showDurationBadge: false,
           onTap: () => context.go('${AppRouter.player}?mediaId=$index'),
         );
       },

@@ -47,7 +47,6 @@ class RecentSessionsList extends StatelessWidget {
             duration: session['duration']!,
             imageUrl: session['image']!,
             isListView: true, // 列表视图
-            showActions: false, // 首页最近播放不显示收藏和更多选项按钮
             thumbnailSize: 52.0, // 调整缩略图尺寸，使列表项更紧凑
             cardPadding: const EdgeInsets.all(10), // 调整内边距
             onTap: () => context.go('${AppRouter.player}?mediaId=$index'),

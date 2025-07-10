@@ -5,15 +5,10 @@ class AnimatedMediaCard extends StatefulWidget {
   final String duration;
   final String category;
   final String? imageUrl;
-  final bool isFavorite;
   final bool isListView;
-  final bool showActions; // 新增：是否显示收藏和更多选项按钮
-  final bool showDurationBadge; // 新增：是否在图片上显示时长标签
   final double? thumbnailSize; // 新增：缩略图尺寸（列表视图时使用）
   final EdgeInsets? cardPadding; // 新增：卡片内边距
   final VoidCallback? onTap;
-  final VoidCallback? onFavoriteToggle;
-  final VoidCallback? onMoreOptions;
 
   const AnimatedMediaCard({
     super.key,
@@ -21,15 +16,10 @@ class AnimatedMediaCard extends StatefulWidget {
     required this.duration,
     required this.category,
     this.imageUrl,
-    this.isFavorite = false,
     this.isListView = false,
-    this.showActions = true, // 默认显示收藏和更多选项按钮
-    this.showDurationBadge = true, // 默认在图片上显示时长标签
     this.thumbnailSize, // 默认为 null，使用内置默认值
     this.cardPadding, // 默认为 null，使用内置默认值
     this.onTap,
-    this.onFavoriteToggle,
-    this.onMoreOptions,
   });
 
   @override
@@ -88,6 +78,83 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
     } else {
       _animationController.reverse();
     }
+  }
+
+  // 根据分类获取图标和颜色的通用方法
+  (IconData, List<Color>) _getIconAndColors(BuildContext context) {
+    final category = widget.category.toLowerCase();
+    final theme = Theme.of(context);
+
+    if (category.contains('睡前') || category.contains('睡眠')) {
+      return (
+        Icons.bedtime,
+        [const Color(0xFF6B73FF), const Color(0xFF9B59B6)],
+      );
+    } else if (category.contains('专注') || category.contains('工作')) {
+      return (
+        Icons.psychology,
+        [const Color(0xFF3498DB), const Color(0xFF2980B9)],
+      );
+    } else if (category.contains('放松') || category.contains('减压')) {
+      return (Icons.spa, [const Color(0xFF2ECC71), const Color(0xFF27AE60)]);
+    } else if (category.contains('自然') || category.contains('音效')) {
+      return (Icons.nature, [const Color(0xFF16A085), const Color(0xFF1ABC9C)]);
+    } else if (category.contains('冥想') || category.contains('正念')) {
+      return (
+        Icons.self_improvement,
+        [const Color(0xFFE67E22), const Color(0xFFD35400)],
+      );
+    } else if (category.contains('呼吸')) {
+      return (Icons.air, [const Color(0xFF9B59B6), const Color(0xFF8E44AD)]);
+    } else {
+      // 默认音乐图标
+      return (
+        Icons.music_note,
+        [theme.colorScheme.primary, theme.colorScheme.secondary],
+      );
+    }
+  }
+
+  Widget _buildDefaultCover(BuildContext context, bool isSmallScreen) {
+    final (iconData, gradientColors) = _getIconAndColors(context);
+
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Icon(
+        iconData,
+        size: isSmallScreen ? 36 : 48,
+        color: Colors.white.withValues(alpha: 0.9),
+      ),
+    );
+  }
+
+  Widget _buildDefaultCoverForList(BuildContext context, bool isSmallScreen) {
+    final (iconData, gradientColors) = _getIconAndColors(context);
+
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Icon(
+        iconData,
+        size: isSmallScreen ? 24 : 32,
+        color: Colors.white.withValues(alpha: 0.9),
+      ),
+    );
   }
 
   @override
@@ -166,54 +233,13 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                                     height: double.infinity,
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) {
-                                      return Icon(
-                                        Icons.music_note,
-                                        size: isSmallScreen ? 36 : 48,
-                                        color: Colors.white,
+                                      return _buildDefaultCover(
+                                        context,
+                                        isSmallScreen,
                                       );
                                     },
                                   )
-                                : Icon(
-                                    Icons.music_note,
-                                    size: isSmallScreen ? 36 : 48,
-                                    color: Colors.white,
-                                  ),
-
-                            // Duration Badge - 只在需要时显示
-                            if (widget.showDurationBadge)
-                              Positioned(
-                                bottom: isSmallScreen ? 6 : 8,
-                                right: isSmallScreen ? 6 : 8,
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: isSmallScreen ? 6 : 8,
-                                    vertical: isSmallScreen ? 3 : 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.7),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    widget.duration,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: durationFontSize,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                            // Animated Favorite Button - 只在需要时显示
-                            if (widget.showActions)
-                              Positioned(
-                                top: isSmallScreen ? 6 : 8,
-                                right: isSmallScreen ? 6 : 8,
-                                child: _AnimatedFavoriteButton(
-                                  isFavorite: widget.isFavorite,
-                                  onTap: widget.onFavoriteToggle,
-                                ),
-                              ),
+                                : _buildDefaultCover(context, isSmallScreen),
                           ],
                         ),
                       ),
@@ -363,18 +389,22 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                                   widget.imageUrl!,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.music_note,
-                                      color: Colors.white,
-                                      size: isSmallScreen ? 24 : 32,
+                                    return ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: _buildDefaultCoverForList(
+                                        context,
+                                        isSmallScreen,
+                                      ),
                                     );
                                   },
                                 ),
                               )
-                            : Icon(
-                                Icons.music_note,
-                                color: Colors.white,
-                                size: isSmallScreen ? 24 : 32,
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: _buildDefaultCoverForList(
+                                  context,
+                                  isSmallScreen,
+                                ),
                               ),
                       ),
 
@@ -444,25 +474,6 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                           ],
                         ),
                       ),
-
-                      // Actions - 只在需要时显示
-                      if (widget.showActions)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _AnimatedFavoriteButton(
-                              isFavorite: widget.isFavorite,
-                              onTap: widget.onFavoriteToggle,
-                              showBackground: false,
-                            ),
-                            _AnimatedIconButton(
-                              icon: Icons.more_vert,
-                              onTap:
-                                  widget.onMoreOptions ??
-                                  () => _showMoreOptions(context),
-                            ),
-                          ],
-                        ),
                     ],
                   ),
                 ),
@@ -470,231 +481,6 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
             ),
           );
         },
-      ),
-    );
-  }
-
-  void _showMoreOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _AnimatedBottomSheet(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.edit),
-            title: const Text('编辑信息'),
-            onTap: () {
-              Navigator.pop(context);
-              // TODO: Edit media item
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.share),
-            title: const Text('分享'),
-            onTap: () {
-              Navigator.pop(context);
-              // TODO: Share media item
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.delete),
-            title: const Text('删除'),
-            onTap: () {
-              Navigator.pop(context);
-              // TODO: Delete media item
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AnimatedFavoriteButton extends StatefulWidget {
-  final bool isFavorite;
-  final VoidCallback? onTap;
-  final bool showBackground;
-
-  const _AnimatedFavoriteButton({
-    required this.isFavorite,
-    this.onTap,
-    this.showBackground = true,
-  });
-
-  @override
-  State<_AnimatedFavoriteButton> createState() =>
-      _AnimatedFavoriteButtonState();
-}
-
-class _AnimatedFavoriteButtonState extends State<_AnimatedFavoriteButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  bool _isHovered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onHoverChange(bool isHovered) {
-    setState(() {
-      _isHovered = isHovered;
-    });
-
-    if (isHovered) {
-      _controller.forward();
-    } else {
-      _controller.reverse();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => _onHoverChange(true),
-      onExit: (_) => _onHoverChange(false),
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: InkWell(
-              onTap: widget.onTap,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: widget.showBackground
-                    ? BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        shape: BoxShape.circle,
-                      )
-                    : null,
-                child: Icon(
-                  widget.isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: widget.isFavorite
-                      ? Colors.red
-                      : widget.showBackground
-                      ? Colors.white
-                      : null,
-                  size: 20,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _AnimatedIconButton extends StatefulWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _AnimatedIconButton({required this.icon, this.onTap});
-
-  @override
-  State<_AnimatedIconButton> createState() => _AnimatedIconButtonState();
-}
-
-class _AnimatedIconButtonState extends State<_AnimatedIconButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => _controller.forward(),
-      onExit: (_) => _controller.reverse(),
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: IconButton(icon: Icon(widget.icon), onPressed: widget.onTap),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _AnimatedBottomSheet extends StatefulWidget {
-  final List<Widget> children;
-
-  const _AnimatedBottomSheet({required this.children});
-
-  @override
-  State<_AnimatedBottomSheet> createState() => _AnimatedBottomSheetState();
-}
-
-class _AnimatedBottomSheetState extends State<_AnimatedBottomSheet>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<Offset> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 300), // slideUp 0.3s ease
-      vsync: this,
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: widget.children,
-        ),
       ),
     );
   }

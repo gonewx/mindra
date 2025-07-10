@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../widgets/media_item_card.dart';
+import '../../../../shared/widgets/animated_media_card.dart';
 import '../widgets/add_media_dialog.dart';
 import '../bloc/media_bloc.dart';
 import '../bloc/media_event.dart';
 import '../bloc/media_state.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/constants/app_constants.dart';
 
 class MediaLibraryPage extends StatelessWidget {
   const MediaLibraryPage({super.key});
@@ -33,7 +34,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   bool _isGridView = true;
   final TextEditingController _searchController = TextEditingController();
 
-  final List<String> _categories = ['全部', '专注', '睡前', '放松', '自然音效'];
+  final List<String> _categories = ['全部', ...AppConstants.defaultCategories];
 
   @override
   void dispose() {
@@ -75,38 +76,78 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
             ),
           ),
 
-          // Search Bar
+          // Search Bar with View Toggle
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(
-                  color: theme.colorScheme.outline.withValues(alpha: 0.2),
+            child: Row(
+              children: [
+                // Search Bar
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: '搜索冥想素材...',
+                        hintStyle: TextStyle(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      onChanged: (value) {
+                        // TODO: Implement search
+                      },
+                    ),
+                  ),
                 ),
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: '搜索冥想素材...',
-                  hintStyle: TextStyle(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                const SizedBox(width: 12),
+                // View Toggle Button
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isGridView = !_isGridView),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: theme.colorScheme.outline.withValues(
+                            alpha: 0.2,
+                          ),
+                        ),
+                      ),
+                      child: Icon(
+                        _isGridView
+                            ? Icons.view_list_rounded
+                            : Icons.grid_view_rounded,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.8,
+                        ),
+                        size: 20,
+                      ),
+                    ),
                   ),
                 ),
-                onChanged: (value) {
-                  // TODO: Implement search
-                },
-              ),
+              ],
             ),
           ),
           const SizedBox(height: 20),
@@ -172,73 +213,6 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
             ),
           ),
           const SizedBox(height: 20),
-
-          // View Toggle
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                MouseRegion(
-                  cursor: SystemMouseCursors.click, // 添加手形光标
-                  child: GestureDetector(
-                    onTap: () => setState(() => _isGridView = true),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: _isGridView
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: theme.colorScheme.outline.withValues(
-                            alpha: 0.2,
-                          ),
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.grid_view_rounded,
-                        color: _isGridView
-                            ? Colors.white
-                            : theme.colorScheme.onSurface.withValues(
-                                alpha: 0.6,
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                MouseRegion(
-                  cursor: SystemMouseCursors.click, // 添加手形光标
-                  child: GestureDetector(
-                    onTap: () => setState(() => _isGridView = false),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: !_isGridView
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: theme.colorScheme.outline.withValues(
-                            alpha: 0.2,
-                          ),
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.view_list_rounded,
-                        color: !_isGridView
-                            ? Colors.white
-                            : theme.colorScheme.onSurface.withValues(
-                                alpha: 0.6,
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
 
           // Content
           Expanded(child: _buildMediaList()),
@@ -317,24 +291,51 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   }
 
   Widget _buildGridView(List<dynamic> mediaItems) {
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: mediaItems.length,
-      itemBuilder: (context, index) {
-        final item = mediaItems[index];
-        return MediaItemCard(
-          title: item.title,
-          duration:
-              '${item.duration ~/ 60}:${(item.duration % 60).toString().padLeft(2, '0')}',
-          category: item.category,
-          isFavorite: item.isFavorite,
-          onTap: () => _playMedia(item.id),
-          onFavoriteToggle: () => _toggleFavorite(item.id, !item.isFavorite),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 响应式设计：根据屏幕宽度计算列数和间距
+        final screenWidth = constraints.maxWidth;
+        const effectiveSpacing = 16.0;
+
+        // 计算响应式列数
+        int responsiveCrossAxisCount;
+        if (screenWidth < 600) {
+          responsiveCrossAxisCount = 2; // 小屏幕 2 列
+        } else if (screenWidth < 900) {
+          responsiveCrossAxisCount = 3; // 中屏幕 3 列
+        } else if (screenWidth < 1200) {
+          responsiveCrossAxisCount = 4; // 大屏幕 4 列
+        } else {
+          responsiveCrossAxisCount = 5; // 超大屏幕 5 列
+        }
+
+        // 计算响应式宽高比
+        double responsiveChildAspectRatio;
+        if (screenWidth < 600) {
+          responsiveChildAspectRatio = 0.75; // 小屏幕保持原比例
+        } else {
+          responsiveChildAspectRatio = 1.0; // 大屏幕使用更方正的比例
+        }
+
+        return GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: responsiveCrossAxisCount,
+            childAspectRatio: responsiveChildAspectRatio,
+            crossAxisSpacing: effectiveSpacing,
+            mainAxisSpacing: effectiveSpacing,
+          ),
+          itemCount: mediaItems.length,
+          itemBuilder: (context, index) {
+            final item = mediaItems[index];
+            return AnimatedMediaCard(
+              title: item.title,
+              duration:
+                  '${item.duration ~/ 60}:${(item.duration % 60).toString().padLeft(2, '0')}',
+              category: item.category,
+              isListView: false,
+              onTap: () => _playMedia(item.id),
+            );
+          },
         );
       },
     );
@@ -347,15 +348,13 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
         final item = mediaItems[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: MediaItemCard(
+          child: AnimatedMediaCard(
             title: item.title,
             duration:
                 '${item.duration ~/ 60}:${(item.duration % 60).toString().padLeft(2, '0')}',
             category: item.category,
-            isFavorite: item.isFavorite,
             isListView: true,
             onTap: () => _playMedia(item.id),
-            onFavoriteToggle: () => _toggleFavorite(item.id, !item.isFavorite),
           ),
         );
       },
@@ -375,9 +374,5 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
 
   void _playMedia(String mediaId) {
     context.go('${AppRouter.player}?mediaId=$mediaId');
-  }
-
-  void _toggleFavorite(String mediaId, bool isFavorite) {
-    context.read<MediaBloc>().add(ToggleFavorite(mediaId, isFavorite));
   }
 }

@@ -5,7 +5,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/theme_provider.dart';
 import '../widgets/daily_goal_card.dart';
 import '../widgets/quick_actions_grid.dart';
-import '../widgets/recommended_content.dart';
+
 import '../widgets/recent_sessions_list.dart';
 
 class HomePage extends StatelessWidget {
@@ -85,20 +85,6 @@ class HomePage extends StatelessWidget {
             // Quick Actions
             const QuickActionsGrid(),
             const SizedBox(height: 32), // --space-32: 32px
-            // Recommended Content
-            Text(
-              '推荐内容',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.primary,
-                // 移除额外的fontWeight，使用主题默认的w500
-              ),
-            ),
-            const SizedBox(height: 16),
-            RecommendedContent(
-              cardSpacing: themeProvider.cardSpacing, // 使用主题提供者中的卡片间距
-            ),
-            const SizedBox(height: 32),
-
             // Recent Sessions
             Text(
               '最近播放',
