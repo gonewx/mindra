@@ -33,6 +33,10 @@ class MediaAdding extends MediaState {}
 
 class MediaAdded extends MediaState {}
 
+class MediaUpdating extends MediaState {}
+
+class MediaUpdated extends MediaState {}
+
 class MediaDeleting extends MediaState {}
 
 class MediaDeleted extends MediaState {}

@@ -12,6 +12,7 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
   final GetMediaItemsUseCase _getMediaItemsUseCase;
   final GetMediaItemsByCategoryUseCase _getMediaItemsByCategoryUseCase;
   final GetFavoriteMediaItemsUseCase _getFavoriteMediaItemsUseCase;
+  final UpdateMediaItemUseCase _updateMediaItemUseCase;
   final ToggleFavoriteUseCase _toggleFavoriteUseCase;
   final DeleteMediaItemUseCase _deleteMediaItemUseCase;
 
@@ -22,19 +23,22 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     required GetMediaItemsUseCase getMediaItemsUseCase,
     required GetMediaItemsByCategoryUseCase getMediaItemsByCategoryUseCase,
     required GetFavoriteMediaItemsUseCase getFavoriteMediaItemsUseCase,
+    required UpdateMediaItemUseCase updateMediaItemUseCase,
     required ToggleFavoriteUseCase toggleFavoriteUseCase,
     required DeleteMediaItemUseCase deleteMediaItemUseCase,
-  })  : _addMediaUseCase = addMediaUseCase,
-        _getMediaItemsUseCase = getMediaItemsUseCase,
-        _getMediaItemsByCategoryUseCase = getMediaItemsByCategoryUseCase,
-        _getFavoriteMediaItemsUseCase = getFavoriteMediaItemsUseCase,
-        _toggleFavoriteUseCase = toggleFavoriteUseCase,
-        _deleteMediaItemUseCase = deleteMediaItemUseCase,
-        super(MediaInitial()) {
+  }) : _addMediaUseCase = addMediaUseCase,
+       _getMediaItemsUseCase = getMediaItemsUseCase,
+       _getMediaItemsByCategoryUseCase = getMediaItemsByCategoryUseCase,
+       _getFavoriteMediaItemsUseCase = getFavoriteMediaItemsUseCase,
+       _updateMediaItemUseCase = updateMediaItemUseCase,
+       _toggleFavoriteUseCase = toggleFavoriteUseCase,
+       _deleteMediaItemUseCase = deleteMediaItemUseCase,
+       super(MediaInitial()) {
     on<LoadMediaItems>(_onLoadMediaItems);
     on<LoadMediaItemsByCategory>(_onLoadMediaItemsByCategory);
     on<LoadFavoriteMediaItems>(_onLoadFavoriteMediaItems);
     on<AddMediaItem>(_onAddMediaItem);
+    on<UpdateMediaItem>(_onUpdateMediaItem);
     on<ToggleFavorite>(_onToggleFavorite);
     on<DeleteMediaItem>(_onDeleteMediaItem);
     on<SearchMediaItems>(_onSearchMediaItems);
@@ -85,14 +89,16 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
   ) async {
     try {
       emit(MediaAdding());
-      
+
       final mediaId = _uuid.v4();
       debugPrint('Generated media ID: $mediaId');
-      
+
       // Store file bytes for web platform BEFORE creating media item
       if (kIsWeb && event.fileBytes != null) {
         try {
-          debugPrint('Storing media bytes for web platform, mediaId: $mediaId, bytes length: ${event.fileBytes!.length}');
+          debugPrint(
+            'Storing media bytes for web platform, mediaId: $mediaId, bytes length: ${event.fileBytes!.length}',
+          );
           // Use the MediaLocalDataSource to store bytes
           final dataSource = MediaLocalDataSource();
           await dataSource.storeMediaBytes(mediaId, event.fileBytes!);
@@ -103,7 +109,7 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
           return;
         }
       }
-      
+
       final mediaItem = MediaItem(
         id: mediaId,
         title: event.title,
@@ -118,11 +124,35 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
 
       await _addMediaUseCase(mediaItem);
       emit(MediaAdded());
-      
+
       // Reload media items
       add(LoadMediaItems());
     } catch (e) {
       emit(MediaError('Failed to add media item: ${e.toString()}'));
+    }
+  }
+
+  Future<void> _onUpdateMediaItem(
+    UpdateMediaItem event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      await _updateMediaItemUseCase(event.mediaItem);
+      emit(MediaUpdated());
+
+      // Reload current media items
+      if (state is MediaLoaded) {
+        final currentState = state as MediaLoaded;
+        if (currentState.currentCategory == '收藏') {
+          add(LoadFavoriteMediaItems());
+        } else {
+          add(LoadMediaItemsByCategory(currentState.currentCategory));
+        }
+      } else {
+        add(LoadMediaItems());
+      }
+    } catch (e) {
+      emit(MediaError('Failed to update media item: ${e.toString()}'));
     }
   }
 
@@ -133,7 +163,7 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     try {
       await _toggleFavoriteUseCase(event.id, event.isFavorite);
       emit(FavoriteToggled(event.id, event.isFavorite));
-      
+
       // Reload current media items
       if (state is MediaLoaded) {
         final currentState = state as MediaLoaded;
@@ -156,7 +186,7 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       emit(MediaDeleting());
       await _deleteMediaItemUseCase(event.id);
       emit(MediaDeleted());
-      
+
       // Reload media items
       if (state is MediaLoaded) {
         final currentState = state as MediaLoaded;
@@ -178,8 +208,11 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       final allItems = await _getMediaItemsUseCase();
       final filteredItems = allItems.where((item) {
         return item.title.toLowerCase().contains(event.query.toLowerCase()) ||
-               item.category.toLowerCase().contains(event.query.toLowerCase()) ||
-               (item.description?.toLowerCase().contains(event.query.toLowerCase()) ?? false);
+            item.category.toLowerCase().contains(event.query.toLowerCase()) ||
+            (item.description?.toLowerCase().contains(
+                  event.query.toLowerCase(),
+                ) ??
+                false);
       }).toList();
       emit(MediaLoaded(filteredItems, currentCategory: '搜索结果'));
     } catch (e) {

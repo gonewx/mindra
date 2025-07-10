@@ -9,28 +9,46 @@ final getIt = GetIt.instance;
 
 Future<void> configureDependencies() async {
   // Data sources
-  getIt.registerLazySingleton<MediaLocalDataSource>(() => MediaLocalDataSource());
-  
+  getIt.registerLazySingleton<MediaLocalDataSource>(
+    () => MediaLocalDataSource(),
+  );
+
   // Repositories
   getIt.registerLazySingleton<MediaRepository>(
     () => MediaRepositoryImpl(getIt<MediaLocalDataSource>()),
   );
-  
+
   // Use cases
   getIt.registerLazySingleton(() => AddMediaUseCase(getIt<MediaRepository>()));
-  getIt.registerLazySingleton(() => GetMediaItemsUseCase(getIt<MediaRepository>()));
-  getIt.registerLazySingleton(() => GetMediaItemsByCategoryUseCase(getIt<MediaRepository>()));
-  getIt.registerLazySingleton(() => GetFavoriteMediaItemsUseCase(getIt<MediaRepository>()));
-  getIt.registerLazySingleton(() => ToggleFavoriteUseCase(getIt<MediaRepository>()));
-  getIt.registerLazySingleton(() => DeleteMediaItemUseCase(getIt<MediaRepository>()));
-  
+  getIt.registerLazySingleton(
+    () => GetMediaItemsUseCase(getIt<MediaRepository>()),
+  );
+  getIt.registerLazySingleton(
+    () => GetMediaItemsByCategoryUseCase(getIt<MediaRepository>()),
+  );
+  getIt.registerLazySingleton(
+    () => GetFavoriteMediaItemsUseCase(getIt<MediaRepository>()),
+  );
+  getIt.registerLazySingleton(
+    () => UpdateMediaItemUseCase(getIt<MediaRepository>()),
+  );
+  getIt.registerLazySingleton(
+    () => ToggleFavoriteUseCase(getIt<MediaRepository>()),
+  );
+  getIt.registerLazySingleton(
+    () => DeleteMediaItemUseCase(getIt<MediaRepository>()),
+  );
+
   // BLoC
-  getIt.registerFactory(() => MediaBloc(
-    addMediaUseCase: getIt<AddMediaUseCase>(),
-    getMediaItemsUseCase: getIt<GetMediaItemsUseCase>(),
-    getMediaItemsByCategoryUseCase: getIt<GetMediaItemsByCategoryUseCase>(),
-    getFavoriteMediaItemsUseCase: getIt<GetFavoriteMediaItemsUseCase>(),
-    toggleFavoriteUseCase: getIt<ToggleFavoriteUseCase>(),
-    deleteMediaItemUseCase: getIt<DeleteMediaItemUseCase>(),
-  ));
+  getIt.registerFactory(
+    () => MediaBloc(
+      addMediaUseCase: getIt<AddMediaUseCase>(),
+      getMediaItemsUseCase: getIt<GetMediaItemsUseCase>(),
+      getMediaItemsByCategoryUseCase: getIt<GetMediaItemsByCategoryUseCase>(),
+      getFavoriteMediaItemsUseCase: getIt<GetFavoriteMediaItemsUseCase>(),
+      updateMediaItemUseCase: getIt<UpdateMediaItemUseCase>(),
+      toggleFavoriteUseCase: getIt<ToggleFavoriteUseCase>(),
+      deleteMediaItemUseCase: getIt<DeleteMediaItemUseCase>(),
+    ),
+  );
 }

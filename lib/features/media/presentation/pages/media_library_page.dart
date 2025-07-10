@@ -6,19 +6,20 @@ import '../widgets/add_media_dialog.dart';
 import '../bloc/media_bloc.dart';
 import '../bloc/media_event.dart';
 import '../bloc/media_state.dart';
-import '../../../../core/di/injection_container.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/constants/app_constants.dart';
 
-class MediaLibraryPage extends StatelessWidget {
+class MediaLibraryPage extends StatefulWidget {
   const MediaLibraryPage({super.key});
 
   @override
+  State<MediaLibraryPage> createState() => _MediaLibraryPageState();
+}
+
+class _MediaLibraryPageState extends State<MediaLibraryPage> {
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => getIt<MediaBloc>()..add(LoadMediaItems()),
-      child: const _MediaLibraryView(),
-    );
+    return const _MediaLibraryView();
   }
 }
 
@@ -35,6 +36,17 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   final TextEditingController _searchController = TextEditingController();
 
   final List<String> _categories = ['全部', ...AppConstants.defaultCategories];
+
+  @override
+  void initState() {
+    super.initState();
+    // 在下一帧触发加载事件，确保context已经完全初始化
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<MediaBloc>().add(LoadMediaItems());
+      }
+    });
+  }
 
   @override
   void dispose() {

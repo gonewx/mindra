@@ -5,11 +5,12 @@ import 'package:flutter/foundation.dart';
 import '../../domain/entities/media_item.dart';
 import '../bloc/media_bloc.dart';
 import '../bloc/media_event.dart';
-import '../../../../core/di/injection_container.dart';
 import '../../../../core/constants/app_constants.dart';
 
 class AddMediaDialog extends StatefulWidget {
-  const AddMediaDialog({super.key});
+  final MediaItem? editingMedia; // 如果不为null，则为编辑模式
+
+  const AddMediaDialog({super.key, this.editingMedia});
 
   @override
   State<AddMediaDialog> createState() => _AddMediaDialogState();
@@ -17,9 +18,19 @@ class AddMediaDialog extends StatefulWidget {
   static Future<void> show(BuildContext context) {
     return showDialog<void>(
       context: context,
-      builder: (context) => BlocProvider(
-        create: (context) => getIt<MediaBloc>(),
+      builder: (dialogContext) => BlocProvider.value(
+        value: context.read<MediaBloc>(),
         child: const AddMediaDialog(),
+      ),
+    );
+  }
+
+  static Future<void> showEdit(BuildContext context, MediaItem mediaItem) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => BlocProvider.value(
+        value: context.read<MediaBloc>(),
+        child: AddMediaDialog(editingMedia: mediaItem),
       ),
     );
   }
@@ -29,6 +40,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _urlController = TextEditingController();
+  final _thumbnailController = TextEditingController();
   String _selectedCategory = AppConstants.defaultCategories.first;
   bool _isFromFile = true;
   String? _selectedFilePath;
@@ -37,11 +49,40 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
   final List<String> _categories = AppConstants.defaultCategories;
 
+  bool get _isEditMode => widget.editingMedia != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditMode) {
+      _initializeForEdit();
+    }
+  }
+
+  void _initializeForEdit() {
+    final media = widget.editingMedia!;
+    _titleController.text = media.title;
+    _descriptionController.text = media.description ?? '';
+    _thumbnailController.text = media.thumbnailPath ?? '';
+    _selectedCategory = media.category;
+
+    // 编辑模式下，如果有sourceUrl则显示为URL模式，否则为文件模式
+    if (media.sourceUrl != null && media.sourceUrl!.isNotEmpty) {
+      _isFromFile = false;
+      _urlController.text = media.sourceUrl!;
+    } else {
+      _isFromFile = true;
+      _selectedFilePath = media.filePath;
+      _selectedFileName = media.filePath.split('/').last;
+    }
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _urlController.dispose();
+    _thumbnailController.dispose();
     super.dispose();
   }
 
@@ -76,7 +117,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '添加冥想素材',
+                    _isEditMode ? '编辑媒体信息' : '添加冥想素材',
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: isDark
                           ? const Color(0xFF32B8C6)
@@ -108,150 +149,157 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                   children: [
                     const SizedBox(height: 20),
 
-                    // Add source selection header
-                    Text(
-                      '添加方式',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: isDark
-                            ? Colors.white
-                            : theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w500,
+                    // Add source selection header (隐藏在编辑模式下)
+                    if (!_isEditMode) ...[
+                      Text(
+                        '添加方式',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: isDark
+                              ? Colors.white
+                              : theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
-                    // Source Selection
-                    Container(
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF1E2329)
-                            : theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => setState(() => _isFromFile = true),
-                              borderRadius: const BorderRadius.horizontal(
-                                left: Radius.circular(12),
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                  horizontal: 12,
+                      // Source Selection
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF1E2329)
+                              : theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => setState(() => _isFromFile = true),
+                                borderRadius: const BorderRadius.horizontal(
+                                  left: Radius.circular(12),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: _isFromFile
-                                      ? (isDark
-                                            ? const Color(0xFF32B8C6)
-                                            : theme.colorScheme.primary)
-                                      : Colors.transparent,
-                                  borderRadius: const BorderRadius.horizontal(
-                                    left: Radius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                    horizontal: 12,
                                   ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.file_upload_outlined,
-                                      color: _isFromFile
-                                          ? Colors.white
-                                          : (isDark
-                                                ? Colors.white70
-                                                : theme.colorScheme.onSurface),
-                                      size: 20,
+                                  decoration: BoxDecoration(
+                                    color: _isFromFile
+                                        ? (isDark
+                                              ? const Color(0xFF32B8C6)
+                                              : theme.colorScheme.primary)
+                                        : Colors.transparent,
+                                    borderRadius: const BorderRadius.horizontal(
+                                      left: Radius.circular(12),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '本地导入',
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            color: _isFromFile
-                                                ? Colors.white
-                                                : (isDark
-                                                      ? Colors.white70
-                                                      : theme
-                                                            .colorScheme
-                                                            .onSurface),
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                    ),
-                                  ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.file_upload_outlined,
+                                        color: _isFromFile
+                                            ? Colors.white
+                                            : (isDark
+                                                  ? Colors.white70
+                                                  : theme
+                                                        .colorScheme
+                                                        .onSurface),
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '本地导入',
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color: _isFromFile
+                                                  ? Colors.white
+                                                  : (isDark
+                                                        ? Colors.white70
+                                                        : theme
+                                                              .colorScheme
+                                                              .onSurface),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          Container(
-                            width: 1,
-                            height: 48,
-                            color: isDark
-                                ? const Color(0xFF3A3F47)
-                                : theme.colorScheme.outline.withValues(
-                                    alpha: 0.3,
-                                  ),
-                          ),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => setState(() => _isFromFile = false),
-                              borderRadius: const BorderRadius.horizontal(
-                                right: Radius.circular(12),
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                  horizontal: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: !_isFromFile
-                                      ? (isDark
-                                            ? const Color(0xFF32B8C6)
-                                            : theme.colorScheme.primary)
-                                      : Colors.transparent,
-                                  borderRadius: const BorderRadius.horizontal(
-                                    right: Radius.circular(12),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.link,
-                                      color: !_isFromFile
-                                          ? Colors.white
-                                          : (isDark
-                                                ? Colors.white70
-                                                : theme.colorScheme.onSurface),
-                                      size: 20,
+                            Container(
+                              width: 1,
+                              height: 48,
+                              color: isDark
+                                  ? const Color(0xFF3A3F47)
+                                  : theme.colorScheme.outline.withValues(
+                                      alpha: 0.3,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '网络链接',
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            color: !_isFromFile
-                                                ? Colors.white
-                                                : (isDark
-                                                      ? Colors.white70
-                                                      : theme
-                                                            .colorScheme
-                                                            .onSurface),
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                            ),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () =>
+                                    setState(() => _isFromFile = false),
+                                borderRadius: const BorderRadius.horizontal(
+                                  right: Radius.circular(12),
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                    horizontal: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: !_isFromFile
+                                        ? (isDark
+                                              ? const Color(0xFF32B8C6)
+                                              : theme.colorScheme.primary)
+                                        : Colors.transparent,
+                                    borderRadius: const BorderRadius.horizontal(
+                                      right: Radius.circular(12),
                                     ),
-                                  ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.link,
+                                        color: !_isFromFile
+                                            ? Colors.white
+                                            : (isDark
+                                                  ? Colors.white70
+                                                  : theme
+                                                        .colorScheme
+                                                        .onSurface),
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '网络链接',
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color: !_isFromFile
+                                                  ? Colors.white
+                                                  : (isDark
+                                                        ? Colors.white70
+                                                        : theme
+                                                              .colorScheme
+                                                              .onSurface),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 20),
 
-                    // File/URL Input
-                    if (_isFromFile) ...[
+                    // File/URL Input (隐藏在编辑模式下)
+                    if (!_isEditMode && _isFromFile) ...[
                       OutlinedButton.icon(
                         onPressed: _pickFile,
                         icon: const Icon(Icons.folder_open),
@@ -358,7 +406,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                           ),
                         ),
                       ],
-                    ] else
+                    ] else if (!_isEditMode)
                       TextField(
                         controller: _urlController,
                         style: TextStyle(
@@ -680,6 +728,75 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                       maxLines: 3,
                     ),
                     const SizedBox(height: 16),
+
+                    // Thumbnail URL
+                    Text(
+                      '封面图片',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: isDark
+                            ? Colors.white
+                            : theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _thumbnailController,
+                      style: TextStyle(
+                        color: isDark
+                            ? Colors.white
+                            : theme.colorScheme.onSurface,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: '请输入封面图片链接（可选）',
+                        hintStyle: TextStyle(
+                          color: isDark
+                              ? Colors.white54
+                              : theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? const Color(0xFF1E2329)
+                            : theme.colorScheme.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? const Color(0xFF3A3F47)
+                                : theme.colorScheme.outline,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? const Color(0xFF3A3F47)
+                                : theme.colorScheme.outline,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? const Color(0xFF32B8C6)
+                                : theme.colorScheme.primary,
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.image,
+                          color: isDark
+                              ? Colors.white70
+                              : theme.colorScheme.onSurface,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -729,7 +846,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _addMedia,
+                      onPressed: _isEditMode ? _updateMedia : _addMedia,
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(0, 48),
                         backgroundColor: isDark
@@ -740,7 +857,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('保存'),
+                      child: Text(_isEditMode ? '更新' : '保存'),
                     ),
                   ),
                 ],
@@ -856,5 +973,33 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('素材添加成功')));
+  }
+
+  void _updateMedia() {
+    if (_titleController.text.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入标题')));
+      return;
+    }
+
+    final updatedMedia = widget.editingMedia!.copyWith(
+      title: _titleController.text,
+      description: _descriptionController.text.isEmpty
+          ? null
+          : _descriptionController.text,
+      category: _selectedCategory,
+      thumbnailPath: _thumbnailController.text.isEmpty
+          ? null
+          : _thumbnailController.text,
+    );
+
+    // Update media item using BLoC
+    context.read<MediaBloc>().add(UpdateMediaItem(updatedMedia));
+
+    Navigator.pop(context);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('媒体信息更新成功')));
   }
 }

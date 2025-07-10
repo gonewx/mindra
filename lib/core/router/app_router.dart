@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
@@ -7,7 +8,9 @@ import '../../features/media/presentation/pages/media_library_page.dart';
 import '../../features/player/presentation/pages/player_page.dart';
 import '../../features/meditation/presentation/pages/meditation_history_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/media/presentation/bloc/media_bloc.dart';
 import '../../shared/widgets/animated_bottom_navigation.dart';
+import '../di/injection_container.dart';
 
 class AppRouter {
   static const String splash = '/splash';
@@ -33,7 +36,10 @@ class AppRouter {
       ),
       ShellRoute(
         builder: (context, state, child) {
-          return MainScaffold(child: child);
+          return BlocProvider(
+            create: (context) => getIt<MediaBloc>(),
+            child: MainScaffold(child: child),
+          );
         },
         routes: [
           GoRoute(
@@ -74,15 +80,9 @@ class AppRouter {
           children: [
             const Icon(Icons.error_outline, size: 64),
             const SizedBox(height: 16),
-            Text(
-              '页面不存在',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+            Text('页面不存在', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 8),
-            Text(
-              '请检查链接或返回首页',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            Text('请检查链接或返回首页', style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => context.go(home),
@@ -97,7 +97,7 @@ class AppRouter {
 
 class MainScaffold extends StatefulWidget {
   final Widget child;
-  
+
   const MainScaffold({super.key, required this.child});
 
   @override

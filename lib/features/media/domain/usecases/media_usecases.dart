@@ -51,6 +51,16 @@ class ToggleFavoriteUseCase {
   }
 }
 
+class UpdateMediaItemUseCase {
+  final MediaRepository _repository;
+
+  UpdateMediaItemUseCase(this._repository);
+
+  Future<void> call(MediaItem mediaItem) async {
+    await _repository.updateMediaItem(mediaItem);
+  }
+}
+
 class DeleteMediaItemUseCase {
   final MediaRepository _repository;
 

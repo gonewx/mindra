@@ -40,7 +40,24 @@ class AddMediaItem extends MediaEvent {
   });
 
   @override
-  List<Object?> get props => [title, description, filePath, category, sourceUrl, type, fileBytes];
+  List<Object?> get props => [
+    title,
+    description,
+    filePath,
+    category,
+    sourceUrl,
+    type,
+    fileBytes,
+  ];
+}
+
+class UpdateMediaItem extends MediaEvent {
+  final MediaItem mediaItem;
+
+  UpdateMediaItem(this.mediaItem);
+
+  @override
+  List<Object?> get props => [mediaItem];
 }
 
 class ToggleFavorite extends MediaEvent {
