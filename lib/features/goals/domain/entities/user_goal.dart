@@ -5,6 +5,10 @@ class UserGoal extends Equatable {
   final String dailyGoal; // 每日目标，如 "20分钟"
   final String weeklyGoal; // 每周目标，如 "7次"
   final TimeOfDay reminderTime; // 提醒时间
+  final bool isReminderEnabled; // 是否启用提醒
+  final List<String> reminderDays; // 提醒日期
+  final bool enableSound; // 是否启用声音
+  final bool enableVibration; // 是否启用振动
   final DateTime createdAt; // 创建时间
   final DateTime updatedAt; // 更新时间
 
@@ -12,6 +16,10 @@ class UserGoal extends Equatable {
     required this.dailyGoal,
     required this.weeklyGoal,
     required this.reminderTime,
+    this.isReminderEnabled = false,
+    this.reminderDays = const ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+    this.enableSound = true,
+    this.enableVibration = true,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -23,6 +31,10 @@ class UserGoal extends Equatable {
       dailyGoal: '20分钟',
       weeklyGoal: '7次',
       reminderTime: const TimeOfDay(hour: 9, minute: 0),
+      isReminderEnabled: false,
+      reminderDays: const ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+      enableSound: true,
+      enableVibration: true,
       createdAt: now,
       updatedAt: now,
     );
@@ -32,6 +44,10 @@ class UserGoal extends Equatable {
     String? dailyGoal,
     String? weeklyGoal,
     TimeOfDay? reminderTime,
+    bool? isReminderEnabled,
+    List<String>? reminderDays,
+    bool? enableSound,
+    bool? enableVibration,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -39,6 +55,10 @@ class UserGoal extends Equatable {
       dailyGoal: dailyGoal ?? this.dailyGoal,
       weeklyGoal: weeklyGoal ?? this.weeklyGoal,
       reminderTime: reminderTime ?? this.reminderTime,
+      isReminderEnabled: isReminderEnabled ?? this.isReminderEnabled,
+      reminderDays: reminderDays ?? this.reminderDays,
+      enableSound: enableSound ?? this.enableSound,
+      enableVibration: enableVibration ?? this.enableVibration,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -51,6 +71,10 @@ class UserGoal extends Equatable {
       'weekly_goal': weeklyGoal,
       'reminder_hour': reminderTime.hour,
       'reminder_minute': reminderTime.minute,
+      'is_reminder_enabled': isReminderEnabled,
+      'reminder_days': reminderDays.join(','),
+      'enable_sound': enableSound,
+      'enable_vibration': enableVibration,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
     };
@@ -65,6 +89,10 @@ class UserGoal extends Equatable {
         hour: map['reminder_hour'] ?? 9,
         minute: map['reminder_minute'] ?? 0,
       ),
+      isReminderEnabled: map['is_reminder_enabled'] ?? false,
+      reminderDays: (map['reminder_days'] as String? ?? '周一,周二,周三,周四,周五,周六,周日').split(','),
+      enableSound: map['enable_sound'] ?? true,
+      enableVibration: map['enable_vibration'] ?? true,
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         map['created_at'] ?? DateTime.now().millisecondsSinceEpoch,
       ),
@@ -82,6 +110,10 @@ class UserGoal extends Equatable {
   "weekly_goal": "$weeklyGoal",
   "reminder_hour": ${reminderTime.hour},
   "reminder_minute": ${reminderTime.minute},
+  "is_reminder_enabled": $isReminderEnabled,
+  "reminder_days": "${reminderDays.join(',')}",
+  "enable_sound": $enableSound,
+  "enable_vibration": $enableVibration,
   "created_at": ${createdAt.millisecondsSinceEpoch},
   "updated_at": ${updatedAt.millisecondsSinceEpoch}
 }''';
@@ -95,6 +127,10 @@ class UserGoal extends Equatable {
     String weeklyGoal = '7次';
     int reminderHour = 9;
     int reminderMinute = 0;
+    bool isReminderEnabled = false;
+    String reminderDaysString = '周一,周二,周三,周四,周五,周六,周日';
+    bool enableSound = true;
+    bool enableVibration = true;
     int createdAt = DateTime.now().millisecondsSinceEpoch;
     int updatedAt = DateTime.now().millisecondsSinceEpoch;
 
@@ -108,6 +144,14 @@ class UserGoal extends Equatable {
         reminderHour = int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ?? 9;
       } else if (trimmed.startsWith('"reminder_minute":')) {
         reminderMinute = int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ?? 0;
+      } else if (trimmed.startsWith('"is_reminder_enabled":')) {
+        isReminderEnabled = trimmed.split(':')[1].replaceAll(',', '').trim() == 'true';
+      } else if (trimmed.startsWith('"reminder_days":')) {
+        reminderDaysString = trimmed.split('"')[3];
+      } else if (trimmed.startsWith('"enable_sound":')) {
+        enableSound = trimmed.split(':')[1].replaceAll(',', '').trim() == 'true';
+      } else if (trimmed.startsWith('"enable_vibration":')) {
+        enableVibration = trimmed.split(':')[1].replaceAll(',', '').trim() == 'true';
       } else if (trimmed.startsWith('"created_at":')) {
         createdAt = int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ?? DateTime.now().millisecondsSinceEpoch;
       } else if (trimmed.startsWith('"updated_at":')) {
@@ -119,6 +163,10 @@ class UserGoal extends Equatable {
       dailyGoal: dailyGoal,
       weeklyGoal: weeklyGoal,
       reminderTime: TimeOfDay(hour: reminderHour, minute: reminderMinute),
+      isReminderEnabled: isReminderEnabled,
+      reminderDays: reminderDaysString.split(','),
+      enableSound: enableSound,
+      enableVibration: enableVibration,
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdAt),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedAt),
     );
@@ -148,12 +196,16 @@ class UserGoal extends Equatable {
         dailyGoal,
         weeklyGoal,
         reminderTime,
+        isReminderEnabled,
+        reminderDays,
+        enableSound,
+        enableVibration,
         createdAt,
         updatedAt,
       ];
 
   @override
   String toString() {
-    return 'UserGoal(dailyGoal: $dailyGoal, weeklyGoal: $weeklyGoal, reminderTime: ${reminderTimeString})';
+    return 'UserGoal(dailyGoal: $dailyGoal, weeklyGoal: $weeklyGoal, reminderTime: $reminderTimeString, isReminderEnabled: $isReminderEnabled)';
   }
 }

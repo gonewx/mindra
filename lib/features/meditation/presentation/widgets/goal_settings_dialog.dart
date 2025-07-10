@@ -19,7 +19,6 @@ class GoalSettingsDialog extends StatefulWidget {
 class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
   late String _selectedDailyGoal;
   late String _selectedWeeklyGoal;
-  late TimeOfDay _selectedReminderTime;
   bool _isLoading = false;
 
   @override
@@ -27,7 +26,6 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
     super.initState();
     _selectedDailyGoal = widget.currentGoal?.dailyGoal ?? '20分钟';
     _selectedWeeklyGoal = widget.currentGoal?.weeklyGoal ?? '7次';
-    _selectedReminderTime = widget.currentGoal?.reminderTime ?? const TimeOfDay(hour: 9, minute: 0);
   }
 
   @override
@@ -93,12 +91,6 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
               (value) => setState(() => _selectedWeeklyGoal = value),
               theme,
             ),
-            const SizedBox(height: 24),
-
-            // 提醒时间
-            _buildSectionTitle('提醒时间', Icons.access_time_outlined, theme),
-            const SizedBox(height: 12),
-            _buildTimeSelector(theme),
             const SizedBox(height: 32),
 
             // 操作按钮
@@ -228,84 +220,6 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
     );
   }
 
-  Widget _buildTimeSelector(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '每日提醒时间',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${_selectedReminderTime.hour.toString().padLeft(2, '0')}:${_selectedReminderTime.minute.toString().padLeft(2, '0')}',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          ElevatedButton.icon(
-            onPressed: _selectTime,
-            icon: Icon(Icons.access_time, size: 18),
-            label: Text('选择时间'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-              foregroundColor: theme.colorScheme.primary,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _selectTime() async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedReminderTime,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            timePickerTheme: TimePickerThemeData(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              hourMinuteColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-              hourMinuteTextColor: Theme.of(context).colorScheme.primary,
-              dialHandColor: Theme.of(context).colorScheme.primary,
-              dialTextColor: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null && picked != _selectedReminderTime) {
-      setState(() {
-        _selectedReminderTime = picked;
-      });
-    }
-  }
-
   Future<void> _saveGoals() async {
     if (_isLoading) return;
 
@@ -319,11 +233,10 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
         throw Exception('目标设置格式不正确');
       }
 
-      // 更新目标
+      // 更新目标（不包括提醒时间）
       await GoalService.updateGoal(
         dailyGoal: _selectedDailyGoal,
         weeklyGoal: _selectedWeeklyGoal,
-        reminderTime: _selectedReminderTime,
       );
 
       // 获取更新后的目标

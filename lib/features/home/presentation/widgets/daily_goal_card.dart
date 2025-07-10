@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/goal_setting_dialog.dart';
+import '../../../meditation/presentation/widgets/goal_settings_dialog.dart';
 import '../../../../features/goals/data/services/goal_service.dart';
 import '../../../../features/goals/domain/entities/user_goal.dart';
 
@@ -40,9 +40,15 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
   }
 
   Future<void> _showGoalDialog() async {
-    await GoalSettingDialog.show(context);
-    // 重新加载目标设置
-    _loadGoal();
+    await showGoalSettingsDialog(
+      context,
+      currentGoal: _currentGoal,
+      onGoalUpdated: (goal) {
+        setState(() {
+          _currentGoal = goal;
+        });
+      },
+    );
   }
 
   @override

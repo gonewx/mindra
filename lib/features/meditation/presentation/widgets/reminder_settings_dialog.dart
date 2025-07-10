@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../goals/domain/entities/user_goal.dart';
 import '../../../goals/data/services/goal_service.dart';
+import '../../../../core/services/reminder_scheduler_service.dart';
 
 class ReminderSettingsDialog extends StatefulWidget {
   final UserGoal? currentGoal;
@@ -21,11 +22,19 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
   bool _isReminderEnabled = true;
   bool _isLoading = false;
   List<String> _selectedDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  bool _enableSound = true;
+  bool _enableVibration = true;
+  
+  final ReminderSchedulerService _reminderService = ReminderSchedulerService();
 
   @override
   void initState() {
     super.initState();
     _selectedReminderTime = widget.currentGoal?.reminderTime ?? const TimeOfDay(hour: 9, minute: 0);
+    _isReminderEnabled = widget.currentGoal?.isReminderEnabled ?? false;
+    _selectedDays = widget.currentGoal?.reminderDays ?? ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+    _enableSound = widget.currentGoal?.enableSound ?? true;
+    _enableVibration = widget.currentGoal?.enableVibration ?? true;
   }
 
   @override
@@ -347,22 +356,33 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
             Icons.notifications,
             true,
             theme,
+            (value) {},
           ),
           const SizedBox(height: 8),
           _buildNotificationOption(
             '声音提醒',
             '播放提醒声音',
             Icons.volume_up,
-            true,
+            _enableSound,
             theme,
+            (value) {
+              setState(() {
+                _enableSound = value;
+              });
+            },
           ),
           const SizedBox(height: 8),
           _buildNotificationOption(
             '振动提醒',
             '设备振动提醒',
             Icons.vibration,
-            false,
+            _enableVibration,
             theme,
+            (value) {
+              setState(() {
+                _enableVibration = value;
+              });
+            },
           ),
         ],
       ),
@@ -375,6 +395,7 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
     IconData icon,
     bool isEnabled,
     ThemeData theme,
+    ValueChanged<bool> onChanged,
   ) {
     return Row(
       children: [
@@ -409,12 +430,7 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
         ),
         Switch(
           value: isEnabled,
-          onChanged: (value) {
-            // 这里可以添加具体的开关逻辑
-            setState(() {
-              // 实际实现中需要保存这些设置
-            });
-          },
+          onChanged: onChanged,
           activeColor: theme.colorScheme.primary,
         ),
       ],
@@ -456,13 +472,66 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
     });
 
     try {
-      // 这里只更新提醒时间，实际应用中需要扩展GoalService来处理更多提醒设置
+      // 先请求通知权限
+      if (_isReminderEnabled) {
+        final hasPermission = await _reminderService.requestNotificationPermissions();
+        if (!hasPermission) {
+          if (mounted) {
+            // 显示权限说明对话框
+            final shouldContinue = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text('需要权限'),
+                content: Text('为了发送冥想提醒，需要开启以下权限：\n\n• 通知权限 - 显示提醒消息\n• 精确闹钟权限 - 准时发送提醒\n\n请在系统设置中手动开启这些权限。'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text('取消'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text('去设置'),
+                  ),
+                ],
+              ),
+            );
+            
+            if (shouldContinue != true) {
+              setState(() {
+                _isLoading = false;
+                _isReminderEnabled = false;
+              });
+              return;
+            }
+            
+            // 打开系统设置
+            // 注意：这里只是保存设置，用户需要手动开启权限后重新设置
+          }
+        }
+      }
+
+      // 保存设置到目标服务
       await GoalService.updateGoal(
         reminderTime: _selectedReminderTime,
       );
 
       // 获取更新后的目标
-      final updatedGoal = await GoalService.getGoal();
+      final currentGoal = await GoalService.getGoal();
+      
+      // 更新所有提醒设置
+      final updatedGoal = currentGoal.copyWith(
+        reminderTime: _selectedReminderTime,
+        isReminderEnabled: _isReminderEnabled,
+        reminderDays: _selectedDays,
+        enableSound: _enableSound,
+        enableVibration: _enableVibration,
+        updatedAt: DateTime.now(),
+      );
+      
+      await GoalService.saveGoal(updatedGoal);
+      
+      // 更新提醒调度
+      await _reminderService.updateReminderSettings(updatedGoal);
 
       // 通知回调
       widget.onGoalUpdated?.call(updatedGoal);

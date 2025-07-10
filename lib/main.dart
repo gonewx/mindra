@@ -8,6 +8,7 @@ import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/di/injection_container.dart';
 import 'core/database/database_helper.dart';
+import 'core/services/reminder_scheduler_service.dart';
 import 'features/player/services/simple_sound_effects_player.dart';
 import 'features/player/services/global_player_service.dart';
 
@@ -63,6 +64,15 @@ void main() async {
       debugPrint('Sound effects service initialized successfully');
     } catch (e) {
       debugPrint('Failed to initialize sound effects service: $e');
+    }
+    
+    // Initialize reminder scheduler service
+    try {
+      final reminderService = ReminderSchedulerService();
+      await reminderService.initialize();
+      debugPrint('Reminder scheduler service initialized successfully');
+    } catch (e) {
+      debugPrint('Failed to initialize reminder scheduler service: $e');
     }
     
     runApp(MindraApp(themeProvider: themeProvider));
