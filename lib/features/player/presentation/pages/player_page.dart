@@ -50,8 +50,10 @@ class _PlayerPageState extends State<PlayerPage> {
   final MediaLocalDataSource _mediaDataSource = MediaLocalDataSource();
 
   // Media data getters
-  String get _title => widget.mediaId == null ? '未选择素材' : (_currentMedia?.title ?? '加载中...');
-  String get _category => widget.mediaId == null ? '' : (_currentMedia?.category ?? '未知');
+  String get _title =>
+      widget.mediaId == null ? '未选择素材' : (_currentMedia?.title ?? '加载中...');
+  String get _category =>
+      widget.mediaId == null ? '' : (_currentMedia?.category ?? '未知');
 
   @override
   void initState() {
@@ -79,7 +81,7 @@ class _PlayerPageState extends State<PlayerPage> {
         setState(() {
           _isPlaying = isPlaying;
         });
-        
+
         // Handle session management based on playing state
         _handlePlayingStateChange(isPlaying);
       }
@@ -91,7 +93,7 @@ class _PlayerPageState extends State<PlayerPage> {
         setState(() {
           _currentPosition = position.inSeconds.toDouble();
         });
-        
+
         // Update session progress
         MeditationSessionManager.updateSessionProgress(position.inSeconds);
       }
@@ -115,7 +117,9 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   void _handlePlayingStateChange(bool isPlaying) {
-    if (isPlaying && !MeditationSessionManager.hasActiveSession && _currentMedia != null) {
+    if (isPlaying &&
+        !MeditationSessionManager.hasActiveSession &&
+        _currentMedia != null) {
       // Start new session when playback begins
       _startMeditationSession();
     } else if (!isPlaying && MeditationSessionManager.hasActiveSession) {
@@ -150,17 +154,19 @@ class _PlayerPageState extends State<PlayerPage> {
 
   Future<void> _startMeditationSession() async {
     if (_currentMedia == null) return;
-    
+
     try {
-      final sessionType = MeditationSessionManager.getSessionTypeFromCategory(_currentMedia!.category);
+      final sessionType = MeditationSessionManager.getSessionTypeFromCategory(
+        _currentMedia!.category,
+      );
       final soundEffects = _soundEffectsService.getActiveSoundEffects();
-      
+
       await MeditationSessionManager.startSession(
         mediaItem: _currentMedia!,
         sessionType: sessionType,
         soundEffects: soundEffects,
       );
-      
+
       debugPrint('Started meditation session for: ${_currentMedia!.title}');
     } catch (e) {
       debugPrint('Error starting meditation session: $e');
@@ -169,11 +175,11 @@ class _PlayerPageState extends State<PlayerPage> {
 
   Future<void> _completeMeditationSession() async {
     if (!MeditationSessionManager.hasActiveSession) return;
-    
+
     try {
       await MeditationSessionManager.completeSession();
       debugPrint('Completed meditation session');
-      
+
       // Show completion dialog or notification
       if (mounted) {
         _showSessionCompletedDialog();
@@ -185,7 +191,7 @@ class _PlayerPageState extends State<PlayerPage> {
 
   Future<void> _stopMeditationSession() async {
     if (!MeditationSessionManager.hasActiveSession) return;
-    
+
     try {
       await MeditationSessionManager.stopSession();
       debugPrint('Stopped meditation session');
@@ -216,7 +222,7 @@ class _PlayerPageState extends State<PlayerPage> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              context.go('/progress'); // 跳转到进度页面
+              context.go('/meditation-history'); // 跳转到进度页面
             },
             child: const Text('查看进度'),
           ),
@@ -335,7 +341,7 @@ class _PlayerPageState extends State<PlayerPage> {
     if (MeditationSessionManager.hasActiveSession) {
       _stopMeditationSession();
     }
-    
+
     _playingSubscription.cancel();
     _positionSubscription.cancel();
     _durationSubscription.cancel();
@@ -437,7 +443,9 @@ class _PlayerPageState extends State<PlayerPage> {
                         shape: BoxShape.circle,
                         color: theme.colorScheme.surface,
                         border: Border.all(
-                          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                          color: theme.colorScheme.outline.withValues(
+                            alpha: 0.2,
+                          ),
                         ),
                       ),
                       child: IconButton(
@@ -553,12 +561,8 @@ class _PlayerPageState extends State<PlayerPage> {
                     child: IconButton(
                       onPressed: _toggleFavorite,
                       icon: Icon(
-                        _isFavorited
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: _isFavorited
-                            ? Colors.red
-                            : Colors.white,
+                        _isFavorited ? Icons.favorite : Icons.favorite_border,
+                        color: _isFavorited ? Colors.red : Colors.white,
                       ),
                     ),
                   ),
@@ -582,9 +586,7 @@ class _PlayerPageState extends State<PlayerPage> {
               Text(
                 _category,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(
-                    alpha: 0.7,
-                  ),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -598,9 +600,7 @@ class _PlayerPageState extends State<PlayerPage> {
               currentPosition: _currentPosition,
               totalDuration: _totalDuration,
               onSeek: (position) async {
-                await _audioPlayer.seek(
-                  Duration(seconds: position.toInt()),
-                );
+                await _audioPlayer.seek(Duration(seconds: position.toInt()));
               },
             ),
           ),
@@ -638,10 +638,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 onTap: _toggleRepeatMode,
               ),
               SizedBox(width: 16),
-              _buildActionButton(
-                icon: Icons.timer,
-                onTap: _showTimerDialog,
-              ),
+              _buildActionButton(icon: Icons.timer, onTap: _showTimerDialog),
               SizedBox(width: 16),
               _buildActionButton(
                 icon: Icons.equalizer,
