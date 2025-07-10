@@ -178,6 +178,38 @@ class CrossPlatformAudioPlayer {
     }
   }
 
+  Future<Duration?> getDuration() async {
+    if (_useAudioPlayers) {
+      return _audioPlayersInstance?.getDuration();
+    } else {
+      return _justAudioInstance?.duration;
+    }
+  }
+
+  /// Get duration of a media file without keeping it loaded
+  static Future<Duration?> getMediaDuration(String filePath) async {
+    try {
+      final tempPlayer = CrossPlatformAudioPlayer();
+      
+      if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+        await tempPlayer.setUrl(filePath);
+      } else {
+        await tempPlayer.setFilePath(filePath);
+      }
+      
+      // Wait a bit for the duration to be loaded
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      final duration = await tempPlayer.getDuration();
+      await tempPlayer.dispose();
+      
+      return duration;
+    } catch (e) {
+      debugPrint('Failed to get media duration: $e');
+      return null;
+    }
+  }
+
   Future<void> dispose() async {
     _positionTimer?.cancel();
     await _audioPlayersInstance?.dispose();

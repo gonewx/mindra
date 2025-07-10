@@ -6,6 +6,7 @@ import '../../domain/entities/media_item.dart';
 import '../bloc/media_bloc.dart';
 import '../bloc/media_event.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/audio/cross_platform_audio_player.dart';
 
 class AddMediaDialog extends StatefulWidget {
   final MediaItem? editingMedia; // 如果不为null，则为编辑模式
@@ -41,11 +42,13 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
   final _descriptionController = TextEditingController();
   final _urlController = TextEditingController();
   final _thumbnailController = TextEditingController();
+  final _durationController = TextEditingController();
   String _selectedCategory = AppConstants.defaultCategories.first;
   bool _isFromFile = true;
   String? _selectedFilePath;
   String? _selectedFileName;
   Uint8List? _selectedFileBytes;
+  bool _isLoadingDuration = false;
 
   final List<String> _categories = AppConstants.defaultCategories;
 
@@ -64,6 +67,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
     _titleController.text = media.title;
     _descriptionController.text = media.description ?? '';
     _thumbnailController.text = media.thumbnailPath ?? '';
+    _durationController.text = media.duration.toString();
     _selectedCategory = media.category;
 
     // 编辑模式下，如果有sourceUrl则显示为URL模式，否则为文件模式
@@ -83,6 +87,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
     _descriptionController.dispose();
     _urlController.dispose();
     _thumbnailController.dispose();
+    _durationController.dispose();
     super.dispose();
   }
 
@@ -548,13 +553,16 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                     ),
                     const SizedBox(height: 8),
                     TextField(
+                      controller: _durationController,
+                      keyboardType: TextInputType.number,
+                      enabled: !_isLoadingDuration,
                       style: TextStyle(
                         color: isDark
                             ? Colors.white
                             : theme.colorScheme.onSurface,
                       ),
                       decoration: InputDecoration(
-                        hintText: '例如：10分钟',
+                        hintText: _isLoadingDuration ? '正在获取时长...' : '请输入时长（秒）',
                         hintStyle: TextStyle(
                           color: isDark
                               ? Colors.white54
@@ -594,6 +602,18 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                           horizontal: 16,
                           vertical: 16,
                         ),
+                        suffixIcon: _isLoadingDuration
+                            ? const Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              )
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -887,6 +907,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
         setState(() {
           _titleController.text = file.name.split('.').first;
           _selectedFileName = file.name;
+          _isLoadingDuration = true;
 
           if (kIsWeb) {
             // On web, use file bytes and a placeholder path
@@ -902,6 +923,9 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
           }
         });
 
+        // Try to get duration automatically
+        await _getDurationFromFile();
+
         if (mounted) {
           ScaffoldMessenger.of(
             context,
@@ -914,6 +938,57 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
           context,
         ).showSnackBar(SnackBar(content: Text('文件选择失败: ${e.toString()}')));
       }
+    }
+  }
+
+  Future<void> _getDurationFromFile() async {
+    if (_selectedFilePath == null) return;
+
+    try {
+      setState(() {
+        _isLoadingDuration = true;
+      });
+
+      Duration? duration;
+      
+      if (kIsWeb) {
+        // For web, try to get duration using HTML5 Audio/Video
+        duration = await _getWebDuration();
+      } else {
+        // For desktop/mobile platforms
+        duration = await CrossPlatformAudioPlayer.getMediaDuration(_selectedFilePath!);
+      }
+
+      if (mounted) {
+        setState(() {
+          _isLoadingDuration = false;
+          if (duration != null) {
+            _durationController.text = duration.inSeconds.toString();
+            debugPrint('Auto-detected duration: ${duration.inSeconds} seconds');
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to get duration automatically: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingDuration = false;
+        });
+      }
+    }
+  }
+
+  Future<Duration?> _getWebDuration() async {
+    if (!kIsWeb || _selectedFileBytes == null) return null;
+    
+    try {
+      // Skip web duration detection for now
+      // This would require creating a blob URL and using HTML5 Audio/Video
+      debugPrint('Web platform: Duration detection not implemented yet');
+      return null;
+    } catch (e) {
+      debugPrint('Failed to get web duration: $e');
+      return null;
     }
   }
 
@@ -939,6 +1014,19 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
       return;
     }
 
+    // Parse duration from input
+    int duration = 0;
+    if (_durationController.text.isNotEmpty) {
+      try {
+        duration = int.parse(_durationController.text);
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('请输入有效的时长（秒）')));
+        return;
+      }
+    }
+
     // Determine media type based on file extension or URL
     MediaType mediaType = MediaType.audio;
     final filePath = _isFromFile ? _selectedFilePath! : _urlController.text;
@@ -950,7 +1038,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
     // Add media item using BLoC
     debugPrint(
-      'Adding media item - Title: ${_titleController.text}, FilePath: $filePath, FileBytes: ${kIsWeb && _isFromFile ? _selectedFileBytes?.length ?? 0 : 'N/A'}',
+      'Adding media item - Title: ${_titleController.text}, FilePath: $filePath, Duration: $duration, FileBytes: ${kIsWeb && _isFromFile ? _selectedFileBytes?.length ?? 0 : 'N/A'}',
     );
 
     context.read<MediaBloc>().add(
@@ -963,6 +1051,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
         category: _selectedCategory,
         sourceUrl: _isFromFile ? null : _urlController.text,
         type: mediaType,
+        duration: duration,
         fileBytes: kIsWeb && _isFromFile
             ? _selectedFileBytes
             : null, // Pass file bytes for web
@@ -983,6 +1072,19 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
       return;
     }
 
+    // Parse duration from input
+    int duration = widget.editingMedia!.duration; // Keep existing duration as default
+    if (_durationController.text.isNotEmpty) {
+      try {
+        duration = int.parse(_durationController.text);
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('请输入有效的时长（秒）')));
+        return;
+      }
+    }
+
     final updatedMedia = widget.editingMedia!.copyWith(
       title: _titleController.text,
       description: _descriptionController.text.isEmpty
@@ -992,6 +1094,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
       thumbnailPath: _thumbnailController.text.isEmpty
           ? null
           : _thumbnailController.text,
+      duration: duration,
     );
 
     // Update media item using BLoC

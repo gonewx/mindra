@@ -27,6 +27,7 @@ class AddMediaItem extends MediaEvent {
   final String category;
   final String? sourceUrl;
   final MediaType type;
+  final int duration;
   final Uint8List? fileBytes; // For web platform file bytes
 
   AddMediaItem({
@@ -36,6 +37,7 @@ class AddMediaItem extends MediaEvent {
     required this.category,
     this.sourceUrl,
     required this.type,
+    required this.duration,
     this.fileBytes,
   });
 
@@ -47,6 +49,7 @@ class AddMediaItem extends MediaEvent {
     category,
     sourceUrl,
     type,
+    duration,
     fileBytes,
   ];
 }

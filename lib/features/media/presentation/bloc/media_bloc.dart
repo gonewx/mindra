@@ -117,7 +117,7 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
         filePath: event.filePath,
         type: event.type,
         category: event.category,
-        duration: 0, // TODO: Get actual duration from file
+        duration: event.duration, // Use actual duration from event
         createdAt: DateTime.now(),
         sourceUrl: event.sourceUrl,
       );

@@ -288,22 +288,7 @@ class _PlayerPageState extends State<PlayerPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: theme.colorScheme.primary,
-                    ),
-                    child: IconButton(
-                      onPressed: () {
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        } else {
-                          context.go('/');
-                        }
-                      },
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    ),
-                  ),
+                  const SizedBox(width: 48), // 占位符，保持标题居中
                   Text(
                     '播放中',
                     style: theme.textTheme.headlineMedium?.copyWith(
