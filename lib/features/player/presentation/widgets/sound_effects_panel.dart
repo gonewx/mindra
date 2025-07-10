@@ -77,68 +77,6 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
     debugPrint('Synced master volume: $_masterVolume');
   }
 
-  void _testSoundEffects() async {
-    debugPrint('Testing sound effects...');
-    try {
-      // 保存当前音效状态
-      final currentEffects = Map<String, double>.from(_effectVolumes);
-      final currentMasterVolume = _masterVolume;
-
-      // 先停止所有音效
-      await _soundPlayer.stopAllEffects();
-
-      // 设置较高的主音量进行测试
-      await _soundPlayer.setMasterVolume(1.0);
-
-      // 测试播放雨声，使用最大音量
-      await _soundPlayer.toggleEffect('rain', 1.0);
-
-      // 显示测试结果
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('正在测试雨声音效（最大音量），请检查是否能听到声音'),
-            duration: Duration(seconds: 5),
-          ),
-        );
-      }
-
-      // 5秒后停止测试并恢复用户设置
-      Future.delayed(const Duration(seconds: 5), () async {
-        // 停止测试音效
-        await _soundPlayer.toggleEffect('rain', 0.0);
-        
-        // 恢复用户的音效设置
-        await _soundPlayer.setMasterVolume(currentMasterVolume);
-        
-        // 恢复所有用户选择的音效
-        for (final entry in currentEffects.entries) {
-          if (entry.value > 0) {
-            await _soundPlayer.toggleEffect(entry.key, entry.value);
-          }
-        }
-
-        debugPrint('Sound effect test completed, restored user settings');
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('音效测试完成，已恢复您的设置'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      });
-    } catch (e) {
-      debugPrint('Sound effect test failed: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('音效测试失败: $e')));
-      }
-    }
-  }
-
   @override
   void dispose() {
     // 注意：不在这里调用 _soundPlayer.dispose()，因为它是单例
@@ -153,37 +91,6 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
     {'id': 'wind_chimes', 'name': '风铃', 'icon': Icons.air},
     {'id': 'birds', 'name': '鸟鸣', 'icon': Icons.flutter_dash},
   ];
-
-  void _testProblemEffects() async {
-    debugPrint('Testing problem effects (rain and wind_chimes)...');
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('正在测试雨声和风铃音效...'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-    }
-    
-    // 测试雨声
-    await _soundPlayer.testSpecificEffect('rain');
-    
-    // 等待一下再测试风铃
-    await Future.delayed(const Duration(seconds: 2));
-    
-    // 测试风铃
-    await _soundPlayer.testSpecificEffect('wind_chimes');
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('问题音效测试完成，请检查控制台日志'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -219,31 +126,11 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
           ),
         ),
         const SizedBox(height: 4),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                '轻柔的背景音效，不会干扰主要音频',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: isDark ? Colors.white70 : Colors.grey[600],
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: _testSoundEffects,
-              child: Text(
-                '测试音效',
-                style: TextStyle(color: const Color(0xFF32B8C6), fontSize: 12),
-              ),
-            ),
-            TextButton(
-              onPressed: _testProblemEffects,
-              child: Text(
-                '测试问题音效',
-                style: TextStyle(color: Colors.orange, fontSize: 12),
-              ),
-            ),
-          ],
+        Text(
+          '轻柔的背景音效，不会干扰主要音频',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: isDark ? Colors.white70 : Colors.grey[600],
+          ),
         ),
         const SizedBox(height: 16),
 
