@@ -48,8 +48,8 @@ class _PlayerPageState extends State<PlayerPage> {
   final MediaLocalDataSource _mediaDataSource = MediaLocalDataSource();
 
   // Media data getters
-  String get _title => _currentMedia?.title ?? '加载中...';
-  String get _category => _currentMedia?.category ?? '未知';
+  String get _title => widget.mediaId == null ? '未选择素材' : (_currentMedia?.title ?? '加载中...');
+  String get _category => widget.mediaId == null ? '' : (_currentMedia?.category ?? '未知');
 
   @override
   void initState() {
@@ -296,170 +296,228 @@ class _PlayerPageState extends State<PlayerPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: theme.colorScheme.surface,
-                      border: Border.all(
-                        color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                  if (widget.mediaId != null)
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.colorScheme.surface,
+                        border: Border.all(
+                          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                        ),
                       ),
-                    ),
-                    child: IconButton(
-                      onPressed: _showMoreOptions,
-                      icon: Icon(
-                        Icons.more_vert,
-                        color: theme.colorScheme.onSurface,
+                      child: IconButton(
+                        onPressed: _showMoreOptions,
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
-                    ),
-                  ),
+                    )
+                  else
+                    const SizedBox(width: 48), // 占位符，保持标题居中
                 ],
               ),
             ),
 
             // Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8), // 减小间距
-                    // Album Art
-                    Container(
-                      width: 300,
-                      height: 300,
-                      margin: const EdgeInsets.symmetric(vertical: 8), // 减小间距
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: theme.shadowColor.withValues(alpha: 0.3),
-                            blurRadius: 32,
-                            offset: const Offset(0, 16),
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: _buildCoverImage(theme),
-                          ),
-                          Positioned(
-                            top: 16,
-                            right: 16,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black.withValues(alpha: 0.6),
-                              ),
-                              child: IconButton(
-                                onPressed: _toggleFavorite,
-                                icon: Icon(
-                                  _isFavorited
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  color: _isFavorited
-                                      ? Colors.red
-                                      : Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Track Info
-                    Column(
-                      children: [
-                        Text(
-                          _title,
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _category,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.7,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Progress Bar with proper width
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 12),
-                      child: ProgressBar(
-                        currentPosition: _currentPosition,
-                        totalDuration: _totalDuration,
-                        onSeek: (position) async {
-                          await _audioPlayer.seek(
-                            Duration(seconds: position.toInt()),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Player Controls
-                    PlayerControls(
-                      isPlaying: _isPlaying,
-                      onPlayPause: () async {
-                        if (_isPlaying) {
-                          await _audioPlayer.pause();
-                        } else {
-                          await _audioPlayer.play();
-                        }
-                      },
-                      onPrevious: _playPrevious,
-                      onNext: _playNext,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Bottom Action Buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        _buildActionButton(
-                          icon: Icons.shuffle,
-                          isActive: _isShuffled,
-                          onTap: _toggleShuffle,
-                        ),
-                        SizedBox(width: 16),
-                        _buildActionButton(
-                          icon: _getRepeatIcon(),
-                          isActive: _repeatMode != RepeatMode.none,
-                          onTap: _toggleRepeatMode,
-                        ),
-                        SizedBox(width: 16),
-                        _buildActionButton(
-                          icon: Icons.timer,
-                          onTap: _showTimerDialog,
-                        ),
-                        SizedBox(width: 16),
-                        _buildActionButton(
-                          icon: Icons.equalizer,
-                          onTap: _showSoundEffectsDialog,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
+              child: widget.mediaId == null
+                  ? _buildEmptyState(theme)
+                  : _buildPlayerContent(theme),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.colorScheme.surface,
+              border: Border.all(
+                color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                width: 2,
+              ),
+            ),
+            child: Icon(
+              Icons.music_note,
+              size: 80,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            '未选择素材',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '请先在媒体库中选择一个音频或视频素材',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton.icon(
+            onPressed: () => context.go('/media'),
+            icon: const Icon(Icons.library_music),
+            label: const Text('前往媒体库'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayerContent(ThemeData theme) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        children: [
+          const SizedBox(height: 8), // 减小间距
+          // Album Art
+          Container(
+            width: 300,
+            height: 300,
+            margin: const EdgeInsets.symmetric(vertical: 8), // 减小间距
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.shadowColor.withValues(alpha: 0.3),
+                  blurRadius: 32,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: _buildCoverImage(theme),
+                ),
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withValues(alpha: 0.6),
+                    ),
+                    child: IconButton(
+                      onPressed: _toggleFavorite,
+                      icon: Icon(
+                        _isFavorited
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: _isFavorited
+                            ? Colors.red
+                            : Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Track Info
+          Column(
+            children: [
+              Text(
+                _title,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _category,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(
+                    alpha: 0.7,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Progress Bar with proper width
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            child: ProgressBar(
+              currentPosition: _currentPosition,
+              totalDuration: _totalDuration,
+              onSeek: (position) async {
+                await _audioPlayer.seek(
+                  Duration(seconds: position.toInt()),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Player Controls
+          PlayerControls(
+            isPlaying: _isPlaying,
+            onPlayPause: () async {
+              if (_isPlaying) {
+                await _audioPlayer.pause();
+              } else {
+                await _audioPlayer.play();
+              }
+            },
+            onPrevious: _playPrevious,
+            onNext: _playNext,
+          ),
+          const SizedBox(height: 24),
+
+          // Bottom Action Buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildActionButton(
+                icon: Icons.shuffle,
+                isActive: _isShuffled,
+                onTap: _toggleShuffle,
+              ),
+              SizedBox(width: 16),
+              _buildActionButton(
+                icon: _getRepeatIcon(),
+                isActive: _repeatMode != RepeatMode.none,
+                onTap: _toggleRepeatMode,
+              ),
+              SizedBox(width: 16),
+              _buildActionButton(
+                icon: Icons.timer,
+                onTap: _showTimerDialog,
+              ),
+              SizedBox(width: 16),
+              _buildActionButton(
+                icon: Icons.equalizer,
+                onTap: _showSoundEffectsDialog,
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          const SizedBox(height: 40),
+        ],
       ),
     );
   }
