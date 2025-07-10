@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/animated_media_card.dart';
 
 class RecommendedContent extends StatelessWidget {
@@ -17,32 +18,34 @@ class RecommendedContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     final recommendations = [
       {
-        'title': '晨间正念冥想',
-        'category': '专注',
-        'duration': '10分钟',
+        'title': l10n.recommendedMorningMeditation,
+        'category': l10n.recommendedCategoryFocus,
+        'duration': l10n.timerOption10Min,
         'image':
             'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop',
       },
       {
-        'title': '深度睡眠引导',
-        'category': '睡前',
-        'duration': '20分钟',
+        'title': l10n.recommendedDeepSleep,
+        'category': l10n.recommendedCategoryBedtime,
+        'duration': l10n.timerOption20Min,
         'image':
             'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=400&fit=crop',
       },
       {
-        'title': '工作压力缓解',
-        'category': '放松',
-        'duration': '15分钟',
+        'title': l10n.recommendedWorkStress,
+        'category': l10n.recommendedCategoryRelax,
+        'duration': l10n.timerOption15Min,
         'image':
             'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=400&fit=crop',
       },
       {
-        'title': '自然森林音效',
-        'category': '自然音效',
-        'duration': '30分钟',
+        'title': l10n.recommendedNatureSounds,
+        'category': l10n.recommendedCategoryNature,
+        'duration': l10n.timerOption30Min,
         'image':
             'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop',
       },

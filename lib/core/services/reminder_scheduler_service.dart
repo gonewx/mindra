@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
 import '../../features/goals/domain/entities/user_goal.dart';
 import '../../features/goals/data/services/goal_service.dart';
+import '../localization/app_localizations.dart';
 
 /// 提醒调度服务
 /// 负责管理和调度所有冥想提醒
@@ -25,14 +26,14 @@ class ReminderSchedulerService {
   }
 
   /// 更新用户提醒设置
-  Future<void> updateReminderSettings(UserGoal goal) async {
+  Future<void> updateReminderSettings(UserGoal goal, [BuildContext? context]) async {
     try {
       // 取消现有的提醒
       await _cancelAllReminders();
 
       // 如果启用了提醒，重新调度
       if (goal.isReminderEnabled) {
-        await _scheduleReminders(goal);
+        await _scheduleReminders(goal, context);
       }
 
       debugPrint('Reminder settings updated: ${goal.isReminderEnabled}');
@@ -43,10 +44,28 @@ class ReminderSchedulerService {
   }
 
   /// 调度提醒
-  Future<void> _scheduleReminders(UserGoal goal) async {
+  Future<void> _scheduleReminders(UserGoal goal, [BuildContext? context]) async {
     if (!goal.isReminderEnabled) {
       debugPrint('Reminders disabled');
       return;
+    }
+
+    // 获取本地化文本（在异步操作之前）
+    String title;
+    String body;
+    
+    if (context != null) {
+      final l10n = AppLocalizations.of(context)!;
+      title = l10n.reminderNotificationTitle;
+      final goalText = goal.getDailyGoalText(l10n);
+      body = l10n.reminderNotificationBody(goalText);
+    } else {
+      // 回退到默认文本（英文）
+      title = 'Meditation Time!';
+      final goalValue = goal.dailyGoalValue;
+      final unitText = goal.dailyGoalUnit == GoalTimeUnit.minutes ? 'minute' : 'hour';
+      final pluralSuffix = goalValue == 1 ? '' : 's';
+      body = 'Time to start your $goalValue $unitText$pluralSuffix meditation and let your mind relax.';
     }
 
     // 检查通知权限
@@ -74,8 +93,8 @@ class ReminderSchedulerService {
     // 调度重复提醒
     await _notificationService.scheduleRepeatingNotification(
       id: _baseReminderId,
-      title: '冥想时间到了！',
-      body: '是时候开始您的${goal.dailyGoal}冥想了，让心灵得到放松。',
+      title: title,
+      body: body,
       time: reminderTime,
       weekdays: weekdays,
       payload: 'meditation_reminder',
@@ -149,8 +168,22 @@ class ReminderSchedulerService {
   }
 
   /// 显示测试通知
-  Future<void> showTestNotification() async {
+  Future<void> showTestNotification([BuildContext? context]) async {
     try {
+      // 获取本地化文本（在异步操作之前）
+      String title;
+      String body;
+      
+      if (context != null) {
+        final l10n = AppLocalizations.of(context)!;
+        title = l10n.testNotificationTitle;
+        body = l10n.testNotificationBody;
+      } else {
+        // 回退到默认文本（英文）
+        title = 'Test Notification';
+        body = 'This is a test notification to verify that the reminder function works properly.';
+      }
+
       final hasPermission = await _notificationService
           .areNotificationsEnabled();
       if (!hasPermission) {
@@ -160,8 +193,8 @@ class ReminderSchedulerService {
 
       await _notificationService.showNotification(
         id: 9999,
-        title: '测试通知',
-        body: '这是一条测试通知，用于验证提醒功能是否正常工作。',
+        title: title,
+        body: body,
         payload: 'test_notification',
       );
     } catch (e) {

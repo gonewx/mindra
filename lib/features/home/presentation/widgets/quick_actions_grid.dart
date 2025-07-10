@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/theme_provider.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/animated_action_button.dart';
 
 class QuickActionsGrid extends StatelessWidget {
@@ -10,26 +11,28 @@ class QuickActionsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     final actions = [
       AnimatedActionButton(
         icon: Icons.play_arrow_rounded,
-        label: '开始冥想',
+        label: l10n.quickActionStartMeditation,
         isPrimary: true,
         onTap: () => context.go('${AppRouter.player}?autoStart=true'),
       ),
       AnimatedActionButton(
         icon: Icons.music_note_rounded,
-        label: '浏览素材',
+        label: l10n.quickActionBrowseMedia,
         onTap: () => context.go(AppRouter.mediaLibrary),
       ),
       AnimatedActionButton(
         icon: Icons.show_chart_rounded,
-        label: '查看进度',
+        label: l10n.quickActionViewProgress,
         onTap: () => context.go(AppRouter.meditationHistory),
       ),
       AnimatedActionButton(
         icon: Icons.schedule_rounded,
-        label: '定时冥想',
+        label: l10n.quickActionTimedMeditation,
         onTap: () => _showTimerDialog(context),
       ),
     ];
@@ -72,6 +75,7 @@ class QuickActionsGrid extends StatelessWidget {
   void _showTimerDialog(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
@@ -101,7 +105,7 @@ class QuickActionsGrid extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '定时冥想',
+                      l10n.timerDialogTitle,
                       style: theme.textTheme.titleLarge?.copyWith(
                         color: isDark
                             ? const Color(0xFF32B8C6)
@@ -130,7 +134,7 @@ class QuickActionsGrid extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '选择冥想时长',
+                      l10n.timerDialogSubtitle,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: isDark
                             ? Colors.white
@@ -143,15 +147,15 @@ class QuickActionsGrid extends StatelessWidget {
                     // Time Options
                     Column(
                       children: [
-                        _buildTimeOption(context, '5分钟', 5, isDark),
+                        _buildTimeOption(context, l10n.timerOption5Min, 5, isDark),
                         const SizedBox(height: 8),
-                        _buildTimeOption(context, '10分钟', 10, isDark),
+                        _buildTimeOption(context, l10n.timerOption10Min, 10, isDark),
                         const SizedBox(height: 8),
-                        _buildTimeOption(context, '15分钟', 15, isDark),
+                        _buildTimeOption(context, l10n.timerOption15Min, 15, isDark),
                         const SizedBox(height: 8),
-                        _buildTimeOption(context, '20分钟', 20, isDark),
+                        _buildTimeOption(context, l10n.timerOption20Min, 20, isDark),
                         const SizedBox(height: 8),
-                        _buildTimeOption(context, '30分钟', 30, isDark),
+                        _buildTimeOption(context, l10n.timerOption30Min, 30, isDark),
                       ],
                     ),
                   ],

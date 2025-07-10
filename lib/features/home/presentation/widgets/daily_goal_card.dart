@@ -24,7 +24,6 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
   UserGoal? _currentGoal;
   MeditationStatistics? _statistics;
   double _progressValue = 0.0;
-  String _progressText = '0%';
 
   @override
   void initState() {
@@ -52,13 +51,11 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
   void _calculateProgress() {
     if (_currentGoal == null || _statistics == null) {
       _progressValue = 0.0;
-      _progressText = '0%';
       return;
     }
 
-    // 解析每日目标时长（分钟）
-    final goalText = _currentGoal!.dailyGoal;
-    final goalMinutes = int.tryParse(goalText.replaceAll('分钟', '')) ?? 20;
+    // 获取每日目标时长（分钟）
+    final goalMinutes = _getGoalMinutes();
 
     // 获取今日实际冥想时长
     final today = DateTime.now();
@@ -66,7 +63,24 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
 
     // 计算进度
     _progressValue = (todayMinutes / goalMinutes).clamp(0.0, 1.0);
-    _progressText = '${(_progressValue * 100).round()}%';
+  }
+
+  /// 获取格式化的进度详情文本
+  /// 使用本地化配置显示当前进度的百分比
+  String _getProgressDetailText(AppLocalizations localizations) {
+    if (_currentGoal == null || _statistics == null) {
+      return '0%';
+    }
+
+    final progressPercentage = (_progressValue * 100).round();
+    return '$progressPercentage%';
+  }
+
+  /// 从 UserGoal 实体中获取目标分钟数
+  int _getGoalMinutes() {
+    if (_currentGoal == null) return 20;
+
+    return _currentGoal!.dailyGoalMinutes;
   }
 
   int _getTodayMinutes(DateTime today) {
@@ -90,6 +104,25 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
 
   String _getDateKey(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  /// 获取格式化的目标文本
+  /// 使用本地化配置统一格式化数值显示
+  String _getFormattedGoalText(AppLocalizations localizations) {
+    if (_currentGoal == null) {
+      return localizations.dailyGoalDefault;
+    }
+
+    // 使用新的结构化方法
+    try {
+      final formattedGoal = _currentGoal!.getDailyGoalText(localizations);
+      return '$formattedGoal${localizations.dailyGoalMeditationSuffix}';
+    } catch (e) {
+      // 如果新方法失败，使用备用方法
+      final goalMinutes = _getGoalMinutes();
+      final formattedMinutes = localizations.statsMinutesFormat(goalMinutes);
+      return '$formattedMinutes${localizations.dailyGoalMeditationSuffix}';
+    }
   }
 
   Future<void> _showGoalDialog() async {
@@ -159,9 +192,7 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
                     const SizedBox(height: 4),
                     Flexible(
                       child: Text(
-                        _currentGoal != null
-                            ? '${_currentGoal!.dailyGoal}${localizations.dailyGoalMeditationSuffix}'
-                            : localizations.dailyGoalDefault,
+                        _getFormattedGoalText(localizations),
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: Colors.white.withValues(alpha: 0.9),
                         ),
@@ -196,11 +227,12 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
                       ),
                     ),
                     Text(
-                      _progressText,
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      _getProgressDetailText(localizations),
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),

@@ -44,23 +44,47 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
   final _urlController = TextEditingController();
   final _thumbnailController = TextEditingController();
   final _durationController = TextEditingController();
-  String _selectedCategory = AppConstants.defaultCategories.first;
+  String _selectedCategory = '';
   bool _isFromFile = true;
   String? _selectedFilePath;
   String? _selectedFileName;
   Uint8List? _selectedFileBytes;
   bool _isLoadingDuration = false;
 
-  final List<String> _categories = AppConstants.defaultCategories;
+  List<String> get _categories {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return AppConstants.defaultCategories;
+    }
+    
+    return [
+      l10n.categoryNameMeditation,
+      l10n.categoryNameBedtime,
+      l10n.categoryNameFocus,
+      l10n.categoryNameRelax,
+      l10n.categoryNameNatureSounds,
+    ];
+  }
 
   bool get _isEditMode => widget.editingMedia != null;
 
   @override
   void initState() {
     super.initState();
-    if (_isEditMode) {
-      _initializeForEdit();
-    }
+    // 延迟初始化以确保context可用
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          if (_selectedCategory.isEmpty && _categories.isNotEmpty) {
+            _selectedCategory = _categories.first;
+          }
+        });
+        
+        if (_isEditMode) {
+          _initializeForEdit();
+        }
+      }
+    });
   }
 
   void _initializeForEdit() {
@@ -104,6 +128,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.9,
           maxHeight: MediaQuery.of(context).size.height * 0.85,
+          minWidth: 320, // 最小宽度确保内容不会过于拥挤
         ),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF2A3441) : theme.colorScheme.surface,
@@ -195,7 +220,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
-                                    horizontal: 12,
+                                    horizontal: 8,
                                   ),
                                   decoration: BoxDecoration(
                                     color: _isFromFile
@@ -209,6 +234,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
                                         Icons.file_upload_outlined,
@@ -221,20 +247,24 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                                                         .onSurface),
                                         size: 20,
                                       ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        l10n.dialogLocalImport,
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                              color: _isFromFile
-                                                  ? Colors.white
-                                                  : (isDark
-                                                        ? Colors.white70
-                                                        : theme
-                                                              .colorScheme
-                                                              .onSurface),
-                                              fontWeight: FontWeight.w500,
-                                            ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          l10n.dialogLocalImport,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: _isFromFile
+                                                    ? Colors.white
+                                                    : (isDark
+                                                          ? Colors.white70
+                                                          : theme
+                                                                .colorScheme
+                                                                .onSurface),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -260,7 +290,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
-                                    horizontal: 12,
+                                    horizontal: 8,
                                   ),
                                   decoration: BoxDecoration(
                                     color: !_isFromFile
@@ -274,6 +304,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
                                         Icons.link,
@@ -286,20 +317,24 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                                                         .onSurface),
                                         size: 20,
                                       ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        l10n.dialogNetworkLink,
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                              color: !_isFromFile
-                                                  ? Colors.white
-                                                  : (isDark
-                                                        ? Colors.white70
-                                                        : theme
-                                                              .colorScheme
-                                                              .onSurface),
-                                              fontWeight: FontWeight.w500,
-                                            ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          l10n.dialogNetworkLink,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: !_isFromFile
+                                                    ? Colors.white
+                                                    : (isDark
+                                                          ? Colors.white70
+                                                          : theme
+                                                                .colorScheme
+                                                                .onSurface),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                        ),
                                       ),
                                     ],
                                   ),

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class RecentSessionsCard extends StatelessWidget {
   const RecentSessionsCard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -16,39 +19,42 @@ class RecentSessionsCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('最近练习', style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  l10n.recentSessionsTitle,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 TextButton(
                   onPressed: () {
                     context.push(AppRouter.meditationHistory);
                   },
-                  child: const Text('查看全部'),
+                  child: Text(l10n.recentSessionsViewAll),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             // TODO: Replace with actual recent sessions data
             _RecentSessionItem(
-              title: '晨间冥想',
-              duration: '10分钟',
-              date: '今天',
+              title: l10n.recentSessionMorning,
+              duration: l10n.timerOption10Min,
+              date: l10n.recentSessionToday,
               onTap: () {
                 // TODO: Resume session or show details
               },
             ),
             const SizedBox(height: 12),
             _RecentSessionItem(
-              title: '放松练习',
-              duration: '15分钟',
-              date: '昨天',
+              title: l10n.recentSessionRelaxation,
+              duration: l10n.timerOption15Min,
+              date: l10n.recentSessionYesterday,
               onTap: () {
                 // TODO: Resume session or show details
               },
             ),
             const SizedBox(height: 12),
             _RecentSessionItem(
-              title: '睡前冥想',
-              duration: '20分钟',
-              date: '2天前',
+              title: l10n.recentSessionBedtime,
+              duration: l10n.timerOption20Min,
+              date: l10n.recentSessionDaysAgo(2),
               onTap: () {
                 // TODO: Resume session or show details
               },

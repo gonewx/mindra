@@ -59,8 +59,10 @@ class GoalService {
 
   /// 更新用户目标设置
   static Future<void> updateGoal({
-    String? dailyGoal,
-    String? weeklyGoal,
+    int? dailyGoalValue,
+    GoalTimeUnit? dailyGoalUnit,
+    int? weeklyGoalValue,
+    GoalFrequencyUnit? weeklyGoalUnit,
     TimeOfDay? reminderTime,
   }) async {
     try {
@@ -69,8 +71,10 @@ class GoalService {
 
       // 创建更新后的目标
       final updatedGoal = currentGoal.copyWith(
-        dailyGoal: dailyGoal,
-        weeklyGoal: weeklyGoal,
+        dailyGoalValue: dailyGoalValue,
+        dailyGoalUnit: dailyGoalUnit,
+        weeklyGoalValue: weeklyGoalValue,
+        weeklyGoalUnit: weeklyGoalUnit,
         reminderTime: reminderTime,
         updatedAt: DateTime.now(),
       );
@@ -134,33 +138,35 @@ class GoalService {
   }
 
   /// 验证目标设置是否有效
-  static bool isValidGoal(String dailyGoal, String weeklyGoal) {
-    // 验证每日目标格式
-    final dailyMatch = RegExp(r'^\d+分钟$').hasMatch(dailyGoal);
-    if (!dailyMatch) return false;
+  static bool isValidGoal(int dailyGoalValue, GoalTimeUnit dailyGoalUnit, int weeklyGoalValue, GoalFrequencyUnit weeklyGoalUnit) {
+    // 验证每日目标数值范围
+    switch (dailyGoalUnit) {
+      case GoalTimeUnit.minutes:
+        if (dailyGoalValue < 5 || dailyGoalValue > 120) return false; // 5分钟到2小时
+        break;
+      case GoalTimeUnit.hours:
+        if (dailyGoalValue < 1 || dailyGoalValue > 8) return false; // 1小时到8小时
+        break;
+    }
 
-    // 验证每周目标格式
-    final weeklyMatch = RegExp(r'^\d+次$').hasMatch(weeklyGoal);
-    if (!weeklyMatch) return false;
-
-    // 验证数值范围
-    final dailyMinutes = int.tryParse(dailyGoal.replaceAll('分钟', ''));
-    final weeklyCount = int.tryParse(weeklyGoal.replaceAll('次', ''));
-
-    if (dailyMinutes == null || weeklyCount == null) return false;
-    if (dailyMinutes < 5 || dailyMinutes > 120) return false; // 5分钟到2小时
-    if (weeklyCount < 1 || weeklyCount > 21) return false; // 1次到21次
+    // 验证每周目标数值范围
+    if (weeklyGoalValue < 1 || weeklyGoalValue > 21) return false; // 1次到21次
 
     return true;
   }
 
-  /// 获取可用的每日目标选项
-  static List<String> getDailyGoalOptions() {
-    return ['10分钟', '15分钟', '20分钟', '30分钟', '45分钟', '60分钟'];
+  /// 获取可用的每日目标选项（分钟）
+  static List<int> getDailyGoalMinuteOptions() {
+    return [5, 10, 15, 20, 30, 45, 60, 90, 120];
+  }
+
+  /// 获取可用的每日目标选项（小时）
+  static List<int> getDailyGoalHourOptions() {
+    return [1, 2, 3, 4, 6, 8];
   }
 
   /// 获取可用的每周目标选项
-  static List<String> getWeeklyGoalOptions() {
-    return ['3次', '5次', '7次', '10次', '14次'];
+  static List<int> getWeeklyGoalOptions() {
+    return [1, 3, 5, 7, 10, 14, 21];
   }
 }

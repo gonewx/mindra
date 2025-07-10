@@ -304,4 +304,17 @@ extension AppThemeModeExtension on AppThemeMode {
         return '自然';
     }
   }
+
+  String displayNameLocalized(BuildContext context) {
+    final localizations = context.findAncestorWidgetOfExactType<Localizations>()?.locale.languageCode ?? 'zh';
+    
+    switch (this) {
+      case AppThemeMode.light:
+        return localizations == 'zh' ? '浅色主题' : 'Light Theme';
+      case AppThemeMode.dark:
+        return localizations == 'zh' ? '深色主题' : 'Dark Theme';
+      case AppThemeMode.nature:
+        return localizations == 'zh' ? '自然主题' : 'Nature Theme';
+    }
+  }
 }

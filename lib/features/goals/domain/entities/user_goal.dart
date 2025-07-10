@@ -1,9 +1,18 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/localization/app_localizations.dart';
+
+/// 目标时间单位枚举
+enum GoalTimeUnit { minutes, hours }
+
+/// 目标频率单位枚举
+enum GoalFrequencyUnit { times, sessions }
 
 class UserGoal extends Equatable {
-  final String dailyGoal; // 每日目标，如 "20分钟"
-  final String weeklyGoal; // 每周目标，如 "7次"
+  final int dailyGoalValue; // 每日目标数值，如 20
+  final GoalTimeUnit dailyGoalUnit; // 每日目标单位，如 minutes
+  final int weeklyGoalValue; // 每周目标数值，如 7
+  final GoalFrequencyUnit weeklyGoalUnit; // 每周目标单位，如 times
   final TimeOfDay reminderTime; // 提醒时间
   final bool isReminderEnabled; // 是否启用提醒
   final List<String> reminderDays; // 提醒日期
@@ -13,8 +22,10 @@ class UserGoal extends Equatable {
   final DateTime updatedAt; // 更新时间
 
   const UserGoal({
-    required this.dailyGoal,
-    required this.weeklyGoal,
+    required this.dailyGoalValue,
+    this.dailyGoalUnit = GoalTimeUnit.minutes,
+    required this.weeklyGoalValue,
+    this.weeklyGoalUnit = GoalFrequencyUnit.times,
     required this.reminderTime,
     this.isReminderEnabled = false,
     this.reminderDays = const ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
@@ -25,14 +36,26 @@ class UserGoal extends Equatable {
   });
 
   // 默认目标设置
-  factory UserGoal.defaultGoal() {
+  factory UserGoal.defaultGoal([AppLocalizations? l10n]) {
     final now = DateTime.now();
     return UserGoal(
-      dailyGoal: '20分钟',
-      weeklyGoal: '7次',
+      dailyGoalValue: 20,
+      dailyGoalUnit: GoalTimeUnit.minutes,
+      weeklyGoalValue: 7,
+      weeklyGoalUnit: GoalFrequencyUnit.times,
       reminderTime: const TimeOfDay(hour: 9, minute: 0),
       isReminderEnabled: false,
-      reminderDays: const ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+      reminderDays: l10n != null
+          ? [
+              l10n.weekdaysMonday,
+              l10n.weekdaysTuesday,
+              l10n.weekdaysWednesday,
+              l10n.weekdaysThursday,
+              l10n.weekdaysFriday,
+              l10n.weekdaysSaturday,
+              l10n.weekdaysSunday,
+            ]
+          : const ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
       enableSound: true,
       enableVibration: true,
       createdAt: now,
@@ -41,8 +64,10 @@ class UserGoal extends Equatable {
   }
 
   UserGoal copyWith({
-    String? dailyGoal,
-    String? weeklyGoal,
+    int? dailyGoalValue,
+    GoalTimeUnit? dailyGoalUnit,
+    int? weeklyGoalValue,
+    GoalFrequencyUnit? weeklyGoalUnit,
     TimeOfDay? reminderTime,
     bool? isReminderEnabled,
     List<String>? reminderDays,
@@ -52,8 +77,10 @@ class UserGoal extends Equatable {
     DateTime? updatedAt,
   }) {
     return UserGoal(
-      dailyGoal: dailyGoal ?? this.dailyGoal,
-      weeklyGoal: weeklyGoal ?? this.weeklyGoal,
+      dailyGoalValue: dailyGoalValue ?? this.dailyGoalValue,
+      dailyGoalUnit: dailyGoalUnit ?? this.dailyGoalUnit,
+      weeklyGoalValue: weeklyGoalValue ?? this.weeklyGoalValue,
+      weeklyGoalUnit: weeklyGoalUnit ?? this.weeklyGoalUnit,
       reminderTime: reminderTime ?? this.reminderTime,
       isReminderEnabled: isReminderEnabled ?? this.isReminderEnabled,
       reminderDays: reminderDays ?? this.reminderDays,
@@ -67,8 +94,10 @@ class UserGoal extends Equatable {
   // 转换为 Map 用于存储
   Map<String, dynamic> toMap() {
     return {
-      'daily_goal': dailyGoal,
-      'weekly_goal': weeklyGoal,
+      'daily_goal_value': dailyGoalValue,
+      'daily_goal_unit': dailyGoalUnit.name,
+      'weekly_goal_value': weeklyGoalValue,
+      'weekly_goal_unit': weeklyGoalUnit.name,
       'reminder_hour': reminderTime.hour,
       'reminder_minute': reminderTime.minute,
       'is_reminder_enabled': isReminderEnabled,
@@ -83,8 +112,18 @@ class UserGoal extends Equatable {
   // 从 Map 创建实例
   factory UserGoal.fromMap(Map<String, dynamic> map) {
     return UserGoal(
-      dailyGoal: map['daily_goal'] ?? '20分钟',
-      weeklyGoal: map['weekly_goal'] ?? '7次',
+      dailyGoalValue:
+          map['daily_goal_value'] ?? map['daily_goal_minutes'] ?? 20,
+      dailyGoalUnit: GoalTimeUnit.values.firstWhere(
+        (unit) => unit.name == (map['daily_goal_unit'] ?? 'minutes'),
+        orElse: () => GoalTimeUnit.minutes,
+      ),
+      weeklyGoalValue:
+          map['weekly_goal_value'] ?? map['weekly_goal_count'] ?? 7,
+      weeklyGoalUnit: GoalFrequencyUnit.values.firstWhere(
+        (unit) => unit.name == (map['weekly_goal_unit'] ?? 'times'),
+        orElse: () => GoalFrequencyUnit.times,
+      ),
       reminderTime: TimeOfDay(
         hour: map['reminder_hour'] ?? 9,
         minute: map['reminder_minute'] ?? 0,
@@ -107,8 +146,10 @@ class UserGoal extends Equatable {
   String toJson() {
     return '''
 {
-  "daily_goal": "$dailyGoal",
-  "weekly_goal": "$weeklyGoal",
+  "daily_goal_value": $dailyGoalValue,
+  "daily_goal_unit": "${dailyGoalUnit.name}",
+  "weekly_goal_value": $weeklyGoalValue,
+  "weekly_goal_unit": "${weeklyGoalUnit.name}",
   "reminder_hour": ${reminderTime.hour},
   "reminder_minute": ${reminderTime.minute},
   "is_reminder_enabled": $isReminderEnabled,
@@ -124,8 +165,10 @@ class UserGoal extends Equatable {
   factory UserGoal.fromJson(String jsonString) {
     // 简单的 JSON 解析，避免依赖 dart:convert
     final lines = jsonString.split('\n');
-    String dailyGoal = '20分钟';
-    String weeklyGoal = '7次';
+    int dailyGoalValue = 20;
+    GoalTimeUnit dailyGoalUnit = GoalTimeUnit.minutes;
+    int weeklyGoalValue = 7;
+    GoalFrequencyUnit weeklyGoalUnit = GoalFrequencyUnit.times;
     int reminderHour = 9;
     int reminderMinute = 0;
     bool isReminderEnabled = false;
@@ -137,10 +180,25 @@ class UserGoal extends Equatable {
 
     for (final line in lines) {
       final trimmed = line.trim();
-      if (trimmed.startsWith('"daily_goal":')) {
-        dailyGoal = trimmed.split('"')[3];
-      } else if (trimmed.startsWith('"weekly_goal":')) {
-        weeklyGoal = trimmed.split('"')[3];
+      if (trimmed.startsWith('"daily_goal_value":')) {
+        dailyGoalValue =
+            int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ??
+            20;
+      } else if (trimmed.startsWith('"daily_goal_unit":')) {
+        final unitString = trimmed.split('"')[3];
+        dailyGoalUnit = GoalTimeUnit.values.firstWhere(
+          (unit) => unit.name == unitString,
+          orElse: () => GoalTimeUnit.minutes,
+        );
+      } else if (trimmed.startsWith('"weekly_goal_value":')) {
+        weeklyGoalValue =
+            int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ?? 7;
+      } else if (trimmed.startsWith('"weekly_goal_unit":')) {
+        final unitString = trimmed.split('"')[3];
+        weeklyGoalUnit = GoalFrequencyUnit.values.firstWhere(
+          (unit) => unit.name == unitString,
+          orElse: () => GoalFrequencyUnit.times,
+        );
       } else if (trimmed.startsWith('"reminder_hour":')) {
         reminderHour =
             int.tryParse(trimmed.split(':')[1].replaceAll(',', '').trim()) ?? 9;
@@ -170,8 +228,10 @@ class UserGoal extends Equatable {
     }
 
     return UserGoal(
-      dailyGoal: dailyGoal,
-      weeklyGoal: weeklyGoal,
+      dailyGoalValue: dailyGoalValue,
+      dailyGoalUnit: dailyGoalUnit,
+      weeklyGoalValue: weeklyGoalValue,
+      weeklyGoalUnit: weeklyGoalUnit,
       reminderTime: TimeOfDay(hour: reminderHour, minute: reminderMinute),
       isReminderEnabled: isReminderEnabled,
       reminderDays: reminderDaysString.split(','),
@@ -184,14 +244,41 @@ class UserGoal extends Equatable {
 
   // 获取每日目标的分钟数
   int get dailyGoalMinutes {
-    final match = RegExp(r'(\d+)').firstMatch(dailyGoal);
-    return match != null ? int.tryParse(match.group(1)!) ?? 20 : 20;
+    switch (dailyGoalUnit) {
+      case GoalTimeUnit.minutes:
+        return dailyGoalValue;
+      case GoalTimeUnit.hours:
+        return dailyGoalValue * 60;
+    }
   }
 
   // 获取每周目标的次数
   int get weeklyGoalCount {
-    final match = RegExp(r'(\d+)').firstMatch(weeklyGoal);
-    return match != null ? int.tryParse(match.group(1)!) ?? 7 : 7;
+    return weeklyGoalValue;
+  }
+
+  // 获取格式化的每日目标文本
+  String getDailyGoalText(AppLocalizations localizations) {
+    switch (dailyGoalUnit) {
+      case GoalTimeUnit.minutes:
+        return localizations.statsMinutesFormat(dailyGoalValue);
+      case GoalTimeUnit.hours:
+        return localizations.locale.languageCode == 'zh'
+            ? '$dailyGoalValue小时'
+            : '$dailyGoalValue ${dailyGoalValue == 1 ? "hour" : "hours"}';
+    }
+  }
+
+  // 获取格式化的每周目标文本
+  String getWeeklyGoalText(AppLocalizations localizations) {
+    switch (weeklyGoalUnit) {
+      case GoalFrequencyUnit.times:
+        return localizations.statsTimesFormat(weeklyGoalValue);
+      case GoalFrequencyUnit.sessions:
+        return localizations.locale.languageCode == 'zh'
+            ? '$weeklyGoalValue学习'
+            : '$weeklyGoalValue ${weeklyGoalValue == 1 ? "session" : "sessions"}';
+    }
   }
 
   // 格式化提醒时间为字符串
@@ -203,8 +290,10 @@ class UserGoal extends Equatable {
 
   @override
   List<Object?> get props => [
-    dailyGoal,
-    weeklyGoal,
+    dailyGoalValue,
+    dailyGoalUnit,
+    weeklyGoalValue,
+    weeklyGoalUnit,
     reminderTime,
     isReminderEnabled,
     reminderDays,
@@ -216,6 +305,6 @@ class UserGoal extends Equatable {
 
   @override
   String toString() {
-    return 'UserGoal(dailyGoal: $dailyGoal, weeklyGoal: $weeklyGoal, reminderTime: $reminderTimeString, isReminderEnabled: $isReminderEnabled)';
+    return 'UserGoal(dailyGoal: $dailyGoalValue ${dailyGoalUnit.name}, weeklyGoal: $weeklyGoalValue ${weeklyGoalUnit.name}, reminderTime: $reminderTimeString, isReminderEnabled: $isReminderEnabled)';
   }
 }

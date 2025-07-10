@@ -8,6 +8,7 @@ import '../bloc/media_event.dart';
 import '../bloc/media_state.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class MediaLibraryPage extends StatefulWidget {
   const MediaLibraryPage({super.key});
@@ -31,11 +32,25 @@ class _MediaLibraryView extends StatefulWidget {
 }
 
 class _MediaLibraryViewState extends State<_MediaLibraryView> {
-  String _selectedCategory = '全部';
+  String _selectedCategory = 'All';
   bool _isGridView = true;
   final TextEditingController _searchController = TextEditingController();
 
-  final List<String> _categories = ['全部', ...AppConstants.defaultCategories];
+  List<String> get _categories {
+    final localizations = AppLocalizations.of(context);
+    if (localizations == null) {
+      return ['All', ...AppConstants.defaultCategories];
+    }
+    
+    return [
+      localizations.mediaLibraryCategoryAll,
+      localizations.categoryNameMeditation,
+      localizations.categoryNameBedtime,
+      localizations.categoryNameFocus,
+      localizations.categoryNameRelax,
+      localizations.categoryNameNatureSounds,
+    ];
+  }
 
   @override
   void initState() {
@@ -43,6 +58,9 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
     // 在下一帧触发加载事件，确保context已经完全初始化
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        // 设置默认分类为本地化的"全部"
+        final localizations = AppLocalizations.of(context);
+        _selectedCategory = localizations?.mediaLibraryCategoryAll ?? 'All';
         context.read<MediaBloc>().add(LoadMediaItems());
       }
     });
@@ -68,7 +86,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '素材库',
+                  AppLocalizations.of(context)?.mediaLibraryTitle ?? 'Media Library',
                   style: theme.textTheme.headlineLarge?.copyWith(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.bold,
@@ -106,7 +124,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText: '搜索冥想素材...',
+                        hintText: AppLocalizations.of(context)?.mediaLibrarySearchHint ?? 'Search meditation materials...',
                         hintStyle: TextStyle(
                           color: theme.colorScheme.onSurface.withValues(
                             alpha: 0.6,
@@ -245,7 +263,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
               children: [
                 const Icon(Icons.error_outline, size: 64, color: Colors.grey),
                 const SizedBox(height: 16),
-                Text('加载失败', style: Theme.of(context).textTheme.titleLarge),
+                Text(AppLocalizations.of(context)?.mediaLibraryLoadFailed ?? 'Load Failed', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
                 Text(
                   state.message,
@@ -259,7 +277,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                       LoadMediaItemsByCategory(_selectedCategory),
                     );
                   },
-                  child: const Text('重试'),
+                  child: Text(AppLocalizations.of(context)?.mediaLibraryRetry ?? 'Retry'),
                 ),
               ],
             ),
@@ -278,11 +296,11 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                     color: Colors.grey,
                   ),
                   const SizedBox(height: 16),
-                  Text('暂无素材', style: Theme.of(context).textTheme.titleLarge),
+                  Text(AppLocalizations.of(context)?.mediaLibraryNoMaterials ?? 'No Materials', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
-                  const Text(
-                    '点击右上角按钮添加素材',
-                    style: TextStyle(color: Colors.grey),
+                  Text(
+                    AppLocalizations.of(context)?.mediaLibraryAddMaterialsHint ?? 'Click the top-right button to add materials',
+                    style: const TextStyle(color: Colors.grey),
                   ),
                 ],
               ),

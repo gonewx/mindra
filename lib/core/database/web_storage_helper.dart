@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 import '../../features/media/domain/entities/media_item.dart';
 import '../../features/meditation/domain/entities/meditation_session.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Conditional import for web-only functionality
 import 'web_storage_helper_io.dart' as html if (dart.library.html) 'dart:html';

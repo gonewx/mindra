@@ -5,6 +5,7 @@ import '../../../../shared/widgets/animated_media_card.dart';
 import '../../../../features/meditation/domain/entities/meditation_session.dart';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/database/web_storage_helper.dart';
+import '../../../../core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 
 class RecentSessionsList extends StatefulWidget {
@@ -63,7 +64,12 @@ class _RecentSessionsListState extends State<RecentSessionsList> {
 
   String _formatDuration(int seconds) {
     final minutes = seconds ~/ 60;
-    return '$minutes分钟';
+    final localizations = AppLocalizations.of(context);
+    if (localizations?.locale.languageCode == 'zh') {
+      return '$minutes分钟';
+    } else {
+      return '${minutes}min';
+    }
   }
 
   String _getImageUrl(String title) {
@@ -104,14 +110,14 @@ class _RecentSessionsListState extends State<RecentSessionsList> {
             ),
             const SizedBox(height: 12),
             Text(
-              '还没有冥想记录',
+              AppLocalizations.of(context)?.recentSessionsNoRecords ?? 'No recent meditation records yet',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              '开始你的第一次冥想之旅吧！',
+              AppLocalizations.of(context)?.recentSessionsStartMeditating ?? 'Start your first meditation journey!',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(
                   context,

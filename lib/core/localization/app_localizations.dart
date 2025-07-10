@@ -232,6 +232,11 @@ class AppLocalizations {
       'session_types_sleep': 'Sleep',
       'session_types_focus': 'Focus',
       'session_types_relaxation': 'Relaxation',
+      // Reminder Notifications
+      'reminder_notification_title': 'Meditation Time!',
+      'reminder_notification_body': 'Time to start your {goal} meditation and let your mind relax.',
+      'test_notification_title': 'Test Notification',
+      'test_notification_body': 'This is a test notification to verify that the reminder function works properly.',
       // Session Categories
       'session_categories_breathing_practice': 'Breathing Practice',
       'session_categories_sleep_guidance': 'Sleep Guidance',
@@ -274,6 +279,73 @@ class AppLocalizations {
       'dialog_duration_invalid': 'Please enter valid duration (seconds)',
       'dialog_material_added': 'Material added successfully',
       'dialog_media_updated': 'Media information updated successfully',
+      // Quick Actions
+      'quick_action_start_meditation': 'Start Meditation',
+      'quick_action_browse_media': 'Browse Media',
+      'quick_action_view_progress': 'View Progress',
+      'quick_action_timed_meditation': 'Timed Meditation',
+      // Timer Dialog
+      'timer_dialog_title': 'Timed Meditation',
+      'timer_dialog_subtitle': 'Select meditation duration',
+      'timer_option_5min': '5 min',
+      'timer_option_10min': '10 min',
+      'timer_option_15min': '15 min',
+      'timer_option_20min': '20 min',
+      'timer_option_30min': '30 min',
+      'timer_option_45min': '45 min',
+      'timer_option_60min': '60 min',
+      // Goal Options
+      'goal_option_3_times': '3 times',
+      'goal_option_5_times': '5 times',
+      'goal_option_7_times': '7 times',
+      'goal_option_10_times': '10 times',
+      'goal_option_14_times': '14 times',
+      // Recent Sessions
+      'recent_sessions_title': 'Recent Sessions',
+      'recent_sessions_view_all': 'View All',
+      'recent_session_morning': 'Morning Meditation',
+      'recent_session_relaxation': 'Relaxation Practice',
+      'recent_session_bedtime': 'Bedtime Meditation',
+      'recent_session_today': 'Today',
+      'recent_session_yesterday': 'Yesterday',
+      'recent_session_days_ago': '{days} days ago',
+      // Recommended Content
+      'recommended_morning_meditation': 'Morning Mindfulness',
+      'recommended_deep_sleep': 'Deep Sleep Guide',
+      'recommended_work_stress': 'Work Stress Relief',
+      'recommended_nature_sounds': 'Nature Forest Sounds',
+      'recommended_category_focus': 'Focus',
+      'recommended_category_bedtime': 'Bedtime',
+      'recommended_category_relax': 'Relax',
+      'recommended_category_nature': 'Nature Sounds',
+      // Media Library
+      'media_library_title': 'Media Library',
+      'media_library_search_hint': 'Search meditation materials...',
+      'media_library_no_materials': 'No Materials',
+      'media_library_add_materials_hint': 'Click the top-right button to add materials',
+      'media_library_load_failed': 'Load Failed',
+      'media_library_retry': 'Retry',
+      'media_library_category_all': 'All',
+      // Category Names
+      'category_name_meditation': 'Meditation',
+      'category_name_bedtime': 'Bedtime',
+      'category_name_focus': 'Focus',
+      'category_name_relax': 'Relax',
+      'category_name_nature_sounds': 'Nature Sounds',
+      // Recent Sessions No Records
+      'recent_sessions_no_records': 'No recent meditation sessions yet',
+      'recent_sessions_start_meditating': 'Start your meditation journey now',
+      // Personal Center Theme Selection
+      'personal_center_theme_light': 'Light Theme',
+      'personal_center_theme_dark': 'Dark Theme',
+      'personal_center_theme_system': 'Follow System',
+      // About App Content
+      'about_app_version': 'Version',
+      'about_app_description': 'Mindra is a meditation app designed to help you achieve inner peace and mindfulness.',
+      'about_app_developer': 'Developer',
+      'about_app_contact': 'Contact Us',
+      'about_app_privacy_policy': 'Privacy Policy',
+      'about_app_terms_of_service': 'Terms of Service',
     },
     'zh': {
       'personal_center': '个人中心',
@@ -505,6 +577,11 @@ class AppLocalizations {
       'session_types_sleep': '睡眠',
       'session_types_focus': '专注',
       'session_types_relaxation': '放松',
+      // Reminder Notifications
+      'reminder_notification_title': '冥想时间到了！',
+      'reminder_notification_body': '是时候开始您的{goal}冥想了，让心灵得到放松。',
+      'test_notification_title': '测试通知',
+      'test_notification_body': '这是一条测试通知，用于验证提醒功能是否正常工作。',
       // Session Categories
       'session_categories_breathing_practice': '呼吸练习',
       'session_categories_sleep_guidance': '睡眠引导',
@@ -547,6 +624,73 @@ class AppLocalizations {
       'dialog_duration_invalid': '请输入有效的时长（秒）',
       'dialog_material_added': '素材添加成功',
       'dialog_media_updated': '媒体信息更新成功',
+      // Quick Actions
+      'quick_action_start_meditation': '开始冥想',
+      'quick_action_browse_media': '浏览素材',
+      'quick_action_view_progress': '查看进度',
+      'quick_action_timed_meditation': '定时冥想',
+      // Timer Dialog
+      'timer_dialog_title': '定时冥想',
+      'timer_dialog_subtitle': '选择冥想时长',
+      'timer_option_5min': '5分钟',
+      'timer_option_10min': '10分钟',
+      'timer_option_15min': '15分钟',
+      'timer_option_20min': '20分钟',
+      'timer_option_30min': '30分钟',
+      'timer_option_45min': '45分钟',
+      'timer_option_60min': '60分钟',
+      // Goal Options
+      'goal_option_3_times': '3次',
+      'goal_option_5_times': '5次',
+      'goal_option_7_times': '7次',
+      'goal_option_10_times': '10次',
+      'goal_option_14_times': '14次',
+      // Recent Sessions
+      'recent_sessions_title': '最近练习',
+      'recent_sessions_view_all': '查看全部',
+      'recent_session_morning': '晨间冥想',
+      'recent_session_relaxation': '放松练习',
+      'recent_session_bedtime': '睡前冥想',
+      'recent_session_today': '今天',
+      'recent_session_yesterday': '昨天',
+      'recent_session_days_ago': '{days}天前',
+      // Recommended Content
+      'recommended_morning_meditation': '晨间正念冥想',
+      'recommended_deep_sleep': '深度睡眠引导',
+      'recommended_work_stress': '工作压力缓解',
+      'recommended_nature_sounds': '自然森林音效',
+      'recommended_category_focus': '专注',
+      'recommended_category_bedtime': '睡前',
+      'recommended_category_relax': '放松',
+      'recommended_category_nature': '自然音效',
+      // Media Library
+      'media_library_title': '素材库',
+      'media_library_search_hint': '搜索冥想素材...',
+      'media_library_no_materials': '暂无素材',
+      'media_library_add_materials_hint': '点击右上角按钮添加素材',
+      'media_library_load_failed': '加载失败',
+      'media_library_retry': '重试',
+      'media_library_category_all': '全部',
+      // Category Names
+      'category_name_meditation': '冥想',
+      'category_name_bedtime': '睡前',
+      'category_name_focus': '专注',
+      'category_name_relax': '放松',
+      'category_name_nature_sounds': '自然音效',
+      // Recent Sessions No Records
+      'recent_sessions_no_records': '暂无最近的冥想记录',
+      'recent_sessions_start_meditating': '现在开始您的冥想之旅吧',
+      // Personal Center Theme Selection
+      'personal_center_theme_light': '浅色主题',
+      'personal_center_theme_dark': '深色主题',
+      'personal_center_theme_system': '跟随系统',
+      // About App Content
+      'about_app_version': '版本',
+      'about_app_description': 'Mindra 是一款专为帮助您实现内心平静和正念而设计的冥想应用。',
+      'about_app_developer': '开发者',
+      'about_app_contact': '联系我们',
+      'about_app_privacy_policy': '隐私政策',
+      'about_app_terms_of_service': '服务条款',
     },
   };
 
@@ -835,6 +979,82 @@ class AppLocalizations {
   String get dialogMaterialAdded => getString('dialog_material_added');
   String get dialogMediaUpdated => getString('dialog_media_updated');
 
+  // Quick Actions getters
+  String get quickActionStartMeditation => getString('quick_action_start_meditation');
+  String get quickActionBrowseMedia => getString('quick_action_browse_media');
+  String get quickActionViewProgress => getString('quick_action_view_progress');
+  String get quickActionTimedMeditation => getString('quick_action_timed_meditation');
+
+  // Timer Dialog getters
+  String get timerDialogTitle => getString('timer_dialog_title');
+  String get timerDialogSubtitle => getString('timer_dialog_subtitle');
+  String get timerOption5Min => getString('timer_option_5min');
+  String get timerOption10Min => getString('timer_option_10min');
+  String get timerOption15Min => getString('timer_option_15min');
+  String get timerOption20Min => getString('timer_option_20min');
+  String get timerOption30Min => getString('timer_option_30min');
+  String get timerOption45Min => getString('timer_option_45min');
+  String get timerOption60Min => getString('timer_option_60min');
+
+  // Goal Options getters
+  String get goalOption3Times => getString('goal_option_3_times');
+  String get goalOption5Times => getString('goal_option_5_times');
+  String get goalOption7Times => getString('goal_option_7_times');
+  String get goalOption10Times => getString('goal_option_10_times');
+  String get goalOption14Times => getString('goal_option_14_times');
+
+  // Recent Sessions getters
+  String get recentSessionsTitle => getString('recent_sessions_title');
+  String get recentSessionsViewAll => getString('recent_sessions_view_all');
+  String get recentSessionMorning => getString('recent_session_morning');
+  String get recentSessionRelaxation => getString('recent_session_relaxation');
+  String get recentSessionBedtime => getString('recent_session_bedtime');
+  String get recentSessionToday => getString('recent_session_today');
+  String get recentSessionYesterday => getString('recent_session_yesterday');
+
+  // Recommended Content getters
+  String get recommendedMorningMeditation => getString('recommended_morning_meditation');
+  String get recommendedDeepSleep => getString('recommended_deep_sleep');
+  String get recommendedWorkStress => getString('recommended_work_stress');
+  String get recommendedNatureSounds => getString('recommended_nature_sounds');
+  String get recommendedCategoryFocus => getString('recommended_category_focus');
+  String get recommendedCategoryBedtime => getString('recommended_category_bedtime');
+  String get recommendedCategoryRelax => getString('recommended_category_relax');
+  String get recommendedCategoryNature => getString('recommended_category_nature');
+
+  // Media Library getters
+  String get mediaLibraryTitle => getString('media_library_title');
+  String get mediaLibrarySearchHint => getString('media_library_search_hint');
+  String get mediaLibraryNoMaterials => getString('media_library_no_materials');
+  String get mediaLibraryAddMaterialsHint => getString('media_library_add_materials_hint');
+  String get mediaLibraryLoadFailed => getString('media_library_load_failed');
+  String get mediaLibraryRetry => getString('media_library_retry');
+  String get mediaLibraryCategoryAll => getString('media_library_category_all');
+
+  // Category Names getters
+  String get categoryNameMeditation => getString('category_name_meditation');
+  String get categoryNameBedtime => getString('category_name_bedtime');
+  String get categoryNameFocus => getString('category_name_focus');
+  String get categoryNameRelax => getString('category_name_relax');
+  String get categoryNameNatureSounds => getString('category_name_nature_sounds');
+
+  // Recent Sessions No Records getters
+  String get recentSessionsNoRecords => getString('recent_sessions_no_records');
+  String get recentSessionsStartMeditating => getString('recent_sessions_start_meditating');
+
+  // Personal Center Theme Selection getters
+  String get personalCenterThemeLight => getString('personal_center_theme_light');
+  String get personalCenterThemeDark => getString('personal_center_theme_dark');
+  String get personalCenterThemeSystem => getString('personal_center_theme_system');
+
+  // About App Content getters
+  String get aboutAppVersion => getString('about_app_version');
+  String get aboutAppDescription => getString('about_app_description');
+  String get aboutAppDeveloper => getString('about_app_developer');
+  String get aboutAppContact => getString('about_app_contact');
+  String get aboutAppPrivacyPolicy => getString('about_app_privacy_policy');
+  String get aboutAppTermsOfService => getString('about_app_terms_of_service');
+
   String meditatedTimes(int count) {
     final template = getString('meditated_times');
     return template.replaceAll('{count}', count.toString());
@@ -964,6 +1184,21 @@ class AppLocalizations {
   String dialogFileSelectionFailed(String error) {
     final template = getString('dialog_file_selection_failed');
     return template.replaceAll('{error}', error);
+  }
+
+  // Reminder Notifications getters
+  String get reminderNotificationTitle => getString('reminder_notification_title');
+  String get testNotificationTitle => getString('test_notification_title');
+  String get testNotificationBody => getString('test_notification_body');
+
+  String reminderNotificationBody(String goal) {
+    final template = getString('reminder_notification_body');
+    return template.replaceAll('{goal}', goal);
+  }
+
+  String recentSessionDaysAgo(int days) {
+    final template = getString('recent_session_days_ago');
+    return template.replaceAll('{days}', days.toString());
   }
 }
 

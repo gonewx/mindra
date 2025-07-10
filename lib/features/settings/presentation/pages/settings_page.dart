@@ -266,7 +266,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: AppThemeMode.values.map((theme) {
                 return RadioListTile<AppThemeMode>(
                   title: Text(
-                    theme.displayName,
+                    theme.displayNameLocalized(context),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   value: theme,
@@ -517,12 +517,13 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showAboutDialog() {
+    final localizations = AppLocalizations.of(context)!;
     showAboutDialog(
       context: context,
       applicationName: 'Mindra',
       applicationVersion: '1.0.0',
       applicationIcon: const Icon(Icons.self_improvement, size: 48),
-      children: [const Text('Mindra 是一款专注于冥想和正念练习的应用，帮助您缓解压力，提升专注力。')],
+      children: [Text(localizations.aboutAppDescription)],
     );
   }
 
