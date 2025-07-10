@@ -43,7 +43,7 @@ class AppConstants {
     'rain',
     'ocean',
     'forest',
-    'wind',
+    'wind_chimes',
     'fire',
     'birds',
     'water',

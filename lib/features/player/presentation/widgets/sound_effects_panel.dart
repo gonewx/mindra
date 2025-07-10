@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/simple_sound_effects_player.dart';
 
 class SoundEffectsPanel extends StatefulWidget {
   const SoundEffectsPanel({super.key});
@@ -8,276 +9,421 @@ class SoundEffectsPanel extends StatefulWidget {
 }
 
 class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
+  final SimpleSoundEffectsPlayer _soundPlayer = SimpleSoundEffectsPlayer();
+
+  // 简化的音效状态管理
   final Map<String, double> _effectVolumes = {
     'rain': 0.0,
     'ocean': 0.0,
-    'forest': 0.0,
-    'wind': 0.0,
-    'fire': 0.0,
+    'wind_chimes': 0.0,
     'birds': 0.0,
-    'water': 0.0,
   };
 
-  final Map<String, String> _effectNames = {
-    'rain': '雨声',
-    'ocean': '海浪',
-    'forest': '森林',
-    'wind': '风声',
-    'fire': '火焰',
-    'birds': '鸟鸣',
-    'water': '流水',
-  };
+  double _masterVolume = 0.5;
+  bool _isInitialized = false;
 
-  final Map<String, IconData> _effectIcons = {
-    'rain': Icons.grain,
-    'ocean': Icons.waves,
-    'forest': Icons.park,
-    'wind': Icons.air,
-    'fire': Icons.local_fire_department,
-    'birds': Icons.flutter_dash,
-    'water': Icons.water_drop,
-  };
+  @override
+  void initState() {
+    super.initState();
+    _checkAndInitialize();
+  }
+
+  void _checkAndInitialize() async {
+    try {
+      // 检查音效播放器是否已正确初始化
+      final testVolumes = _soundPlayer.currentVolumes;
+      if (testVolumes.isEmpty) {
+        debugPrint('Sound effects player not initialized, initializing now...');
+        await _soundPlayer.initialize();
+      }
+      
+      // 同步当前音效状态
+      _syncCurrentState();
+      
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+      debugPrint('Sound effects panel ready');
+    } catch (e) {
+      debugPrint('Failed to verify sound effects player: $e');
+      if (mounted) {
+        setState(() {
+          _isInitialized = true; // 即使失败也标记为已初始化
+        });
+      }
+    }
+  }
+
+  // 同步当前音效状态
+  void _syncCurrentState() {
+    final currentVolumes = _soundPlayer.currentVolumes;
+    final currentMasterVolume = _soundPlayer.masterVolume;
+    
+    setState(() {
+      // 同步各个音效的音量状态
+      for (final entry in currentVolumes.entries) {
+        if (_effectVolumes.containsKey(entry.key)) {
+          _effectVolumes[entry.key] = entry.value;
+        }
+      }
+      
+      // 同步主音量
+      _masterVolume = currentMasterVolume;
+    });
+    
+    debugPrint('Synced sound effects state: $_effectVolumes');
+    debugPrint('Synced master volume: $_masterVolume');
+  }
+
+  void _testSoundEffects() async {
+    debugPrint('Testing sound effects...');
+    try {
+      // 保存当前音效状态
+      final currentEffects = Map<String, double>.from(_effectVolumes);
+      final currentMasterVolume = _masterVolume;
+
+      // 先停止所有音效
+      await _soundPlayer.stopAllEffects();
+
+      // 设置较高的主音量进行测试
+      await _soundPlayer.setMasterVolume(1.0);
+
+      // 测试播放雨声，使用最大音量
+      await _soundPlayer.toggleEffect('rain', 1.0);
+
+      // 显示测试结果
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('正在测试雨声音效（最大音量），请检查是否能听到声音'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+
+      // 5秒后停止测试并恢复用户设置
+      Future.delayed(const Duration(seconds: 5), () async {
+        // 停止测试音效
+        await _soundPlayer.toggleEffect('rain', 0.0);
+        
+        // 恢复用户的音效设置
+        await _soundPlayer.setMasterVolume(currentMasterVolume);
+        
+        // 恢复所有用户选择的音效
+        for (final entry in currentEffects.entries) {
+          if (entry.value > 0) {
+            await _soundPlayer.toggleEffect(entry.key, entry.value);
+          }
+        }
+
+        debugPrint('Sound effect test completed, restored user settings');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('音效测试完成，已恢复您的设置'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      });
+    } catch (e) {
+      debugPrint('Sound effect test failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('音效测试失败: $e')));
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    // 注意：不在这里调用 _soundPlayer.dispose()，因为它是单例
+    // 音效播放器应该在应用生命周期结束时才被销毁
+    super.dispose();
+  }
+
+  // 音效配置
+  final List<Map<String, dynamic>> _effects = [
+    {'id': 'rain', 'name': '雨声', 'icon': Icons.grain},
+    {'id': 'ocean', 'name': '海浪', 'icon': Icons.waves},
+    {'id': 'wind_chimes', 'name': '风铃', 'icon': Icons.air},
+    {'id': 'birds', 'name': '鸟鸣', 'icon': Icons.flutter_dash},
+  ];
+
+  void _testProblemEffects() async {
+    debugPrint('Testing problem effects (rain and wind_chimes)...');
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('正在测试雨声和风铃音效...'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+    
+    // 测试雨声
+    await _soundPlayer.testSpecificEffect('rain');
+    
+    // 等待一下再测试风铃
+    await Future.delayed(const Duration(seconds: 2));
+    
+    // 测试风铃
+    await _soundPlayer.testSpecificEffect('wind_chimes');
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('问题音效测试完成，请检查控制台日志'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // 显示加载状态
+    if (!_isInitialized) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                '自然音效',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('正在加载音效...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Background Sound Effects Section
+        Text(
+          '背景音效',
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: isDark ? Colors.white : theme.colorScheme.onSurface,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '轻柔的背景音效，不会干扰主要音频',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: isDark ? Colors.white70 : Colors.grey[600],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _resetAllEffects,
-                tooltip: '重置所有音效',
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Sound Effects Grid
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 2.5,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
             ),
-            itemCount: _effectVolumes.length,
-            itemBuilder: (context, index) {
-              final effect = _effectVolumes.keys.elementAt(index);
-              return _SoundEffectItem(
-                effect: effect,
-                name: _effectNames[effect]!,
-                icon: _effectIcons[effect]!,
-                volume: _effectVolumes[effect]!,
-                onVolumeChanged: (value) {
-                  setState(() {
-                    _effectVolumes[effect] = value;
-                  });
-                  // TODO: Update effect volume in audio service
-                },
-              );
+            TextButton(
+              onPressed: _testSoundEffects,
+              child: Text(
+                '测试音效',
+                style: TextStyle(color: const Color(0xFF32B8C6), fontSize: 12),
+              ),
+            ),
+            TextButton(
+              onPressed: _testProblemEffects,
+              child: Text(
+                '测试问题音效',
+                style: TextStyle(color: Colors.orange, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Sound Effects Grid - 2x2 layout to match screenshot
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 3.0,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: _effects.length,
+          itemBuilder: (context, index) {
+            final effect = _effects[index];
+            final effectId = effect['id'] as String;
+            final isActive = (_effectVolumes[effectId] ?? 0.0) > 0;
+            return _SoundEffectButton(
+              effect: effectId,
+              name: effect['name'] as String,
+              icon: effect['icon'] as IconData,
+              isActive: isActive,
+              onTap: () async {
+                final newVolume = isActive ? 0.0 : 0.5;
+                setState(() {
+                  _effectVolumes[effectId] = newVolume;
+                });
+
+                // 实际播放音效
+                await _soundPlayer.toggleEffect(effectId, newVolume);
+              },
+            );
+          },
+        ),
+        const SizedBox(height: 24),
+
+        // Volume Control Section
+        Text(
+          '音量控制',
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: isDark ? Colors.white : theme.colorScheme.onSurface,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Volume Slider
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: const Color(0xFF32B8C6),
+            inactiveTrackColor: isDark
+                ? Colors.white.withValues(alpha: 0.3)
+                : Colors.grey.withValues(alpha: 0.3),
+            thumbColor: const Color(0xFF32B8C6),
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+            trackHeight: 4,
+          ),
+          child: Slider(
+            value: _masterVolume,
+            onChanged: (value) async {
+              setState(() {
+                _masterVolume = value;
+              });
+
+              // 实际设置主音量
+              await _soundPlayer.setMasterVolume(value);
             },
+            min: 0.0,
+            max: 1.0,
           ),
-          const SizedBox(height: 16),
+        ),
+        const SizedBox(height: 24),
 
-          // Preset Buttons
-          Text(
-            '预设组合',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+        // Confirm Button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              // 确定时保持当前音效设置，不停止播放
+              debugPrint('Sound effects confirmed with settings: $_effectVolumes');
+              debugPrint('Master volume: $_masterVolume');
+              
+              // 显示确认消息
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('背景音效设置已保存'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              
+              Navigator.of(context).pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF32B8C6),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              '确定',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _PresetButton(
-                label: '雨夜',
-                onTap: () => _applyPreset({
-                  'rain': 0.7,
-                  'wind': 0.3,
-                }),
-              ),
-              _PresetButton(
-                label: '海边',
-                onTap: () => _applyPreset({
-                  'ocean': 0.8,
-                  'birds': 0.2,
-                }),
-              ),
-              _PresetButton(
-                label: '森林',
-                onTap: () => _applyPreset({
-                  'forest': 0.6,
-                  'birds': 0.4,
-                  'water': 0.3,
-                }),
-              ),
-              _PresetButton(
-                label: '篝火',
-                onTap: () => _applyPreset({
-                  'fire': 0.8,
-                  'wind': 0.2,
-                }),
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
-  }
-
-  void _resetAllEffects() {
-    setState(() {
-      for (final effect in _effectVolumes.keys) {
-        _effectVolumes[effect] = 0.0;
-      }
-    });
-    // TODO: Reset all effects in audio service
-  }
-
-  void _applyPreset(Map<String, double> preset) {
-    setState(() {
-      // Reset all effects first
-      for (final effect in _effectVolumes.keys) {
-        _effectVolumes[effect] = 0.0;
-      }
-      // Apply preset values
-      for (final entry in preset.entries) {
-        _effectVolumes[entry.key] = entry.value;
-      }
-    });
-    // TODO: Apply preset in audio service
   }
 }
 
-class _SoundEffectItem extends StatelessWidget {
+class _SoundEffectButton extends StatelessWidget {
   final String effect;
   final String name;
   final IconData icon;
-  final double volume;
-  final Function(double) onVolumeChanged;
+  final bool isActive;
+  final VoidCallback onTap;
 
-  const _SoundEffectItem({
+  const _SoundEffectButton({
     required this.effect,
     required this.name,
     required this.icon,
-    required this.volume,
-    required this.onVolumeChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive = volume > 0;
-
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isActive 
-            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isActive 
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
-              : Colors.transparent,
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: isActive 
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  name,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                    color: isActive 
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: Theme.of(context).colorScheme.primary,
-              inactiveTrackColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-              thumbColor: Theme.of(context).colorScheme.primary,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-              trackHeight: 2,
-            ),
-            child: Slider(
-              value: volume,
-              onChanged: onVolumeChanged,
-              min: 0.0,
-              max: 1.0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PresetButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _PresetButton({
-    required this.label,
+    required this.isActive,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive
+                ? const Color(0xFF32B8C6)
+                : (isDark
+                      ? const Color(0xFF3A4A5C)
+                      : Colors.grey.withValues(alpha: 0.1)),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isActive
+                  ? const Color(0xFF32B8C6)
+                  : (isDark
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : Colors.grey.withValues(alpha: 0.3)),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isActive
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : Colors.grey[600]),
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                name,
+                style: TextStyle(
+                  color: isActive
+                      ? Colors.white
+                      : (isDark ? Colors.white70 : Colors.grey[600]),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      child: Text(label),
     );
   }
 }

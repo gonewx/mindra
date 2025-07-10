@@ -8,6 +8,7 @@ import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/di/injection_container.dart';
 import 'core/database/database_helper.dart';
+import 'features/player/services/simple_sound_effects_player.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +51,14 @@ void main() async {
     // Initialize theme provider
     final themeProvider = ThemeProvider();
     await themeProvider.initialize();
+    
+    // Initialize sound effects service
+    try {
+      await SimpleSoundEffectsPlayer().initialize();
+      debugPrint('Sound effects service initialized successfully');
+    } catch (e) {
+      debugPrint('Failed to initialize sound effects service: $e');
+    }
     
     runApp(MindraApp(themeProvider: themeProvider));
   } catch (e) {

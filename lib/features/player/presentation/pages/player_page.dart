@@ -6,6 +6,7 @@ import 'dart:async';
 import '../widgets/player_controls.dart';
 import '../widgets/progress_bar.dart';
 import '../widgets/sound_effects_panel.dart';
+import '../../domain/services/sound_effects_service.dart';
 import '../../../../features/media/data/datasources/media_local_datasource.dart';
 import '../../../../features/media/domain/entities/media_item.dart';
 import '../../../../features/media/presentation/bloc/media_bloc.dart';
@@ -24,8 +25,9 @@ class PlayerPage extends StatefulWidget {
 
 class _PlayerPageState extends State<PlayerPage> {
   late CrossPlatformAudioPlayer _audioPlayer;
+  final SoundEffectsService _soundEffectsService = SoundEffectsService();
   bool _isPlaying = false;
-  bool _showSoundEffects = false;
+
   bool _isFavorited = false;
   bool _isShuffled = false;
   RepeatMode _repeatMode = RepeatMode.none;
@@ -56,6 +58,16 @@ class _PlayerPageState extends State<PlayerPage> {
     _setupAudioPlayer();
     _loadMediaData();
     _loadFavoriteStatus();
+    _initializeSoundEffects();
+  }
+
+  void _initializeSoundEffects() async {
+    try {
+      await _soundEffectsService.initialize();
+      debugPrint('Sound effects service initialized successfully');
+    } catch (e) {
+      debugPrint('Failed to initialize sound effects service: $e');
+    }
   }
 
   void _setupAudioPlayer() {
@@ -194,6 +206,7 @@ class _PlayerPageState extends State<PlayerPage> {
     _durationSubscription.cancel();
     _sleepTimer?.cancel();
     _audioPlayer.dispose();
+    _soundEffectsService.dispose();
     super.dispose();
   }
 
@@ -449,18 +462,11 @@ class _PlayerPageState extends State<PlayerPage> {
                         SizedBox(width: 16),
                         _buildActionButton(
                           icon: Icons.equalizer,
-                          onTap: () {
-                            setState(() {
-                              _showSoundEffects = !_showSoundEffects;
-                            });
-                          },
+                          onTap: _showSoundEffectsDialog,
                         ),
                       ],
                     ),
                     const SizedBox(height: 32),
-
-                    // Sound Effects Panel
-                    if (_showSoundEffects) const SoundEffectsPanel(),
 
                     const SizedBox(height: 40),
                   ],
@@ -1047,6 +1053,79 @@ ${_currentMedia!.description?.isNotEmpty == true ? '描述：${_currentMedia!.de
             child: const Text('取消'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showSoundEffectsDialog() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF2A3441) : theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with title and close button
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : theme.colorScheme.outline.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '音效设置',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: isDark
+                            ? const Color(0xFF32B8C6)
+                            : theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(
+                        Icons.close,
+                        color: isDark
+                            ? Colors.white70
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.7,
+                              ),
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Container(
+                padding: const EdgeInsets.all(20),
+                constraints: const BoxConstraints(
+                  maxHeight: 400, // 限制最大高度
+                ),
+                child: const SingleChildScrollView(child: SoundEffectsPanel()),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

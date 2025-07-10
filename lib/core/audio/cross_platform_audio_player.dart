@@ -3,15 +3,12 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:just_audio/just_audio.dart' as just_audio;
 import 'dart:io';
 import 'dart:async';
+import '../../features/player/services/audio_focus_manager.dart';
 
 class CrossPlatformAudioPlayer {
   AudioPlayer? _audioPlayersInstance;
   just_audio.AudioPlayer? _justAudioInstance;
-
-  // Manual state tracking for audioplayers
-  bool _isPlaying = false;
-  Duration _currentPosition = Duration.zero;
-  Duration? _totalDuration;
+  final AudioFocusManager _audioFocusManager = AudioFocusManager();
 
   final StreamController<bool> _playingController =
       StreamController<bool>.broadcast();
@@ -29,8 +26,22 @@ class CrossPlatformAudioPlayer {
     if (_useAudioPlayers) {
       _audioPlayersInstance = AudioPlayer();
       _setupAudioPlayersListeners();
+      _configureAudioContext();
     } else {
       _justAudioInstance = just_audio.AudioPlayer();
+    }
+  }
+
+  void _configureAudioContext() async {
+    if (_audioPlayersInstance == null) return;
+
+    try {
+      // 使用音频焦点管理器获取配置
+      final audioContext = _audioFocusManager.getMainAudioContext();
+      await _audioPlayersInstance!.setAudioContext(audioContext);
+      debugPrint('Main audio player context configured for primary playback');
+    } catch (e) {
+      debugPrint('Failed to configure main audio context: $e');
     }
   }
 
@@ -42,23 +53,22 @@ class CrossPlatformAudioPlayer {
       debugPrint('AudioPlayers: State changed to: $state');
       switch (state) {
         case PlayerState.playing:
-          _isPlaying = true;
           _playingController.add(true);
+          _audioFocusManager.notifyMainAudioStarted();
           break;
         case PlayerState.paused:
-          _isPlaying = false;
           _playingController.add(false);
+          _audioFocusManager.notifyMainAudioStopped();
           break;
         case PlayerState.stopped:
         case PlayerState.completed:
-          _isPlaying = false;
           _playingController.add(false);
-          _currentPosition = Duration.zero;
           _positionController.add(Duration.zero);
+          _audioFocusManager.notifyMainAudioStopped();
           break;
         case PlayerState.disposed:
-          _isPlaying = false;
           _playingController.add(false);
+          _audioFocusManager.notifyMainAudioStopped();
           break;
       }
     });
@@ -66,14 +76,12 @@ class CrossPlatformAudioPlayer {
     // Listen to duration changes
     _audioPlayersInstance!.onDurationChanged.listen((duration) {
       // debugPrint('AudioPlayers: Duration changed: ${duration.inSeconds}s');
-      _totalDuration = duration;
       _durationController.add(duration);
     });
 
     // Listen to position changes
     _audioPlayersInstance!.onPositionChanged.listen((position) {
       // debugPrint('AudioPlayers: Position changed: ${position.inSeconds}s');
-      _currentPosition = position;
       _positionController.add(position);
     });
   }
