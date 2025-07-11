@@ -6,8 +6,8 @@ default_platform(:android)
 platform :android do
   # 应用基本信息
   APP_IDENTIFIER = "com.mindra.app"
-  AAB_PATH = "../build/app/outputs/bundle/release/app-release.aab"
-  APK_PATH = "../build/app/outputs/flutter-apk/app-release.apk"
+  AAB_PATH = "../../build/app/outputs/bundle/release/app-release.aab"
+  APK_PATH = "../../build/app/outputs/flutter-apk/app-release.apk"
   
   # 构建前准备
   before_all do
@@ -98,7 +98,7 @@ platform :android do
   # 获取版本名称
   desc "获取版本名称"
   lane :get_version_name do
-    pubspec_path = "../pubspec.yaml"
+    pubspec_path = "../../pubspec.yaml"
     pubspec_content = File.read(pubspec_path)
     version_line = pubspec_content.match(/^version:\s*(.+)$/)
     
@@ -114,7 +114,7 @@ platform :android do
   # 获取版本代码
   desc "获取版本代码"
   lane :get_version_code do
-    pubspec_path = "../pubspec.yaml"
+    pubspec_path = "../../pubspec.yaml"
     pubspec_content = File.read(pubspec_path)
     version_line = pubspec_content.match(/^version:\s*(.+)$/)
     
