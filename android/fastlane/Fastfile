@@ -57,9 +57,10 @@ platform :android do
     validate_aab
     
     # 上传到 Google Play
+    aab_absolute_path = File.expand_path(AAB_PATH)
     upload_to_play_store(
       track: track,
-      aab: AAB_PATH,
+      aab: aab_absolute_path,
       skip_upload_apk: true,
       skip_upload_metadata: false,
       skip_upload_changelogs: false,

@@ -55,4 +55,6 @@ android/fastlane/service-account.json
 
 assets/audio/effects/
 android/fastlane/report.xml
+mindra/android/fastlane/report.xml
 android/vendor/
+
