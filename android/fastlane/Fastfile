@@ -105,7 +105,7 @@ platform :android do
     if version_line
       version_full = version_line[1].strip
       version_name = version_full.split('+')[0]
-      return version_name
+      version_name
     else
       UI.user_error!("无法从 pubspec.yaml 获取版本号")
     end
@@ -122,9 +122,9 @@ platform :android do
       version_full = version_line[1].strip
       if version_full.include?('+')
         version_code = version_full.split('+')[1].to_i
-        return version_code
+        version_code
       else
-        return 1
+        1
       end
     else
       UI.user_error!("无法从 pubspec.yaml 获取版本代码")
