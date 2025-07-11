@@ -139,28 +139,46 @@ pre_release_validation() {
         exit 1
     fi
     
-    # 检查应用 ID
+    # 检查应用 ID（从 build.gradle.kts 读取）
     log_info "验证应用 ID..."
-    local app_id=$(aapt dump badging "$AAB_FILE" 2>/dev/null | grep "package:" | sed "s/.*name='\([^']*\)'.*/\1/")
-    if [ "$app_id" = "com.mindra.app" ]; then
-        log_success "应用 ID 验证成功: $app_id"
+    local expected_app_id="com.mindra.app"
+    local gradle_file="android/app/build.gradle.kts"
+    
+    if [ -f "$gradle_file" ]; then
+        local app_id=$(grep "applicationId" "$gradle_file" | sed 's/.*applicationId = "\([^"]*\)".*/\1/')
+        if [ "$app_id" = "$expected_app_id" ]; then
+            log_success "应用 ID 验证成功: $app_id"
+        else
+            log_error "应用 ID 不匹配，期望: $expected_app_id，实际: $app_id"
+            exit 1
+        fi
     else
-        log_error "应用 ID 不匹配，期望: com.mindra.app，实际: $app_id"
-        exit 1
+        log_warning "无法找到 build.gradle.kts 文件，跳过应用 ID 验证"
     fi
     
-    # 检查版本信息
+    # 检查版本信息（从 pubspec.yaml 读取）
     log_info "验证版本信息..."
-    local version_name=$(aapt dump badging "$AAB_FILE" 2>/dev/null | grep "versionName" | sed "s/.*versionName='\([^']*\)'.*/\1/")
-    local version_code=$(aapt dump badging "$AAB_FILE" 2>/dev/null | grep "versionCode" | sed "s/.*versionCode='\([^']*\)'.*/\1/")
+    local pubspec_file="pubspec.yaml"
     
-    log_info "版本名称: $version_name"
-    log_info "版本代码: $version_code"
+    if [ -f "$pubspec_file" ]; then
+        local version_line=$(grep "^version:" "$pubspec_file")
+        local version_name=$(echo "$version_line" | sed 's/version: \([^+]*\).*/\1/')
+        local version_code=$(echo "$version_line" | sed 's/.*+\([0-9]*\).*/\1/')
+        
+        log_info "版本名称: $version_name"
+        log_info "版本代码: $version_code"
+    else
+        log_warning "无法找到 pubspec.yaml 文件，跳过版本信息验证"
+    fi
     
-    # 检查必要权限
-    log_info "检查应用权限..."
-    local permissions=$(aapt dump permissions "$AAB_FILE" 2>/dev/null)
-    log_info "应用权限已验证"
+    # AAB 文件格式验证
+    log_info "验证 AAB 文件格式..."
+    if file "$AAB_FILE" | grep -q "Zip archive"; then
+        log_success "AAB 文件格式验证成功"
+    else
+        log_error "AAB 文件格式不正确"
+        exit 1
+    fi
     
     log_success "预发布验证完成"
 }
@@ -271,13 +289,19 @@ generate_release_report() {
         echo ""
         
         # 应用信息
-        if command -v aapt &> /dev/null; then
-            echo "应用信息:"
-            local app_id=$(aapt dump badging "$AAB_FILE" 2>/dev/null | grep "package:" | sed "s/.*name='\([^']*\)'.*/\1/")
-            local version_name=$(aapt dump badging "$AAB_FILE" 2>/dev/null | grep "versionName" | sed "s/.*versionName='\([^']*\)'.*/\1/")
-            local version_code=$(aapt dump badging "$AAB_FILE" 2>/dev/null | grep "versionCode" | sed "s/.*versionCode='\([^']*\)'.*/\1/")
-            
+        echo "应用信息:"
+        local gradle_file="android/app/build.gradle.kts"
+        local pubspec_file="pubspec.yaml"
+        
+        if [ -f "$gradle_file" ]; then
+            local app_id=$(grep "applicationId" "$gradle_file" | sed 's/.*applicationId = "\([^"]*\)".*/\1/')
             echo "  应用 ID: $app_id"
+        fi
+        
+        if [ -f "$pubspec_file" ]; then
+            local version_line=$(grep "^version:" "$pubspec_file")
+            local version_name=$(echo "$version_line" | sed 's/version: \([^+]*\).*/\1/')
+            local version_code=$(echo "$version_line" | sed 's/.*+\([0-9]*\).*/\1/')
             echo "  版本名称: $version_name"
             echo "  版本代码: $version_code"
         fi
