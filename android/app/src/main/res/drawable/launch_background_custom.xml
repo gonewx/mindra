@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 与SplashPage相同的渐变背景 - 使用应用主色调 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:startColor="#2E3B82"
+                android:centerColor="#3B4A9A"
+                android:endColor="#4C63D2"
+                android:type="linear" />
+        </shape>
+    </item>
+</layer-list> 

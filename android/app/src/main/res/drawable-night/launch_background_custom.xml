@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 夜间模式的深色渐变背景 - 使用应用深色主题色调 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:startColor="#1A202C"
+                android:centerColor="#2D3748"
+                android:endColor="#4C63D2"
+                android:type="linear" />
+        </shape>
+    </item>
+</layer-list> 

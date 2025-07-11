@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
@@ -12,7 +11,6 @@ import '../../../../features/media/domain/entities/media_item.dart';
 import '../../../../features/media/presentation/bloc/media_bloc.dart';
 import '../../../../features/media/presentation/bloc/media_event.dart';
 import '../../../../features/media/presentation/widgets/add_media_dialog.dart';
-import '../../../meditation/data/services/meditation_session_manager.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/localization/app_localizations.dart';
 

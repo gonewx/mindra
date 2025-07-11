@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lotusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#F8F8FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E8E8FF;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6B73FF;stop-opacity:0.9" />
+      <stop offset="50%" style="stop-color:#9B59B6;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#E74C3C;stop-opacity:0.7" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- 外层光晕背景 -->
+  <circle cx="100" cy="100" r="90" fill="url(#backgroundGradient)" filter="url(#glow)"/>
+  
+  <!-- 莲花花瓣 - 使用更大尺寸 -->
+  <g transform="translate(100,100)" filter="url(#shadow)">
+    <!-- 外层花瓣 -->
+    <path d="M0,-35 C-10,-48 -20,-42 -17,-28 C-10,-14 0,-20 0,-35Z" fill="#FFFFFF"/>
+    <path d="M0,-35 C10,-48 20,-42 17,-28 C10,-14 0,-20 0,-35Z" fill="#FFFFFF"/>
+    
+    <g transform="rotate(45)">
+      <path d="M0,-35 C-10,-48 -20,-42 -17,-28 C-10,-14 0,-20 0,-35Z" fill="#F8F8FF"/>
+      <path d="M0,-35 C10,-48 20,-42 17,-28 C10,-14 0,-20 0,-35Z" fill="#F8F8FF"/>
+    </g>
+    
+    <g transform="rotate(90)">
+      <path d="M0,-35 C-10,-48 -20,-42 -17,-28 C-10,-14 0,-20 0,-35Z" fill="#F0F0FF"/>
+      <path d="M0,-35 C10,-48 20,-42 17,-28 C10,-14 0,-20 0,-35Z" fill="#F0F0FF"/>
+    </g>
+    
+    <g transform="rotate(135)">
+      <path d="M0,-35 C-10,-48 -20,-42 -17,-28 C-10,-14 0,-20 0,-35Z" fill="#E8E8FF"/>
+      <path d="M0,-35 C10,-48 20,-42 17,-28 C10,-14 0,-20 0,-35Z" fill="#E8E8FF"/>
+    </g>
+    
+    <g transform="rotate(180)">
+      <path d="M0,-35 C-10,-48 -20,-42 -17,-28 C-10,-14 0,-20 0,-35Z" fill="#E0E0FF"/>
+      <path d="M0,-35 C10,-48 20,-42 17,-28 C10,-14 0,-20 0,-35Z" fill="#E0E0FF"/>
+    </g>
+    
+    <g transform="rotate(225)">
+      <path d="M0,-35 C-10,-48 -20,-42 -17,-28 C-10,-14 0,-20 0,-35Z" fill="#E8E8FF"/>
+      <path d="M0,-35 C10,-48 20,-42 17,-28 C10,-14 0,-20 0,-35Z" fill="#E8E8FF"/>
+    </g>
+    
+    <g transform="rotate(270)">
+      <path d="M0,-35 C-10,-48 -20,-42 -17,-28 C-10,-14 0,-20 0,-35Z" fill="#F0F0FF"/>
+      <path d="M0,-35 C10,-48 20,-42 17,-28 C10,-14 0,-20 0,-35Z" fill="#F0F0FF"/>
+    </g>
+    
+    <g transform="rotate(315)">
+      <path d="M0,-35 C-10,-48 -20,-42 -17,-28 C-10,-14 0,-20 0,-35Z" fill="#F8F8FF"/>
+      <path d="M0,-35 C10,-48 20,-42 17,-28 C10,-14 0,-20 0,-35Z" fill="#F8F8FF"/>
+    </g>
+    
+    <!-- 内层花瓣 -->
+    <g transform="rotate(22.5)">
+      <path d="M0,-25 C-8,-35 -14,-32 -10,-20 C-8,-10 0,-16 0,-25Z" fill="#FFFFFF"/>
+      <path d="M0,-25 C8,-35 14,-32 10,-20 C8,-10 0,-16 0,-25Z" fill="#FFFFFF"/>
+    </g>
+    
+    <g transform="rotate(67.5)">
+      <path d="M0,-25 C-8,-35 -14,-32 -10,-20 C-8,-10 0,-16 0,-25Z" fill="#F8F8FF"/>
+      <path d="M0,-25 C8,-35 14,-32 10,-20 C8,-10 0,-16 0,-25Z" fill="#F8F8FF"/>
+    </g>
+    
+    <g transform="rotate(112.5)">
+      <path d="M0,-25 C-8,-35 -14,-32 -10,-20 C-8,-10 0,-16 0,-25Z" fill="#F0F0FF"/>
+      <path d="M0,-25 C8,-35 14,-32 10,-20 C8,-10 0,-16 0,-25Z" fill="#F0F0FF"/>
+    </g>
+    
+    <g transform="rotate(157.5)">
+      <path d="M0,-25 C-8,-35 -14,-32 -10,-20 C-8,-10 0,-16 0,-25Z" fill="#E8E8FF"/>
+      <path d="M0,-25 C8,-35 14,-32 10,-20 C8,-10 0,-16 0,-25Z" fill="#E8E8FF"/>
+    </g>
+    
+    <g transform="rotate(202.5)">
+      <path d="M0,-25 C-8,-35 -14,-32 -10,-20 C-8,-10 0,-16 0,-25Z" fill="#E0E0FF"/>
+      <path d="M0,-25 C8,-35 14,-32 10,-20 C8,-10 0,-16 0,-25Z" fill="#E0E0FF"/>
+    </g>
+    
+    <g transform="rotate(247.5)">
+      <path d="M0,-25 C-8,-35 -14,-32 -10,-20 C-8,-10 0,-16 0,-25Z" fill="#E8E8FF"/>
+      <path d="M0,-25 C8,-35 14,-32 10,-20 C8,-10 0,-16 0,-25Z" fill="#E8E8FF"/>
+    </g>
+    
+    <g transform="rotate(292.5)">
+      <path d="M0,-25 C-8,-35 -14,-32 -10,-20 C-8,-10 0,-16 0,-25Z" fill="#F0F0FF"/>
+      <path d="M0,-25 C8,-35 14,-32 10,-20 C8,-10 0,-16 0,-25Z" fill="#F0F0FF"/>
+    </g>
+    
+    <g transform="rotate(337.5)">
+      <path d="M0,-25 C-8,-35 -14,-32 -10,-20 C-8,-10 0,-16 0,-25Z" fill="#F8F8FF"/>
+      <path d="M0,-25 C8,-35 14,-32 10,-20 C8,-10 0,-16 0,-25Z" fill="#F8F8FF"/>
+    </g>
+    
+    <!-- 中心圆 -->
+    <circle cx="0" cy="0" r="12" fill="url(#lotusGradient)"/>
+    <circle cx="0" cy="0" r="6" fill="#FFFFFF"/>
+  </g>
+  
+  <!-- 应用名称 -->
+  <text x="100" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF" filter="url(#shadow)">
+    Mindra
+  </text>
+</svg> 

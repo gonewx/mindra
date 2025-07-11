@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'dart:io';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
@@ -14,15 +15,12 @@ import 'features/player/services/simple_sound_effects_player.dart';
 import 'features/player/services/global_player_service.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // 保持原生启动画面
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  try {
-    // 最小化启动时间 - 直接启动应用
-    runApp(const MindraApp());
-  } catch (e) {
-    debugPrint('Critical initialization error: $e');
-    runApp(ErrorApp(error: e.toString()));
-  }
+  // 启动应用
+  runApp(const MindraApp());
 }
 
 class MindraApp extends StatefulWidget {
@@ -33,46 +31,36 @@ class MindraApp extends StatefulWidget {
 }
 
 class _MindraAppState extends State<MindraApp> {
-  ThemeProvider? _themeProvider;
-  String? _error;
+  late ThemeProvider _themeProvider;
 
   @override
   void initState() {
     super.initState();
-    _initializeApp();
-  }
-
-  Future<void> _initializeApp() async {
-    // 创建主题提供者（使用默认值，不需要等待）
+    // 使用默认主题立即启动
     _themeProvider = ThemeProvider();
-    
-    // 触发重建以使用新的主题提供者
-    if (mounted) {
-      setState(() {});
-    }
-    
-    // 在微任务中异步初始化所有服务，不阻塞当前帧
-    Future.microtask(() => _initializeAllServicesInBackground());
+
+    // 后台初始化所有服务
+    _initializeBackgroundServices();
   }
 
-  Future<void> _initializeAllServicesInBackground() async {
+  Future<void> _initializeBackgroundServices() async {
     try {
       // 初始化主题
-      await _themeProvider!.initialize();
-      
+      await _themeProvider.initialize();
+
       // 初始化依赖注入
       await configureDependencies();
-      
+
       // 初始化数据库
       await _initializeDatabaseServices();
-      
+
       // 初始化音频服务
       await _initializeAudioServices();
-      
+
       // 初始化其他服务
       await _initializeOtherServices();
-      
-      debugPrint('All services initialized in background');
+
+      debugPrint('Background services initialized');
     } catch (e) {
       debugPrint('Failed to initialize background services: $e');
       // 不影响UI显示
@@ -141,23 +129,15 @@ class _MindraAppState extends State<MindraApp> {
 
   @override
   Widget build(BuildContext context) {
-    // 如果有错误，显示错误页面
-    if (_error != null) {
-      return ErrorApp(error: _error!);
-    }
-
-    // 直接显示应用界面，使用默认主题
-    final themeProvider = _themeProvider ?? ThemeProvider();
-    
     return ChangeNotifierProvider.value(
-      value: themeProvider,
+      value: _themeProvider,
       child: Consumer<ThemeProvider>(
         builder: (context, theme, child) {
           return MaterialApp.router(
             title: 'Mindra',
             debugShowCheckedModeBanner: false,
 
-            // Theme - 使用默认主题或已加载的主题
+            // Theme
             theme: theme.themeData,
 
             // Localization

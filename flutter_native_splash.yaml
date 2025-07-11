@@ -1,0 +1,31 @@
+flutter_native_splash:
+  # 使用应用主色调蓝色
+  color: "#2E3B82"
+  
+  # 暂时不使用图像，保持简洁
+  # image: assets/images/app_icon_1024.png
+  
+  # 暗色模式 - 使用应用深色主题背景色
+  color_dark: "#1A202C"
+  # image_dark: assets/images/app_icon_1024.png
+  
+  # 平台设置
+  android: true
+  ios: true
+  web: false
+  
+  # Android 12特殊处理
+  android_12:
+    color: "#2E3B82"
+    color_dark: "#1A202C"
+    # image: assets/images/app_icon_1024.png
+    # image_dark: assets/images/app_icon_1024.png
+    icon_background_color: "#2E3B82"
+    icon_background_color_dark: "#1A202C"
+  
+  # 完全填充，避免任何空白
+  fullscreen: true
+  
+  # Android特定设置
+  android_gravity: center
+  android_screen_orientation: portrait

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 使用纯色背景，立即渲染 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#32B8C6" />
+        </shape>
+    </item>
+    
+    <!-- 中心显示应用图标 -->
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@mipmap/launcher_icon" />
+    </item>
+</layer-list>

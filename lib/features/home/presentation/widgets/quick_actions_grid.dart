@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import '../../../../core/router/app_router.dart';
-import '../../../../core/theme/theme_provider.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/animated_action_button.dart';
 import '../../../goals/data/services/goal_service.dart';

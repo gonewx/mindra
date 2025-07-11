@@ -1,27 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 设置背景渐变 -->
     <item>
-        <shape>
-            <gradient
-                android:startColor="@color/primary_color"
-                android:endColor="@color/secondary_color"
-                android:angle="90" />
-        </shape>
-    </item>
-
-    <!-- 添加应用Logo -->
-    <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@mipmap/launcher_icon" />
-    </item>
-    
-    <!-- 添加应用名称 -->
-    <item android:bottom="200dp">
-        <shape>
-            <solid android:color="@android:color/transparent" />
-        </shape>
+        <bitmap android:gravity="fill" android:src="@drawable/background"/>
     </item>
 </layer-list>

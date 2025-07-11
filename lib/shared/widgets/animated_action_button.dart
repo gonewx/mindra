@@ -167,7 +167,7 @@ class _AnimatedActionButtonState extends State<AnimatedActionButton>
                         )
                       : null,
                 ),
-                padding: const EdgeInsets.all(12), // 减小padding避免溢出
+                padding: const EdgeInsets.all(10), // 减小padding避免溢出
                 child: Column(
                   mainAxisSize: MainAxisSize.min, // 防止Column占用过多空间
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -181,7 +181,7 @@ class _AnimatedActionButtonState extends State<AnimatedActionButton>
                             : theme.colorScheme.primary,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 14),
                     Flexible(
                       child: Text(
                         widget.label,

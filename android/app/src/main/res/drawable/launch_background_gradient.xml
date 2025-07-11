@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 渐变背景 - 使用应用主色调蓝色系 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:startColor="#2E3B82"
+                android:centerColor="#3B4A9A"
+                android:endColor="#4C63D2"
+                android:type="linear" />
+        </shape>
+    </item>
+    
+    <!-- 中心logo -->
+    <item android:gravity="center">
+        <bitmap
+            android:src="@mipmap/launcher_icon"
+            android:gravity="center" />
+    </item>
+</layer-list> 

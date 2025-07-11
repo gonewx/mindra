@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_theme.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -10,110 +12,100 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-
+class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800), // 缩短动画时间
-      vsync: this,
-    );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
+    // 在下一帧移除原生启动画面，确保Flutter已完全渲染
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
 
-    _animationController.forward();
-
-    // 减少启动页面显示时间，只用于确保Flutter完全加载
-    Future.delayed(const Duration(milliseconds: 500), () {
+    // 延长显示时间，确保用户能看到splash页面
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
-        _navigateToHome();
+        context.go(AppRouter.home);
       }
     });
   }
 
   @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  void _navigateToHome() {
-    if (mounted) {
-      context.go(AppRouter.home);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      body: GestureDetector(
-        onTap: _navigateToHome, // Allow tap to skip
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.secondary,
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDarkMode
+                ? [
+                    AppTheme.darkBackground,
+                    AppTheme.darkSurface,
+                    AppTheme.darkPrimaryColor,
+                  ]
+                : [
+                    AppTheme.primaryColor,
+                    const Color(0xFF3B4A9A),
+                    AppTheme.darkPrimaryColor,
+                  ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+        ),
+        child: SafeArea(
           child: Center(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // App Icon
-                  SizedBox(
-                    width: 120,
-                    height: 120,
-                    child: SvgPicture.asset(
-                      'assets/images/app_icon.svg',
-                      width: 120,
-                      height: 120,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 使用SVG Logo
+                SvgPicture.asset(
+                  'assets/images/app_icon.svg',
+                  width: 120,
+                  height: 120,
+                ),
+                const SizedBox(height: 32),
 
-                  // App Name
-                  const Text(
-                    'Mindra',
-                    style: TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                // App Name
+                const Text(
+                  'Mindra',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 2,
                   ),
-                  const SizedBox(height: 16),
+                ),
+                const SizedBox(height: 16),
 
-                  // Tagline
-                  const Text(
-                    '开启你的冥想之旅',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
+                // Tagline
+                const Text(
+                  '开启你的冥想之旅',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w300,
                   ),
-                  const SizedBox(height: 48),
+                ),
+                const SizedBox(height: 48),
 
-                  // Loading Indicator
-                  const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                  const SizedBox(height: 16),
+                // Loading Indicator
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 3,
+                ),
+                const SizedBox(height: 24),
 
-                  // Skip instruction
-                  const Text(
-                    '点击任意位置跳过',
-                    style: TextStyle(fontSize: 14, color: Colors.white70),
+                // Loading text
+                const Text(
+                  '加载中...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

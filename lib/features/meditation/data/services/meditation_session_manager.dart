@@ -160,7 +160,7 @@ class MeditationSessionManager {
       }
     } catch (e) {
       debugPrint('Error saving session to database: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -185,7 +185,7 @@ class MeditationSessionManager {
       _currentSession = session;
     } catch (e) {
       debugPrint('Error updating session in database: $e');
-      throw e;
+      rethrow;
     }
   }
 
