@@ -54,3 +54,4 @@ android/fastlane/service-account.json
 !assets/**/*.json
 
 assets/audio/effects/
+android/fastlane/report.xml
