@@ -19,7 +19,7 @@ class _SplashPageState extends State<SplashPage>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 800), // 缩短动画时间
       vsync: this,
     );
 
@@ -29,8 +29,8 @@ class _SplashPageState extends State<SplashPage>
 
     _animationController.forward();
 
-    // Navigate to home after 2 seconds (shorter delay)
-    Future.delayed(const Duration(seconds: 2), () {
+    // 减少启动页面显示时间，只用于确保Flutter完全加载
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         _navigateToHome();
       }

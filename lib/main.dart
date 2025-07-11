@@ -17,11 +17,73 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
+    // 最小化启动时间 - 直接启动应用
+    runApp(const MindraApp());
+  } catch (e) {
+    debugPrint('Critical initialization error: $e');
+    runApp(ErrorApp(error: e.toString()));
+  }
+}
+
+class MindraApp extends StatefulWidget {
+  const MindraApp({super.key});
+
+  @override
+  State<MindraApp> createState() => _MindraAppState();
+}
+
+class _MindraAppState extends State<MindraApp> {
+  ThemeProvider? _themeProvider;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    // 创建主题提供者（使用默认值，不需要等待）
+    _themeProvider = ThemeProvider();
+    
+    // 触发重建以使用新的主题提供者
+    if (mounted) {
+      setState(() {});
+    }
+    
+    // 在微任务中异步初始化所有服务，不阻塞当前帧
+    Future.microtask(() => _initializeAllServicesInBackground());
+  }
+
+  Future<void> _initializeAllServicesInBackground() async {
+    try {
+      // 初始化主题
+      await _themeProvider!.initialize();
+      
+      // 初始化依赖注入
+      await configureDependencies();
+      
+      // 初始化数据库
+      await _initializeDatabaseServices();
+      
+      // 初始化音频服务
+      await _initializeAudioServices();
+      
+      // 初始化其他服务
+      await _initializeOtherServices();
+      
+      debugPrint('All services initialized in background');
+    } catch (e) {
+      debugPrint('Failed to initialize background services: $e');
+      // 不影响UI显示
+    }
+  }
+
+  Future<void> _initializeDatabaseServices() async {
     // Initialize sqflite factory for different platforms
     if (kIsWeb) {
       // For web platform - use in-memory database for now
-      // Note: Web storage will be handled differently
-      print('Running on web platform - using alternative storage');
+      debugPrint('Running on web platform - using alternative storage');
     } else {
       // Check if we're on mobile or desktop
       bool isMobile = false;
@@ -34,89 +96,72 @@ void main() async {
 
       if (isMobile) {
         // For mobile platforms - use standard sqflite (no FFI needed)
-        print('Running on mobile platform - using standard sqflite');
-        // Don't set databaseFactory - let sqflite use its default
+        debugPrint('Running on mobile platform - using standard sqflite');
         // Initialize database for mobile platforms
         await DatabaseHelper.database;
       } else {
         // For desktop platforms - use FFI
-        print('Running on desktop platform - using sqflite FFI');
+        debugPrint('Running on desktop platform - using sqflite FFI');
         sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;
         // Initialize database for desktop platforms
         await DatabaseHelper.database;
       }
     }
-
-    // Initialize dependencies
-    await configureDependencies();
-
-    // Initialize theme provider first (lightweight)
-    final themeProvider = ThemeProvider();
-    await themeProvider.initialize();
-
-    // Initialize services with better error handling for Huawei devices
-    await _initializeServicesWithFallback();
-
-    runApp(MindraApp(themeProvider: themeProvider));
-  } catch (e) {
-    debugPrint('Critical initialization error: $e');
-    // If there's an error during initialization, show error app
-    runApp(ErrorApp(error: e.toString()));
-  }
-}
-
-Future<void> _initializeServicesWithFallback() async {
-  // Initialize global player service with fallback
-  try {
-    final globalPlayerService = getIt<GlobalPlayerService>();
-    await globalPlayerService.initialize();
-    debugPrint('Global player service initialized successfully');
-  } catch (e) {
-    debugPrint('Failed to initialize global player service: $e');
-    // Continue without audio services for now
   }
 
-  // Initialize sound effects service with fallback
-  try {
-    await SimpleSoundEffectsPlayer().initialize();
-    debugPrint('Sound effects service initialized successfully');
-  } catch (e) {
-    debugPrint('Failed to initialize sound effects service: $e');
-    // Continue without sound effects
+  Future<void> _initializeAudioServices() async {
+    // Initialize audio services with fallback
+    try {
+      final globalPlayerService = getIt<GlobalPlayerService>();
+      await globalPlayerService.initialize();
+      debugPrint('Global player service initialized successfully');
+    } catch (e) {
+      debugPrint('Failed to initialize global player service: $e');
+    }
+
+    try {
+      await SimpleSoundEffectsPlayer().initialize();
+      debugPrint('Sound effects service initialized successfully');
+    } catch (e) {
+      debugPrint('Failed to initialize sound effects service: $e');
+    }
   }
 
-  // Initialize reminder scheduler service with fallback
-  try {
-    final reminderService = ReminderSchedulerService();
-    await reminderService.initialize();
-    debugPrint('Reminder scheduler service initialized successfully');
-  } catch (e) {
-    debugPrint('Failed to initialize reminder scheduler service: $e');
-    // Continue without reminder service
+  Future<void> _initializeOtherServices() async {
+    // Initialize other services
+    try {
+      final reminderService = ReminderSchedulerService();
+      await reminderService.initialize();
+      debugPrint('Reminder scheduler service initialized successfully');
+    } catch (e) {
+      debugPrint('Failed to initialize reminder scheduler service: $e');
+    }
   }
-}
-
-class MindraApp extends StatelessWidget {
-  final ThemeProvider themeProvider;
-
-  const MindraApp({super.key, required this.themeProvider});
 
   @override
   Widget build(BuildContext context) {
+    // 如果有错误，显示错误页面
+    if (_error != null) {
+      return ErrorApp(error: _error!);
+    }
+
+    // 直接显示应用界面，使用默认主题
+    final themeProvider = _themeProvider ?? ThemeProvider();
+    
     return ChangeNotifierProvider.value(
       value: themeProvider,
       child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
+        builder: (context, theme, child) {
           return MaterialApp.router(
             title: 'Mindra',
             debugShowCheckedModeBanner: false,
 
-            // Theme
-            theme: themeProvider.themeData,
+            // Theme - 使用默认主题或已加载的主题
+            theme: theme.themeData,
 
             // Localization
-            locale: themeProvider.locale,
+            locale: theme.locale,
             supportedLocales: const [
               Locale('zh', 'CN'), // 简体中文
               Locale('en', 'US'), // English

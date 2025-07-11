@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 启动背景色 - 使用应用主题色 -->
+    <color name="launch_background_color">#E8F5F7</color>
+    
+    <!-- 应用主题色 -->
+    <color name="primary_color">#32B8C6</color>
+    <color name="primary_variant_color">#2A9DAA</color>
+    <color name="secondary_color">#FF6B6B</color>
+</resources>

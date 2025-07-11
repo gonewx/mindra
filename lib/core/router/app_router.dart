@@ -24,7 +24,7 @@ class AppRouter {
   static const String settings = '/settings';
 
   static final GoRouter router = GoRouter(
-    initialLocation: home, // Start directly at home instead of splash
+    initialLocation: splash, // Start with splash screen
     routes: [
       GoRoute(
         path: splash,
@@ -84,9 +84,15 @@ class AppRouter {
             children: [
               const Icon(Icons.error_outline, size: 64),
               const SizedBox(height: 16),
-              Text(localizations.pageNotFound, style: Theme.of(context).textTheme.headlineMedium),
+              Text(
+                localizations.pageNotFound,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
               const SizedBox(height: 8),
-              Text(localizations.pageNotFoundDesc, style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                localizations.pageNotFoundDesc,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () => context.go(home),
