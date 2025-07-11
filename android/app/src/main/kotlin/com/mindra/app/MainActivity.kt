@@ -1,4 +1,4 @@
-package com.example.mindra
+package com.mindra.app
 
 import io.flutter.embedding.android.FlutterActivity
 

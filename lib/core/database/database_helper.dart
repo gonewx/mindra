@@ -18,30 +18,49 @@ class DatabaseHelper {
   }
 
   static Future<Database> _initDatabase() async {
-    try {
-      // Get the database factory (should be set in main.dart)
-      var factory = databaseFactory;
+    int retryCount = 0;
+    const maxRetries = 3;
 
-      // For web platform, use in-memory database path
-      String path;
-      if (kIsWeb) {
-        path = 'mindra_web.db';
-      } else {
-        final databasePath = await factory.getDatabasesPath();
-        path = join(databasePath, AppConstants.databaseName);
+    while (retryCount < maxRetries) {
+      try {
+        // Get the database factory (should be set in main.dart)
+        var factory = databaseFactory;
+
+        // For web platform, use in-memory database path
+        String path;
+        if (kIsWeb) {
+          path = 'mindra_web.db';
+        } else {
+          final databasePath = await factory.getDatabasesPath();
+          path = join(databasePath, AppConstants.databaseName);
+        }
+
+        return await factory.openDatabase(
+          path,
+          options: OpenDatabaseOptions(
+            version: AppConstants.databaseVersion,
+            onCreate: _createTables,
+            onUpgrade: _onUpgrade,
+          ),
+        );
+      } catch (e) {
+        retryCount++;
+        if (kDebugMode) {
+          print('Database initialization attempt $retryCount failed: $e');
+        }
+
+        if (retryCount >= maxRetries) {
+          throw Exception(
+            'Failed to initialize database after $maxRetries attempts: $e',
+          );
+        }
+
+        // 等待一段时间后重试，特别是华为设备可能需要更多时间
+        await Future.delayed(Duration(milliseconds: 500 * retryCount));
       }
-
-      return await factory.openDatabase(
-        path,
-        options: OpenDatabaseOptions(
-          version: AppConstants.databaseVersion,
-          onCreate: _createTables,
-          onUpgrade: _onUpgrade,
-        ),
-      );
-    } catch (e) {
-      throw Exception('Failed to initialize database: $e');
     }
+
+    throw Exception('Unexpected error in database initialization');
   }
 
   static Future<void> _createTables(Database db, int version) async {

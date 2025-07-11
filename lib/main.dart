@@ -51,36 +51,49 @@ void main() async {
     // Initialize dependencies
     await configureDependencies();
 
-    // Initialize global player service
-    final globalPlayerService = getIt<GlobalPlayerService>();
-    await globalPlayerService.initialize();
-
-    // Initialize theme provider
+    // Initialize theme provider first (lightweight)
     final themeProvider = ThemeProvider();
     await themeProvider.initialize();
 
-    // Initialize sound effects service
-    try {
-      await SimpleSoundEffectsPlayer().initialize();
-      debugPrint('Sound effects service initialized successfully');
-    } catch (e) {
-      debugPrint('Failed to initialize sound effects service: $e');
-    }
-
-    // Initialize reminder scheduler service
-    try {
-      final reminderService = ReminderSchedulerService();
-      await reminderService.initialize();
-      debugPrint('Reminder scheduler service initialized successfully');
-    } catch (e) {
-      debugPrint('Failed to initialize reminder scheduler service: $e');
-    }
+    // Initialize services with better error handling for Huawei devices
+    await _initializeServicesWithFallback();
 
     runApp(MindraApp(themeProvider: themeProvider));
   } catch (e) {
-    print('Initialization error: $e');
+    debugPrint('Critical initialization error: $e');
     // If there's an error during initialization, show error app
     runApp(ErrorApp(error: e.toString()));
+  }
+}
+
+Future<void> _initializeServicesWithFallback() async {
+  // Initialize global player service with fallback
+  try {
+    final globalPlayerService = getIt<GlobalPlayerService>();
+    await globalPlayerService.initialize();
+    debugPrint('Global player service initialized successfully');
+  } catch (e) {
+    debugPrint('Failed to initialize global player service: $e');
+    // Continue without audio services for now
+  }
+
+  // Initialize sound effects service with fallback
+  try {
+    await SimpleSoundEffectsPlayer().initialize();
+    debugPrint('Sound effects service initialized successfully');
+  } catch (e) {
+    debugPrint('Failed to initialize sound effects service: $e');
+    // Continue without sound effects
+  }
+
+  // Initialize reminder scheduler service with fallback
+  try {
+    final reminderService = ReminderSchedulerService();
+    await reminderService.initialize();
+    debugPrint('Reminder scheduler service initialized successfully');
+  } catch (e) {
+    debugPrint('Failed to initialize reminder scheduler service: $e');
+    // Continue without reminder service
   }
 }
 

@@ -1,5 +1,5 @@
 name: mindra
-description: "A new Flutter project."
+description: "Mindra - 专业的冥想与正念应用，帮助您找到内心的平静与专注。"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

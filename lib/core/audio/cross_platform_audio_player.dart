@@ -23,17 +23,37 @@ class CrossPlatformAudioPlayer {
 
   Timer? _positionTimer;
 
+  bool _useAudioPlayersFlag = true;
   bool get _useAudioPlayers =>
-      !kIsWeb && (Platform.isAndroid || Platform.isLinux);
+      _useAudioPlayersFlag &&
+      !kIsWeb &&
+      (Platform.isAndroid || Platform.isLinux);
 
   CrossPlatformAudioPlayer() {
-    if (_useAudioPlayers) {
-      _audioPlayersInstance = audioplayers.AudioPlayer();
-      _setupAudioPlayersListeners();
-      // 延迟配置音频上下文
-      Future.microtask(() => _configureAudioContext());
-    } else {
+    try {
+      if (_useAudioPlayers) {
+        _audioPlayersInstance = audioplayers.AudioPlayer();
+        _setupAudioPlayersListeners();
+        // 延迟配置音频上下文，特别是华为设备
+        Future.microtask(() => _configureAudioContextSafely());
+      } else {
+        _justAudioInstance = just_audio.AudioPlayer();
+      }
+    } catch (e) {
+      debugPrint('Failed to initialize audio player: $e');
+      // 如果初始化失败，尝试使用备用方案
+      _initializeFallbackPlayer();
+    }
+  }
+
+  void _initializeFallbackPlayer() {
+    try {
+      // 尝试使用just_audio作为备用
+      _useAudioPlayersFlag = false;
       _justAudioInstance = just_audio.AudioPlayer();
+      debugPrint('Fallback to just_audio player');
+    } catch (e) {
+      debugPrint('Failed to initialize fallback player: $e');
     }
   }
 
@@ -47,6 +67,26 @@ class CrossPlatformAudioPlayer {
       debugPrint('Main audio player context configured for primary playback');
     } catch (e) {
       debugPrint('Failed to configure main audio context: $e');
+    }
+  }
+
+  Future<void> _configureAudioContextSafely() async {
+    if (_audioPlayersInstance == null) return;
+
+    try {
+      // 添加延迟以确保华为设备有足够时间初始化
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // 使用音频焦点管理器获取配置
+      final audioContext = _audioFocusManager.getMainAudioContext();
+      await _audioPlayersInstance!.setAudioContext(audioContext);
+      debugPrint(
+        'Main audio player context configured safely for Huawei devices',
+      );
+    } catch (e) {
+      debugPrint('Failed to configure main audio context safely: $e');
+      // 如果配置失败，尝试不设置音频上下文
+      debugPrint('Continuing without audio context configuration');
     }
   }
 
