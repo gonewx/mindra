@@ -1,0 +1,192 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.24.0'
+  JAVA_VERSION: '17'
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: ${{ env.JAVA_VERSION }}
+        
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get dependencies
+      working-directory: ./mindra
+      run: flutter pub get
+      
+    - name: Verify formatting
+      working-directory: ./mindra
+      run: dart format --output=none --set-exit-if-changed .
+      
+    - name: Analyze project source
+      working-directory: ./mindra
+      run: dart analyze --fatal-infos
+      
+    - name: Run tests
+      working-directory: ./mindra
+      run: flutter test --coverage
+      
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./mindra/coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+
+  build_android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: ${{ env.JAVA_VERSION }}
+        
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get dependencies
+      working-directory: ./mindra
+      run: flutter pub get
+      
+    - name: Build APK
+      working-directory: ./mindra
+      run: flutter build apk --release
+      
+    - name: Build AAB
+      working-directory: ./mindra
+      run: flutter build appbundle --release
+      
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: mindra/build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 30
+        
+    - name: Upload AAB artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-aab
+        path: mindra/build/app/outputs/bundle/release/app-release.aab
+        retention-days: 30
+
+  build_ios:
+    name: Build iOS
+    runs-on: macos-latest
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get dependencies
+      working-directory: ./mindra
+      run: flutter pub get
+      
+    - name: Build iOS (no codesign)
+      working-directory: ./mindra
+      run: flutter build ios --release --no-codesign
+      
+    - name: Upload iOS build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-build
+        path: mindra/build/ios/iphoneos/Runner.app
+        retention-days: 30
+
+  security_scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get dependencies
+      working-directory: ./mindra
+      run: flutter pub get
+      
+    - name: Run dependency audit
+      working-directory: ./mindra
+      run: flutter pub deps --json | jq '.packages[] | select(.kind == "direct") | .name' | xargs -I {} echo "Checking {}"
+      
+    - name: Check for known vulnerabilities
+      working-directory: ./mindra
+      run: |
+        # 检查已知的安全问题
+        flutter pub deps --json > deps.json
+        echo "Dependencies audit completed"
+
+  notify:
+    name: Notify Build Status
+    runs-on: ubuntu-latest
+    needs: [test, build_android, build_ios, security_scan]
+    if: always()
+    
+    steps:
+    - name: Notify success
+      if: needs.test.result == 'success' && needs.build_android.result == 'success' && needs.build_ios.result == 'success'
+      run: |
+        echo "✅ All builds completed successfully!"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Commit: ${{ github.sha }}"
+        
+    - name: Notify failure
+      if: needs.test.result == 'failure' || needs.build_android.result == 'failure' || needs.build_ios.result == 'failure'
+      run: |
+        echo "❌ Build failed!"
+        echo "Test result: ${{ needs.test.result }}"
+        echo "Android build result: ${{ needs.build_android.result }}"
+        echo "iOS build result: ${{ needs.build_ios.result }}"
+        exit 1

@@ -1,0 +1,22 @@
+# Mindra iOS Fastlane 应用配置
+
+# Apple ID 配置
+apple_id(ENV["APPLE_ID"] || "your-apple-id@example.com") # 替换为您的 Apple ID
+app_identifier("com.mindra.app") # 应用 Bundle ID
+
+# Team ID（可选，如果有多个开发团队）
+team_id(ENV["TEAM_ID"]) # 从环境变量获取，或直接填写
+
+# iTunes Connect Team ID（如果与开发团队不同）
+itc_team_id(ENV["ITC_TEAM_ID"])
+
+# 为不同环境配置不同的设置
+for_platform :ios do
+  for_lane :release do
+    # 生产环境特定配置
+  end
+  
+  for_lane :beta do
+    # 测试环境特定配置
+  end
+end

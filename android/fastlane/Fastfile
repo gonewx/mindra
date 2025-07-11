@@ -1,0 +1,215 @@
+# Mindra Android Fastlane 配置
+# 用于自动化构建和发布流程
+
+default_platform(:android)
+
+platform :android do
+  # 应用基本信息
+  APP_IDENTIFIER = "com.mindra.app"
+  AAB_PATH = "../build/app/outputs/bundle/release/app-release.aab"
+  APK_PATH = "../build/app/outputs/flutter-apk/app-release.apk"
+  
+  # 构建前准备
+  before_all do
+    # 确保在正确的目录
+    ensure_git_status_clean unless ENV["SKIP_GIT_CHECK"]
+    
+    # 检查必要文件
+    unless File.exist?("../#{AAB_PATH}")
+      UI.user_error!("AAB 文件不存在，请先运行构建脚本")
+    end
+  end
+
+  # 内部测试发布
+  desc "发布到内部测试轨道"
+  lane :internal do
+    deploy(track: "internal")
+  end
+
+  # Alpha 测试发布
+  desc "发布到 Alpha 测试轨道"
+  lane :alpha do
+    deploy(track: "alpha")
+  end
+
+  # Beta 测试发布
+  desc "发布到 Beta 测试轨道"
+  lane :beta do
+    deploy(track: "beta")
+  end
+
+  # 正式发布
+  desc "发布到生产环境"
+  lane :production do
+    # 生产发布需要额外确认
+    UI.confirm("确定要发布到生产环境吗？这将对所有用户可见。")
+    deploy(track: "production")
+  end
+
+  # 通用发布方法
+  desc "发布到指定轨道"
+  lane :deploy do |options|
+    track = options[:track] || "internal"
+    
+    UI.message("开始发布到 #{track} 轨道...")
+    
+    # 验证 AAB 文件
+    validate_aab
+    
+    # 上传到 Google Play
+    upload_to_play_store(
+      track: track,
+      aab: AAB_PATH,
+      skip_upload_apk: true,
+      skip_upload_metadata: false,
+      skip_upload_changelogs: false,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      release_status: get_release_status(track),
+      version_name: get_version_name,
+      version_code: get_version_code
+    )
+    
+    UI.success("成功发布到 #{track} 轨道！")
+    
+    # 发送通知（可选）
+    send_notification(track: track) if ENV["ENABLE_NOTIFICATIONS"]
+  end
+
+  # 验证 AAB 文件
+  desc "验证 AAB 文件"
+  lane :validate_aab do
+    UI.message("验证 AAB 文件...")
+    
+    # 检查文件存在
+    unless File.exist?(AAB_PATH)
+      UI.user_error!("AAB 文件不存在: #{AAB_PATH}")
+    end
+    
+    # 检查文件大小
+    file_size = File.size(AAB_PATH)
+    if file_size > 150 * 1024 * 1024  # 150MB
+      UI.user_error!("AAB 文件过大: #{file_size / 1024 / 1024}MB")
+    end
+    
+    UI.success("AAB 文件验证通过")
+  end
+
+  # 获取版本名称
+  desc "获取版本名称"
+  lane :get_version_name do
+    pubspec_path = "../pubspec.yaml"
+    pubspec_content = File.read(pubspec_path)
+    version_line = pubspec_content.match(/^version:\s*(.+)$/)
+    
+    if version_line
+      version_full = version_line[1].strip
+      version_name = version_full.split('+')[0]
+      return version_name
+    else
+      UI.user_error!("无法从 pubspec.yaml 获取版本号")
+    end
+  end
+
+  # 获取版本代码
+  desc "获取版本代码"
+  lane :get_version_code do
+    pubspec_path = "../pubspec.yaml"
+    pubspec_content = File.read(pubspec_path)
+    version_line = pubspec_content.match(/^version:\s*(.+)$/)
+    
+    if version_line
+      version_full = version_line[1].strip
+      if version_full.include?('+')
+        version_code = version_full.split('+')[1].to_i
+        return version_code
+      else
+        return 1
+      end
+    else
+      UI.user_error!("无法从 pubspec.yaml 获取版本代码")
+    end
+  end
+
+  # 获取发布状态
+  desc "获取发布状态"
+  lane :get_release_status do |options|
+    track = options[:track]
+    
+    case track
+    when "internal"
+      "completed"  # 内部测试立即发布
+    when "alpha", "beta"
+      "completed"  # 测试版本立即发布
+    when "production"
+      "draft"      # 生产版本先保存为草稿
+    else
+      "completed"
+    end
+  end
+
+  # 发送通知
+  desc "发送发布通知"
+  lane :send_notification do |options|
+    track = options[:track]
+    version_name = get_version_name
+    
+    # Slack 通知（如果配置了）
+    if ENV["SLACK_URL"]
+      slack(
+        message: "Mindra Android #{version_name} 已发布到 #{track} 轨道 🚀",
+        slack_url: ENV["SLACK_URL"],
+        channel: "#releases",
+        username: "Fastlane",
+        icon_emoji: ":rocket:"
+      )
+    end
+    
+    # 邮件通知（如果配置了）
+    if ENV["NOTIFICATION_EMAIL"]
+      # 这里可以添加邮件通知逻辑
+      UI.message("发送邮件通知到: #{ENV['NOTIFICATION_EMAIL']}")
+    end
+  end
+
+  # 构建和发布一体化
+  desc "构建并发布"
+  lane :build_and_deploy do |options|
+    track = options[:track] || "internal"
+    
+    UI.message("开始构建和发布流程...")
+    
+    # 切换到项目根目录
+    Dir.chdir("..") do
+      # 运行 Flutter 构建
+      sh("flutter", "clean")
+      sh("flutter", "pub", "get")
+      sh("flutter", "build", "appbundle", "--release")
+    end
+    
+    # 发布
+    deploy(track: track)
+  end
+
+  # 错误处理
+  error do |lane, exception|
+    UI.error("发布失败: #{exception.message}")
+    
+    # 发送错误通知
+    if ENV["SLACK_URL"]
+      slack(
+        message: "❌ Mindra Android 发布失败: #{exception.message}",
+        slack_url: ENV["SLACK_URL"],
+        channel: "#releases",
+        username: "Fastlane",
+        icon_emoji: ":x:",
+        success: false
+      )
+    end
+  end
+
+  # 发布后清理
+  after_all do |lane|
+    UI.success("发布流程完成！")
+  end
+end

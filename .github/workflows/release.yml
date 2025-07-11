@@ -1,0 +1,364 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+      track:
+        description: 'Release track'
+        required: true
+        default: 'internal'
+        type: choice
+        options:
+        - internal
+        - alpha
+        - beta
+        - production
+      platform:
+        description: 'Platform to release'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - android
+        - ios
+        - all
+
+env:
+  FLUTTER_VERSION: '3.24.0'
+  JAVA_VERSION: '17'
+
+jobs:
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      track: ${{ steps.track.outputs.track }}
+      platform: ${{ steps.platform.outputs.platform }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Determine version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "push" ]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+        else
+          VERSION="${{ github.event.inputs.version }}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Release version: $VERSION"
+        
+    - name: Determine track
+      id: track
+      run: |
+        if [ "${{ github.event_name }}" = "push" ]; then
+          TRACK="production"
+        else
+          TRACK="${{ github.event.inputs.track }}"
+        fi
+        echo "track=$TRACK" >> $GITHUB_OUTPUT
+        echo "Release track: $TRACK"
+        
+    - name: Determine platform
+      id: platform
+      run: |
+        if [ "${{ github.event_name }}" = "push" ]; then
+          PLATFORM="all"
+        else
+          PLATFORM="${{ github.event.inputs.platform }}"
+        fi
+        echo "platform=$PLATFORM" >> $GITHUB_OUTPUT
+        echo "Release platform: $PLATFORM"
+
+  build_android:
+    name: Build Android Release
+    runs-on: ubuntu-latest
+    needs: prepare
+    if: needs.prepare.outputs.platform == 'android' || needs.prepare.outputs.platform == 'all'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: ${{ env.JAVA_VERSION }}
+        
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get dependencies
+      working-directory: ./mindra
+      run: flutter pub get
+      
+    - name: Update version
+      working-directory: ./mindra
+      run: |
+        VERSION="${{ needs.prepare.outputs.version }}"
+        sed -i "s/^version:.*/version: $VERSION+${{ github.run_number }}/" pubspec.yaml
+        echo "Updated version to: $VERSION+${{ github.run_number }}"
+        
+    - name: Decode keystore
+      run: |
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > mindra/android/release-keystore.jks
+        
+    - name: Create key.properties
+      run: |
+        cat > mindra/android/key.properties << EOF
+        storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
+        keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+        keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+        storeFile=release-keystore.jks
+        EOF
+        
+    - name: Build AAB
+      working-directory: ./mindra
+      run: flutter build appbundle --release
+      
+    - name: Build APK
+      working-directory: ./mindra
+      run: flutter build apk --release
+      
+    - name: Upload AAB artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-aab-release
+        path: mindra/build/app/outputs/bundle/release/app-release.aab
+        retention-days: 90
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk-release
+        path: mindra/build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 90
+
+  build_ios:
+    name: Build iOS Release
+    runs-on: macos-latest
+    needs: prepare
+    if: needs.prepare.outputs.platform == 'ios' || needs.prepare.outputs.platform == 'all'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get dependencies
+      working-directory: ./mindra
+      run: flutter pub get
+      
+    - name: Update version
+      working-directory: ./mindra
+      run: |
+        VERSION="${{ needs.prepare.outputs.version }}"
+        sed -i '' "s/^version:.*/version: $VERSION+${{ github.run_number }}/" pubspec.yaml
+        echo "Updated version to: $VERSION+${{ github.run_number }}"
+        
+    - name: Install certificates
+      env:
+        BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
+        P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+        BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_BUILD_PROVISION_PROFILE_BASE64 }}
+        KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+      run: |
+        # 创建临时密钥链
+        CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+        PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+        
+        # 解码证书和配置文件
+        echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode --output $CERTIFICATE_PATH
+        echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode --output $PP_PATH
+        
+        # 创建密钥链
+        security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        
+        # 导入证书
+        security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+        security list-keychain -d user -s $KEYCHAIN_PATH
+        
+        # 安装配置文件
+        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+        cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+        
+    - name: Build iOS
+      working-directory: ./mindra
+      run: flutter build ios --release
+      
+    - name: Build Archive
+      working-directory: ./mindra
+      run: |
+        xcodebuild -workspace ios/Runner.xcworkspace \
+                   -scheme Runner \
+                   -configuration Release \
+                   -destination generic/platform=iOS \
+                   -archivePath build/ios/archive/Runner.xcarchive \
+                   archive
+                   
+    - name: Export IPA
+      working-directory: ./mindra
+      run: |
+        cat > build/ios/ExportOptions.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>compileBitcode</key>
+            <false/>
+        </dict>
+        </plist>
+        EOF
+        
+        xcodebuild -exportArchive \
+                   -archivePath build/ios/archive/Runner.xcarchive \
+                   -exportPath build/ios/ipa \
+                   -exportOptionsPlist build/ios/ExportOptions.plist
+                   
+    - name: Upload IPA artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-ipa-release
+        path: mindra/build/ios/ipa/Runner.ipa
+        retention-days: 90
+        
+    - name: Upload Archive artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-archive-release
+        path: mindra/build/ios/archive/Runner.xcarchive
+        retention-days: 90
+
+  deploy_android:
+    name: Deploy Android
+    runs-on: ubuntu-latest
+    needs: [prepare, build_android]
+    if: needs.prepare.outputs.platform == 'android' || needs.prepare.outputs.platform == 'all'
+    environment: release
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download AAB artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: android-aab-release
+        path: ./
+        
+    - name: Setup Google Play API
+      run: |
+        echo "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}" > service-account.json
+        
+    - name: Deploy to Google Play
+      uses: r0adkll/upload-google-play@v1
+      with:
+        serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        packageName: com.mindra.app
+        releaseFiles: app-release.aab
+        track: ${{ needs.prepare.outputs.track }}
+        status: completed
+        inAppUpdatePriority: 2
+
+  deploy_ios:
+    name: Deploy iOS
+    runs-on: macos-latest
+    needs: [prepare, build_ios]
+    if: needs.prepare.outputs.platform == 'ios' || needs.prepare.outputs.platform == 'all'
+    environment: release
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download IPA artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ios-ipa-release
+        path: ./
+        
+    - name: Deploy to TestFlight
+      if: needs.prepare.outputs.track != 'production'
+      run: |
+        xcrun altool --upload-app \
+                     --type ios \
+                     --file Runner.ipa \
+                     --username "${{ secrets.APPLE_ID }}" \
+                     --password "${{ secrets.APP_SPECIFIC_PASSWORD }}"
+                     
+    - name: Deploy to App Store
+      if: needs.prepare.outputs.track == 'production'
+      run: |
+        echo "Production deployment requires manual submission in App Store Connect"
+        echo "IPA has been built and is ready for upload"
+
+  create_release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [prepare, deploy_android, deploy_ios]
+    if: always() && (needs.deploy_android.result == 'success' || needs.deploy_ios.result == 'success')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
+        
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ needs.prepare.outputs.version }}
+        release_name: Mindra v${{ needs.prepare.outputs.version }}
+        body: |
+          ## Mindra v${{ needs.prepare.outputs.version }}
+          
+          ### 发布信息
+          - **版本**: ${{ needs.prepare.outputs.version }}
+          - **发布轨道**: ${{ needs.prepare.outputs.track }}
+          - **平台**: ${{ needs.prepare.outputs.platform }}
+          - **构建号**: ${{ github.run_number }}
+          
+          ### 下载
+          - Android APK: 见 Artifacts
+          - Android AAB: 见 Artifacts
+          - iOS IPA: 见 Artifacts
+          
+          ### 更新内容
+          请查看 CHANGELOG.md 获取详细更新内容。
+        draft: false
+        prerelease: ${{ needs.prepare.outputs.track != 'production' }}

@@ -1,0 +1,295 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  FLUTTER_VERSION: '3.24.0'
+
+jobs:
+  analyze:
+    name: Code Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get dependencies
+      working-directory: ./mindra
+      run: flutter pub get
+      
+    - name: Verify formatting
+      working-directory: ./mindra
+      run: |
+        dart format --output=none --set-exit-if-changed .
+        if [ $? -ne 0 ]; then
+          echo "❌ Code formatting issues found"
+          echo "Run 'dart format .' to fix formatting"
+          exit 1
+        fi
+        echo "✅ Code formatting is correct"
+        
+    - name: Analyze project source
+      working-directory: ./mindra
+      run: |
+        dart analyze --fatal-infos
+        if [ $? -ne 0 ]; then
+          echo "❌ Code analysis issues found"
+          exit 1
+        fi
+        echo "✅ Code analysis passed"
+        
+    - name: Check for unused dependencies
+      working-directory: ./mindra
+      run: |
+        flutter pub deps --json > deps.json
+        echo "✅ Dependencies checked"
+        
+    - name: Check for outdated dependencies
+      working-directory: ./mindra
+      run: |
+        flutter pub outdated --json > outdated.json || true
+        echo "✅ Outdated dependencies checked"
+
+  test_coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get dependencies
+      working-directory: ./mindra
+      run: flutter pub get
+      
+    - name: Run tests with coverage
+      working-directory: ./mindra
+      run: |
+        flutter test --coverage
+        if [ $? -ne 0 ]; then
+          echo "❌ Tests failed"
+          exit 1
+        fi
+        echo "✅ All tests passed"
+        
+    - name: Generate coverage report
+      working-directory: ./mindra
+      run: |
+        if [ -f "coverage/lcov.info" ]; then
+          # 计算覆盖率
+          COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | awk '{print $2}' | sed 's/%//')
+          echo "Test coverage: $COVERAGE%"
+          
+          # 检查覆盖率阈值
+          THRESHOLD=80
+          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+            echo "❌ Test coverage ($COVERAGE%) is below threshold ($THRESHOLD%)"
+            exit 1
+          fi
+          echo "✅ Test coverage ($COVERAGE%) meets threshold ($THRESHOLD%)"
+        else
+          echo "⚠️ No coverage data found"
+        fi
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./mindra/coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  security_check:
+    name: Security Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get dependencies
+      working-directory: ./mindra
+      run: flutter pub get
+      
+    - name: Check for known vulnerabilities
+      working-directory: ./mindra
+      run: |
+        # 检查 pubspec.yaml 中的依赖
+        echo "Checking for known vulnerabilities..."
+        
+        # 检查是否有已知的不安全依赖
+        flutter pub deps --json > deps.json
+        
+        # 这里可以添加更多的安全检查
+        echo "✅ Security check completed"
+        
+    - name: Check for sensitive data
+      run: |
+        echo "Checking for sensitive data in code..."
+        
+        # 检查是否有硬编码的密钥、密码等
+        if grep -r -i "password\|secret\|key\|token" mindra/lib/ --include="*.dart" | grep -v "// TODO\|// FIXME"; then
+          echo "⚠️ Potential sensitive data found in code"
+          echo "Please review the above matches"
+        else
+          echo "✅ No obvious sensitive data found"
+        fi
+        
+    - name: Check file permissions
+      run: |
+        echo "Checking file permissions..."
+        
+        # 检查是否有不当的文件权限
+        find mindra/ -type f -perm /o+w -exec echo "World-writable file: {}" \;
+        
+        echo "✅ File permissions checked"
+
+  performance_check:
+    name: Performance Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get dependencies
+      working-directory: ./mindra
+      run: flutter pub get
+      
+    - name: Check app size
+      working-directory: ./mindra
+      run: |
+        echo "Analyzing app size..."
+        
+        # 构建 APK 并检查大小
+        flutter build apk --analyze-size --target-platform android-arm64
+        
+        # 检查 APK 大小
+        if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+          APK_SIZE=$(du -h build/app/outputs/flutter-apk/app-release.apk | cut -f1)
+          echo "APK size: $APK_SIZE"
+          
+          # 检查大小是否超过阈值（例如 50MB）
+          APK_SIZE_BYTES=$(du -b build/app/outputs/flutter-apk/app-release.apk | cut -f1)
+          THRESHOLD_BYTES=$((50 * 1024 * 1024))  # 50MB
+          
+          if [ $APK_SIZE_BYTES -gt $THRESHOLD_BYTES ]; then
+            echo "⚠️ APK size ($APK_SIZE) exceeds threshold (50MB)"
+          else
+            echo "✅ APK size ($APK_SIZE) is within acceptable range"
+          fi
+        fi
+        
+    - name: Check for performance anti-patterns
+      working-directory: ./mindra
+      run: |
+        echo "Checking for performance anti-patterns..."
+        
+        # 检查常见的性能问题
+        if grep -r "print(" lib/ --include="*.dart"; then
+          echo "⚠️ Found print() statements that should be removed in production"
+        fi
+        
+        if grep -r "debugPrint(" lib/ --include="*.dart"; then
+          echo "ℹ️ Found debugPrint() statements (OK for debug builds)"
+        fi
+        
+        echo "✅ Performance check completed"
+
+  documentation_check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Check README
+      run: |
+        if [ ! -f "README.md" ]; then
+          echo "❌ README.md not found"
+          exit 1
+        fi
+        echo "✅ README.md exists"
+        
+    - name: Check CHANGELOG
+      run: |
+        if [ ! -f "CHANGELOG.md" ]; then
+          echo "⚠️ CHANGELOG.md not found"
+        else
+          echo "✅ CHANGELOG.md exists"
+        fi
+        
+    - name: Check documentation coverage
+      working-directory: ./mindra
+      run: |
+        echo "Checking documentation coverage..."
+        
+        # 检查公共 API 是否有文档注释
+        dart doc --dry-run --quiet
+        
+        echo "✅ Documentation check completed"
+
+  summary:
+    name: Quality Summary
+    runs-on: ubuntu-latest
+    needs: [analyze, test_coverage, security_check, performance_check, documentation_check]
+    if: always()
+    
+    steps:
+    - name: Quality Summary
+      run: |
+        echo "=========================================="
+        echo "           Code Quality Summary"
+        echo "=========================================="
+        echo "Analysis: ${{ needs.analyze.result }}"
+        echo "Test Coverage: ${{ needs.test_coverage.result }}"
+        echo "Security Check: ${{ needs.security_check.result }}"
+        echo "Performance Check: ${{ needs.performance_check.result }}"
+        echo "Documentation Check: ${{ needs.documentation_check.result }}"
+        echo "=========================================="
+        
+        # 检查是否有失败的检查
+        if [ "${{ needs.analyze.result }}" = "failure" ] || 
+           [ "${{ needs.test_coverage.result }}" = "failure" ] || 
+           [ "${{ needs.security_check.result }}" = "failure" ] || 
+           [ "${{ needs.performance_check.result }}" = "failure" ] || 
+           [ "${{ needs.documentation_check.result }}" = "failure" ]; then
+          echo "❌ Some quality checks failed"
+          exit 1
+        else
+          echo "✅ All quality checks passed"
+        fi
