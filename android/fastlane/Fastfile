@@ -65,7 +65,7 @@ platform :android do
       skip_upload_changelogs: false,
       skip_upload_images: true,
       skip_upload_screenshots: true,
-      release_status: get_release_status(track),
+      release_status: get_release_status(track: track),
       version_name: get_version_name,
       version_code: get_version_code
     )
