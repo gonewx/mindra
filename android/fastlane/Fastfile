@@ -15,7 +15,7 @@ platform :android do
     ensure_git_status_clean unless ENV["SKIP_GIT_CHECK"]
     
     # 检查必要文件
-    unless File.exist?("../#{AAB_PATH}")
+    unless File.exist?(AAB_PATH)
       UI.user_error!("AAB 文件不存在，请先运行构建脚本")
     end
   end
