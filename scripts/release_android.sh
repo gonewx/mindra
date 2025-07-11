@@ -213,13 +213,13 @@ upload_with_fastlane() {
     log_info "使用 Fastlane 上传到 Google Play Store..."
     
     if [ "$DRY_RUN" = true ]; then
-        log_info "模拟运行: fastlane android deploy track:$TRACK"
+        log_info "模拟运行: bundle exec fastlane android deploy track:$TRACK"
         log_success "模拟上传完成"
         return
     fi
     
     cd android
-    if fastlane deploy track:$TRACK; then
+    if bundle exec fastlane deploy track:$TRACK; then
         log_success "Fastlane 上传成功"
     else
         log_error "Fastlane 上传失败"
