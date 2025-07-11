@@ -11,7 +11,7 @@ class SimpleSoundEffectsPlayer {
 
   final Map<String, AudioPlayer> _players = {};
   final Map<String, double> _volumes = {};
-  double _masterVolume = 0.5;
+  double _masterVolume = 1.0; // 默认主音量设为1.0
   final AudioFocusManager _audioFocusManager = AudioFocusManager();
 
   // 音效文件路径映射
@@ -89,7 +89,7 @@ class SimpleSoundEffectsPlayer {
       final prefs = await SharedPreferences.getInstance();
 
       // 加载主音量
-      _masterVolume = prefs.getDouble('sound_effects_master_volume') ?? 0.5;
+      _masterVolume = prefs.getDouble('sound_effects_master_volume') ?? 1.0;
 
       // 加载各个音效的音量
       for (final effectId in _soundPaths.keys) {
@@ -162,11 +162,11 @@ class SimpleSoundEffectsPlayer {
             .getSuggestedSoundEffectVolume();
         final finalVolume = (volume * _masterVolume * suggestedVolume).clamp(
           0.0,
-          0.5,
-        ); // 限制最大音量为0.5，确保不会过响
+          1.0,
+        ); // 提高最大音量限制到1.0
 
         debugPrint(
-          'Setting volume for $effectId: $finalVolume (input: $volume, master: $_masterVolume)',
+          'Setting volume for $effectId: $finalVolume (input: $volume, master: $_masterVolume, suggested: $suggestedVolume)',
         );
 
         // 检查音频文件是否已加载
@@ -299,7 +299,7 @@ class SimpleSoundEffectsPlayer {
           // 使用建议的音量计算，确保不影响主音频
           final effectVolume = _volumes[effectId]!;
           final finalVolume = (effectVolume * _masterVolume * suggestedVolume)
-              .clamp(0.0, 0.5); // 限制最大音量为0.5，避免过响
+              .clamp(0.0, 1.0); // 提高最大音量限制到1.0
           await player.setVolume(finalVolume);
         }
       }
@@ -308,6 +308,66 @@ class SimpleSoundEffectsPlayer {
 
     // 保存主音量设置
     await _saveSettings();
+  }
+
+  // 暂停音效（不改变音量设置）
+  Future<void> pauseEffect(String effectId) async {
+    if (!_players.containsKey(effectId)) return;
+    
+    final player = _players[effectId]!;
+    try {
+      debugPrint('Pausing effect: $effectId');
+      await player.pause();
+    } catch (e) {
+      debugPrint('Failed to pause sound effect $effectId: $e');
+    }
+  }
+
+  // 恢复音效播放
+  Future<void> resumeEffect(String effectId) async {
+    if (!_players.containsKey(effectId)) return;
+    
+    final player = _players[effectId]!;
+    final volume = _volumes[effectId] ?? 0.0;
+    
+    if (volume > 0) {
+      try {
+        // 获取音频焦点管理器建议的音量
+        final suggestedVolume = _audioFocusManager.getSuggestedSoundEffectVolume();
+        final finalVolume = (volume * _masterVolume * suggestedVolume).clamp(0.0, 1.0);
+        
+        debugPrint('Resuming effect: $effectId with volume $finalVolume');
+        await player.setVolume(finalVolume);
+        await player.resume();
+      } catch (e) {
+        debugPrint('Failed to resume sound effect $effectId: $e');
+      }
+    }
+  }
+
+  // 测试音效播放（使用最大音量）
+  Future<void> testEffect(String effectId) async {
+    if (!_players.containsKey(effectId)) {
+      debugPrint('Effect $effectId not found');
+      return;
+    }
+    
+    final player = _players[effectId]!;
+    try {
+      debugPrint('Testing effect $effectId with full volume');
+      await player.setVolume(1.0); // 设置最大音量
+      await player.play(AssetSource(_soundPaths[effectId]!));
+      
+      // 等待一下让播放开始
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // 获取播放状态
+      final position = await player.getCurrentPosition();
+      final duration = await player.getDuration();
+      debugPrint('Test playback status: position=${position?.inMilliseconds}ms, duration=${duration?.inMilliseconds}ms');
+    } catch (e) {
+      debugPrint('Error testing effect $effectId: $e');
+    }
   }
 
   // 停止所有音效

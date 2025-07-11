@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/theme_provider.dart';
@@ -522,7 +523,15 @@ class _SettingsPageState extends State<SettingsPage> {
       context: context,
       applicationName: 'Mindra',
       applicationVersion: '1.0.0',
-      applicationIcon: const Icon(Icons.self_improvement, size: 48),
+      applicationIcon: SizedBox(
+        width: 48,
+        height: 48,
+        child: SvgPicture.asset(
+          'assets/images/app_icon.svg',
+          width: 48,
+          height: 48,
+        ),
+      ),
       children: [Text(localizations.aboutAppDescription)],
     );
   }

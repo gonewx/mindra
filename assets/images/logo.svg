@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lotusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6B73FF;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#9B59B6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E74C3C;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- 背景圆形 -->
+  <circle cx="60" cy="60" r="55" fill="url(#lotusGradient)" opacity="0.1"/>
+  
+  <!-- 莲花花瓣 -->
+  <g transform="translate(60,60)" filter="url(#glow)">
+    <!-- 外层花瓣 -->
+    <path d="M0,-25 C-8,-35 -15,-30 -12,-20 C-8,-10 0,-15 0,-25Z" fill="url(#lotusGradient)" opacity="0.8"/>
+    <path d="M0,-25 C8,-35 15,-30 12,-20 C8,-10 0,-15 0,-25Z" fill="url(#lotusGradient)" opacity="0.8"/>
+    
+    <g transform="rotate(45)">
+      <path d="M0,-25 C-8,-35 -15,-30 -12,-20 C-8,-10 0,-15 0,-25Z" fill="url(#lotusGradient)" opacity="0.7"/>
+      <path d="M0,-25 C8,-35 15,-30 12,-20 C8,-10 0,-15 0,-25Z" fill="url(#lotusGradient)" opacity="0.7"/>
+    </g>
+    
+    <g transform="rotate(90)">
+      <path d="M0,-25 C-8,-35 -15,-30 -12,-20 C-8,-10 0,-15 0,-25Z" fill="url(#lotusGradient)" opacity="0.6"/>
+      <path d="M0,-25 C8,-35 15,-30 12,-20 C8,-10 0,-15 0,-25Z" fill="url(#lotusGradient)" opacity="0.6"/>
+    </g>
+    
+    <g transform="rotate(135)">
+      <path d="M0,-25 C-8,-35 -15,-30 -12,-20 C-8,-10 0,-15 0,-25Z" fill="url(#lotusGradient)" opacity="0.5"/>
+      <path d="M0,-25 C8,-35 15,-30 12,-20 C8,-10 0,-15 0,-25Z" fill="url(#lotusGradient)" opacity="0.5"/>
+    </g>
+    
+    <!-- 内层花瓣 -->
+    <g transform="rotate(22.5)">
+      <path d="M0,-18 C-6,-25 -10,-22 -8,-15 C-6,-8 0,-12 0,-18Z" fill="url(#lotusGradient)" opacity="0.9"/>
+      <path d="M0,-18 C6,-25 10,-22 8,-15 C6,-8 0,-12 0,-18Z" fill="url(#lotusGradient)" opacity="0.9"/>
+    </g>
+    
+    <g transform="rotate(67.5)">
+      <path d="M0,-18 C-6,-25 -10,-22 -8,-15 C-6,-8 0,-12 0,-18Z" fill="url(#lotusGradient)" opacity="0.8"/>
+      <path d="M0,-18 C6,-25 10,-22 8,-15 C6,-8 0,-12 0,-18Z" fill="url(#lotusGradient)" opacity="0.8"/>
+    </g>
+    
+    <g transform="rotate(112.5)">
+      <path d="M0,-18 C-6,-25 -10,-22 -8,-15 C-6,-8 0,-12 0,-18Z" fill="url(#lotusGradient)" opacity="0.7"/>
+      <path d="M0,-18 C6,-25 10,-22 8,-15 C6,-8 0,-12 0,-18Z" fill="url(#lotusGradient)" opacity="0.7"/>
+    </g>
+    
+    <g transform="rotate(157.5)">
+      <path d="M0,-18 C-6,-25 -10,-22 -8,-15 C-6,-8 0,-12 0,-18Z" fill="url(#lotusGradient)" opacity="0.6"/>
+      <path d="M0,-18 C6,-25 10,-22 8,-15 C6,-8 0,-12 0,-18Z" fill="url(#lotusGradient)" opacity="0.6"/>
+    </g>
+    
+    <!-- 中心圆 -->
+    <circle cx="0" cy="0" r="8" fill="url(#lotusGradient)"/>
+    <circle cx="0" cy="0" r="4" fill="#FFFFFF" opacity="0.8"/>
+  </g>
+  
+  <!-- 文字 Mindra -->
+  <text x="60" y="95" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="300" fill="url(#lotusGradient)">Mindra</text>
+</svg>

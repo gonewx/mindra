@@ -432,6 +432,7 @@ class _PlayerPageState extends State<PlayerPage> {
               const SizedBox(width: 16),
               _buildActionButton(
                 icon: Icons.equalizer,
+                isActive: _playerService.hasActiveSoundEffects,
                 onTap: () => _showSoundEffectsDialog(),
               ),
             ],

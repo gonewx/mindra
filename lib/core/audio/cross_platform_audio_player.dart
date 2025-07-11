@@ -30,13 +30,14 @@ class CrossPlatformAudioPlayer {
     if (_useAudioPlayers) {
       _audioPlayersInstance = audioplayers.AudioPlayer();
       _setupAudioPlayersListeners();
-      _configureAudioContext();
+      // 延迟配置音频上下文
+      Future.microtask(() => _configureAudioContext());
     } else {
       _justAudioInstance = just_audio.AudioPlayer();
     }
   }
 
-  void _configureAudioContext() async {
+  Future<void> _configureAudioContext() async {
     if (_audioPlayersInstance == null) return;
 
     try {
@@ -126,9 +127,13 @@ class CrossPlatformAudioPlayer {
   Future<void> play() async {
     if (_useAudioPlayers) {
       debugPrint('AudioPlayers: Play called');
+      // 重新配置音频上下文以确保最新的混音设置
+      await _configureAudioContext();
       await _audioPlayersInstance?.resume();
+      _audioFocusManager.notifyMainAudioStarted();
     } else {
       await _justAudioInstance?.play();
+      _audioFocusManager.notifyMainAudioStarted();
     }
   }
 
@@ -136,8 +141,10 @@ class CrossPlatformAudioPlayer {
     if (_useAudioPlayers) {
       debugPrint('AudioPlayers: Pause called');
       await _audioPlayersInstance?.pause();
+      _audioFocusManager.notifyMainAudioStopped();
     } else {
       await _justAudioInstance?.pause();
+      _audioFocusManager.notifyMainAudioStopped();
     }
   }
 
@@ -145,8 +152,10 @@ class CrossPlatformAudioPlayer {
     if (_useAudioPlayers) {
       debugPrint('AudioPlayers: Stop called');
       await _audioPlayersInstance?.stop();
+      _audioFocusManager.notifyMainAudioStopped();
     } else {
       await _justAudioInstance?.stop();
+      _audioFocusManager.notifyMainAudioStopped();
     }
   }
 

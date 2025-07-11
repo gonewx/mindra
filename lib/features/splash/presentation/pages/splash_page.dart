@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_router.dart';
 
@@ -71,17 +72,13 @@ class _SplashPageState extends State<SplashPage>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // App Icon
-                  Container(
+                  SizedBox(
                     width: 120,
                     height: 120,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.self_improvement,
-                      size: 60,
-                      color: Color(0xFF6B73FF),
+                    child: SvgPicture.asset(
+                      'assets/images/app_icon.svg',
+                      width: 120,
+                      height: 120,
                     ),
                   ),
                   const SizedBox(height: 32),

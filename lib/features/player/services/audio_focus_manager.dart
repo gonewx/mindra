@@ -17,7 +17,6 @@ class AudioFocusManager {
         category: AVAudioSessionCategory.playback,
         options: {
           AVAudioSessionOptions.mixWithOthers, // 允许与其他音频混合
-          AVAudioSessionOptions.defaultToSpeaker, // 默认使用扬声器
         },
       ),
       android: AudioContextAndroid(
@@ -25,11 +24,8 @@ class AudioFocusManager {
         stayAwake: true,
         contentType: AndroidContentType.music,
         usageType: AndroidUsageType.media,
-        // 主音频使用 gainTransient，不使用 duck
-        audioFocus: _isSoundEffectsEnabled
-            ? AndroidAudioFocus
-                  .gainTransient // 如果有背景音效，使用临时焦点
-            : AndroidAudioFocus.gain, // 如果没有背景音效，使用完全焦点
+        // 主音频使用 gain，获得音频焦点但允许背景音效混合
+        audioFocus: AndroidAudioFocus.gain,
       ),
     );
   }
@@ -38,18 +34,19 @@ class AudioFocusManager {
   AudioContext getSoundEffectContext() {
     return AudioContext(
       iOS: AudioContextIOS(
-        category: AVAudioSessionCategory.ambient, // 使用环境音频类别
+        category: AVAudioSessionCategory.playback, // 使用播放类别以支持 mixWithOthers
         options: {
           AVAudioSessionOptions.mixWithOthers, // 允许与其他音频混合
+          AVAudioSessionOptions.duckOthers, // 降低其他音频音量
         },
       ),
       android: AudioContextAndroid(
         isSpeakerphoneOn: false,
         stayAwake: false,
-        contentType: AndroidContentType.sonification,
-        usageType: AndroidUsageType.assistanceSonification, // 使用辅助音效类型
-        // 背景音效不获取音频焦点，避免影响主音频
-        audioFocus: AndroidAudioFocus.none,
+        contentType: AndroidContentType.music, // 改为音乐类型
+        usageType: AndroidUsageType.media, // 改为媒体类型
+        // 背景音效使用 gainTransientMayDuck，允许与主音频混合
+        audioFocus: AndroidAudioFocus.gainTransientMayDuck,
       ),
     );
   }
@@ -82,7 +79,7 @@ class AudioFocusManager {
 
   /// 获取背景音效的建议音量
   double getSuggestedSoundEffectVolume() {
-    // 如果主音频正在播放，降低背景音效音量
-    return _isMainAudioPlaying ? 0.3 : 0.5;
+    // 如果主音频正在播放，稍微降低背景音效音量，但不要太低
+    return _isMainAudioPlaying ? 0.6 : 0.8;
   }
 }

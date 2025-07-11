@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../player/data/models/sound_effect.dart';
+import '../../../player/services/audio_focus_manager.dart';
 
 class SoundEffectsService {
   static final SoundEffectsService _instance = SoundEffectsService._internal();
@@ -11,6 +12,7 @@ class SoundEffectsService {
   final Map<String, AudioPlayer> _players = {};
   final Map<String, double> _volumes = {};
   double _masterVolume = 0.5;
+  final AudioFocusManager _audioFocusManager = AudioFocusManager();
 
   // 获取所有可用音效
   List<SoundEffect> get availableEffects => BuiltInSoundEffects.effects;
@@ -24,6 +26,15 @@ class SoundEffectsService {
     for (final effect in availableEffects) {
       _players[effect.id] = AudioPlayer();
       _volumes[effect.id] = 0.0;
+
+      // 配置背景音效播放器的音频上下文
+      try {
+        final audioContext = _audioFocusManager.getSoundEffectContext();
+        await _players[effect.id]!.setAudioContext(audioContext);
+        debugPrint('Sound effect ${effect.id} audio context configured');
+      } catch (e) {
+        debugPrint('Failed to configure audio context for ${effect.id}: $e');
+      }
 
       // 预加载音效文件
       if (effect.assetPath != null) {
@@ -48,6 +59,7 @@ class SoundEffectsService {
     try {
       await player.setVolume(finalVolume);
       if (finalVolume > 0) {
+        debugPrint('Starting playback for $effectId with volume $finalVolume');
         await player.resume();
       } else {
         await player.pause();
