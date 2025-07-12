@@ -139,13 +139,13 @@ platform :android do
     
     case track
     when "internal"
-      "completed"  # 内部测试立即发布
+      "draft"      # 内部测试先保存为草稿（应用还未完全设置）
     when "alpha", "beta"
-      "completed"  # 测试版本立即发布
+      "draft"      # 测试版本先保存为草稿
     when "production"
       "draft"      # 生产版本先保存为草稿
     else
-      "completed"
+      "draft"
     end
   end
 
