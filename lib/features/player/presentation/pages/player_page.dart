@@ -14,11 +14,13 @@ import '../../../../features/media/presentation/widgets/add_media_dialog.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/constants/media_category.dart';
+import '../../../../shared/widgets/timer_dialog.dart';
 
 class PlayerPage extends StatefulWidget {
   final String? mediaId;
+  final int? timerMinutes;
 
-  const PlayerPage({super.key, this.mediaId});
+  const PlayerPage({super.key, this.mediaId, this.timerMinutes});
 
   @override
   State<PlayerPage> createState() => _PlayerPageState();
@@ -61,6 +63,21 @@ class _PlayerPageState extends State<PlayerPage> {
       } else if (_playerService.currentMedia != null) {
         // Service already has media loaded, just trigger a rebuild
         setState(() {});
+      }
+
+      // Set timer if specified in URL parameters
+      if (widget.timerMinutes != null) {
+        _playerService.setSleepTimer(widget.timerMinutes!);
+        if (mounted) {
+          final localizations = AppLocalizations.of(context)!;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                localizations.timerSetMessage(widget.timerMinutes!),
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error initializing player: $e');
@@ -162,13 +179,16 @@ class _PlayerPageState extends State<PlayerPage> {
     } else if (category == MediaCategory.sleep) {
       iconData = Icons.bedtime;
       gradientColors = [const Color(0xFF667eea), const Color(0xFF764ba2)];
-    } else if (category == MediaCategory.focus || category == MediaCategory.study) {
+    } else if (category == MediaCategory.focus ||
+        category == MediaCategory.study) {
       iconData = Icons.psychology;
       gradientColors = [const Color(0xFF11998e), const Color(0xFF38ef7d)];
-    } else if (category == MediaCategory.relaxation || category == MediaCategory.soothing) {
+    } else if (category == MediaCategory.relaxation ||
+        category == MediaCategory.soothing) {
       iconData = Icons.spa;
       gradientColors = [const Color(0xFFa8edea), const Color(0xFFfed6e3)];
-    } else if (category == MediaCategory.nature || category == MediaCategory.environment) {
+    } else if (category == MediaCategory.nature ||
+        category == MediaCategory.environment) {
       iconData = Icons.nature;
       gradientColors = [const Color(0xFF56ab2f), const Color(0xFFa8e6cf)];
     } else if (category == MediaCategory.breathing) {
@@ -440,7 +460,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 },
               ),
               const SizedBox(width: 16),
-              _buildActionButton(icon: Icons.timer, onTap: _showTimerDialog),
+              _buildTimerButton(),
               const SizedBox(width: 16),
               _buildActionButton(
                 icon: Icons.equalizer,
@@ -485,6 +505,62 @@ class _PlayerPageState extends State<PlayerPage> {
               ? theme.colorScheme.primary
               : theme.colorScheme.onSurface.withValues(alpha: 0.7),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTimerButton() {
+    final theme = Theme.of(context);
+    final isActive = _playerService.hasActiveTimer;
+    final timerMinutes = _playerService.sleepTimerMinutes;
+
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isActive
+            ? theme.colorScheme.primary.withValues(alpha: 0.1)
+            : theme.colorScheme.surface,
+        border: Border.all(
+          color: isActive
+              ? theme.colorScheme.primary.withValues(alpha: 0.3)
+              : theme.colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Stack(
+        children: [
+          IconButton(
+            iconSize: 16,
+            onPressed: _showTimerDialog,
+            icon: Icon(
+              Icons.timer,
+              color: isActive
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          if (isActive && timerMinutes > 0)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  '$timerMinutes',
+                  style: TextStyle(
+                    color: theme.colorScheme.onPrimary,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -904,48 +980,12 @@ ${localizations.shareAppSignature}
   }
 
   void _showTimerDialog() {
-    final localizations = AppLocalizations.of(context)!;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(localizations.timerSettings),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (int minutes in [5, 10, 15, 30, 45, 60])
-              ListTile(
-                title: Text(localizations.timerMinutesAfter(minutes)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _playerService.setSleepTimer(minutes);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.timerSetMessage(minutes)),
-                    ),
-                  );
-                },
-              ),
-            const Divider(),
-            ListTile(
-              title: Text(localizations.timerCancel),
-              onTap: () {
-                Navigator.pop(context);
-                _playerService.cancelSleepTimer();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(localizations.timerCancelled)),
-                );
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(localizations.actionCancel),
-          ),
-        ],
-      ),
+    TimerDialog.show(
+      context,
+      onTimerSet: () {
+        // 定时器设置后刷新UI
+        setState(() {});
+      },
     );
   }
 
@@ -962,16 +1002,22 @@ ${localizations.shareAppSignature}
         child: LayoutBuilder(
           builder: (context, constraints) {
             // 根据屏幕大小动态调整弹出框尺寸
-            final maxWidth = constraints.maxWidth > 450 ? 400.0 : constraints.maxWidth - 32;
-            final maxHeight = constraints.maxHeight > 600 ? 500.0 : constraints.maxHeight - 100;
-            
+            final maxWidth = constraints.maxWidth > 450
+                ? 400.0
+                : constraints.maxWidth - 32;
+            final maxHeight = constraints.maxHeight > 600
+                ? 500.0
+                : constraints.maxHeight - 100;
+
             return Container(
               constraints: BoxConstraints(
                 maxWidth: maxWidth,
                 maxHeight: maxHeight,
               ),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF2A3441) : theme.colorScheme.surface,
+                color: isDark
+                    ? const Color(0xFF2A3441)
+                    : theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -985,7 +1031,9 @@ ${localizations.shareAppSignature}
                         bottom: BorderSide(
                           color: isDark
                               ? Colors.white.withValues(alpha: 0.1)
-                              : theme.colorScheme.outline.withValues(alpha: 0.2),
+                              : theme.colorScheme.outline.withValues(
+                                  alpha: 0.2,
+                                ),
                           width: 1,
                         ),
                       ),

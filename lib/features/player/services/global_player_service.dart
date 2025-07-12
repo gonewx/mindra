@@ -38,6 +38,7 @@ class GlobalPlayerService extends ChangeNotifier {
   bool _isShuffled = false;
   RepeatMode _repeatMode = RepeatMode.none;
   Timer? _sleepTimer;
+  int _sleepTimerMinutes = 0; // 保存当前设置的定时器时长
 
   // Getters
   bool get isPlaying => _isPlaying;
@@ -48,6 +49,7 @@ class GlobalPlayerService extends ChangeNotifier {
   bool get isShuffled => _isShuffled;
   RepeatMode get repeatMode => _repeatMode;
   bool get hasActiveTimer => _sleepTimer != null;
+  int get sleepTimerMinutes => _sleepTimerMinutes;
   bool get isInitialized => _isInitialized;
 
   String get title => _currentMedia?.title ?? '未选择素材';
@@ -424,11 +426,15 @@ class GlobalPlayerService extends ChangeNotifier {
 
   void setSleepTimer(int minutes) {
     _sleepTimer?.cancel();
+    _sleepTimerMinutes = minutes;
 
     _sleepTimer = Timer(Duration(minutes: minutes), () async {
       if (_isPlaying) {
         await pause();
       }
+      // 定时器触发后重置时长
+      _sleepTimerMinutes = 0;
+      notifyListeners();
     });
 
     notifyListeners();
@@ -437,6 +443,7 @@ class GlobalPlayerService extends ChangeNotifier {
   void cancelSleepTimer() {
     _sleepTimer?.cancel();
     _sleepTimer = null;
+    _sleepTimerMinutes = 0;
     notifyListeners();
   }
 

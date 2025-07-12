@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="500" viewBox="0 0 1024 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 主背景渐变 -->
+    <linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="30%" style="stop-color:#16213e;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#0f3460;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#533483;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 莲花图标渐变 -->
+    <linearGradient id="lotusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6B73FF;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#9B59B6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E74C3C;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 装饰性渐变 -->
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6B73FF;stop-opacity:0.3" />
+      <stop offset="50%" style="stop-color:#9B59B6;stop-opacity:0.5" />
+      <stop offset="100%" style="stop-color:#E74C3C;stop-opacity:0.3" />
+    </linearGradient>
+    
+    <!-- 发光效果 -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- 文字阴影 -->
+    <filter id="textShadow">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+  
+  <!-- 主背景 -->
+  <rect width="1024" height="500" fill="url(#backgroundGradient)"/>
+  
+  <!-- 装饰性背景元素 -->
+  <circle cx="100" cy="100" r="80" fill="url(#accentGradient)" opacity="0.2"/>
+  <circle cx="924" cy="400" r="60" fill="url(#accentGradient)" opacity="0.15"/>
+  <circle cx="800" cy="80" r="40" fill="url(#accentGradient)" opacity="0.1"/>
+  
+  <!-- 主要内容区域 -->
+  <g transform="translate(80, 50)">
+    
+    <!-- 应用图标 -->
+    <g transform="translate(120, 200)" filter="url(#glow)">
+      <!-- 图标背景圆 -->
+      <circle cx="0" cy="0" r="80" fill="url(#lotusGradient)"/>
+      
+      <!-- 莲花花瓣 -->
+      <g>
+        <!-- 外层花瓣 -->
+        <path d="M0,-32 C-10,-45 -19,-38 -16,-26 C-10,-13 0,-19 0,-32Z" fill="#FFFFFF"/>
+        <path d="M0,-32 C10,-45 19,-38 16,-26 C10,-13 0,-19 0,-32Z" fill="#FFFFFF"/>
+        
+        <g transform="rotate(45)">
+          <path d="M0,-32 C-10,-45 -19,-38 -16,-26 C-10,-13 0,-19 0,-32Z" fill="#F0F0FF"/>
+          <path d="M0,-32 C10,-45 19,-38 16,-26 C10,-13 0,-19 0,-32Z" fill="#F0F0FF"/>
+        </g>
+        
+        <g transform="rotate(90)">
+          <path d="M0,-32 C-10,-45 -19,-38 -16,-26 C-10,-13 0,-19 0,-32Z" fill="#E8E8FF"/>
+          <path d="M0,-32 C10,-45 19,-38 16,-26 C10,-13 0,-19 0,-32Z" fill="#E8E8FF"/>
+        </g>
+        
+        <g transform="rotate(135)">
+          <path d="M0,-32 C-10,-45 -19,-38 -16,-26 C-10,-13 0,-19 0,-32Z" fill="#F0F0FF"/>
+          <path d="M0,-32 C10,-45 19,-38 16,-26 C10,-13 0,-19 0,-32Z" fill="#F0F0FF"/>
+        </g>
+        
+        <!-- 内层花瓣 -->
+        <g transform="rotate(22.5)">
+          <path d="M0,-22 C-8,-32 -13,-29 -10,-19 C-8,-10 0,-16 0,-22Z" fill="#F8F8FF"/>
+          <path d="M0,-22 C8,-32 13,-29 10,-19 C8,-10 0,-16 0,-22Z" fill="#F8F8FF"/>
+        </g>
+        
+        <g transform="rotate(67.5)">
+          <path d="M0,-22 C-8,-32 -13,-29 -10,-19 C-8,-10 0,-16 0,-22Z" fill="#F8F8FF"/>
+          <path d="M0,-22 C8,-32 13,-29 10,-19 C8,-10 0,-16 0,-22Z" fill="#F8F8FF"/>
+        </g>
+        
+        <g transform="rotate(112.5)">
+          <path d="M0,-22 C-8,-32 -13,-29 -10,-19 C-8,-10 0,-16 0,-22Z" fill="#F8F8FF"/>
+          <path d="M0,-22 C8,-32 13,-29 10,-19 C8,-10 0,-16 0,-22Z" fill="#F8F8FF"/>
+        </g>
+        
+        <g transform="rotate(157.5)">
+          <path d="M0,-22 C-8,-32 -13,-29 -10,-19 C-8,-10 0,-16 0,-22Z" fill="#F8F8FF"/>
+          <path d="M0,-22 C8,-32 13,-29 10,-19 C8,-10 0,-16 0,-22Z" fill="#F8F8FF"/>
+        </g>
+        
+        <!-- 中心圆 -->
+        <circle cx="0" cy="0" r="10" fill="url(#lotusGradient)"/>
+        <circle cx="0" cy="0" r="5" fill="#FFFFFF"/>
+      </g>
+    </g>
+    
+    <!-- 应用名称 -->
+    <text x="280" y="180" font-family="Arial, sans-serif" font-size="72" font-weight="bold" 
+          fill="#FFFFFF" filter="url(#textShadow)">Mindra</text>
+    
+    <!-- 副标题 -->
+    <text x="280" y="220" font-family="Arial, sans-serif" font-size="28" font-weight="300" 
+          fill="#E0E0FF" filter="url(#textShadow)">专业的冥想与正念应用</text>
+    
+    <!-- 特色功能描述 -->
+    <text x="280" y="270" font-family="Arial, sans-serif" font-size="20" font-weight="300" 
+          fill="#C0C0E0">找到内心的平静与专注</text>
+    
+    <!-- 装饰性元素 -->
+    <g transform="translate(650, 150)" opacity="0.3">
+      <circle cx="0" cy="0" r="3" fill="#FFFFFF"/>
+      <circle cx="20" cy="10" r="2" fill="#FFFFFF"/>
+      <circle cx="40" cy="5" r="2.5" fill="#FFFFFF"/>
+      <circle cx="60" cy="15" r="2" fill="#FFFFFF"/>
+      <circle cx="80" cy="8" r="3" fill="#FFFFFF"/>
+    </g>
+    
+    <!-- 底部装饰线 -->
+    <rect x="280" y="300" width="400" height="2" fill="url(#accentGradient)" opacity="0.6"/>
+    
+  </g>
+  
+  <!-- 右侧装饰性莲花轮廓 -->
+  <g transform="translate(850, 350)" opacity="0.1">
+    <circle cx="0" cy="0" r="60" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+    <circle cx="0" cy="0" r="40" fill="none" stroke="#FFFFFF" stroke-width="1"/>
+    <circle cx="0" cy="0" r="20" fill="none" stroke="#FFFFFF" stroke-width="1"/>
+  </g>
+  
+</svg>

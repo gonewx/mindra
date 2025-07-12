@@ -59,7 +59,13 @@ class AppRouter {
             name: 'player',
             builder: (context, state) {
               final mediaId = state.uri.queryParameters['mediaId'];
-              return PlayerPage(mediaId: mediaId);
+              final timerMinutes = state.uri.queryParameters['timer'];
+              return PlayerPage(
+                mediaId: mediaId,
+                timerMinutes: timerMinutes != null
+                    ? int.tryParse(timerMinutes)
+                    : null,
+              );
             },
           ),
           GoRoute(
