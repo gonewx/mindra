@@ -29,15 +29,6 @@ class AppConstants {
     'webm',
   ];
 
-  // Categories
-  static const List<String> defaultCategories = [
-    '冥想',
-    '睡前',
-    '专注',
-    '放松',
-    '自然音效',
-  ];
-
   // Sound Effects
   static const List<String> soundEffects = [
     'rain',

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/constants/weekday.dart';
 
 /// 目标时间单位枚举
 enum GoalTimeUnit { minutes, hours }
@@ -15,7 +16,7 @@ class UserGoal extends Equatable {
   final GoalFrequencyUnit weeklyGoalUnit; // 每周目标单位，如 times
   final TimeOfDay reminderTime; // 提醒时间
   final bool isReminderEnabled; // 是否启用提醒
-  final List<String> reminderDays; // 提醒日期
+  final List<Weekday> reminderDays; // 提醒日期
   final bool enableSound; // 是否启用声音
   final bool enableVibration; // 是否启用振动
   final DateTime createdAt; // 创建时间
@@ -28,7 +29,7 @@ class UserGoal extends Equatable {
     this.weeklyGoalUnit = GoalFrequencyUnit.times,
     required this.reminderTime,
     this.isReminderEnabled = false,
-    this.reminderDays = const ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+    this.reminderDays = const [Weekday.monday, Weekday.tuesday, Weekday.wednesday, Weekday.thursday, Weekday.friday, Weekday.saturday, Weekday.sunday],
     this.enableSound = true,
     this.enableVibration = true,
     required this.createdAt,
@@ -45,17 +46,15 @@ class UserGoal extends Equatable {
       weeklyGoalUnit: GoalFrequencyUnit.times,
       reminderTime: const TimeOfDay(hour: 9, minute: 0),
       isReminderEnabled: false,
-      reminderDays: l10n != null
-          ? [
-              l10n.weekdaysMonday,
-              l10n.weekdaysTuesday,
-              l10n.weekdaysWednesday,
-              l10n.weekdaysThursday,
-              l10n.weekdaysFriday,
-              l10n.weekdaysSaturday,
-              l10n.weekdaysSunday,
-            ]
-          : const ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+      reminderDays: const [
+        Weekday.monday,
+        Weekday.tuesday,
+        Weekday.wednesday,
+        Weekday.thursday,
+        Weekday.friday,
+        Weekday.saturday,
+        Weekday.sunday,
+      ],
       enableSound: true,
       enableVibration: true,
       createdAt: now,
@@ -70,7 +69,7 @@ class UserGoal extends Equatable {
     GoalFrequencyUnit? weeklyGoalUnit,
     TimeOfDay? reminderTime,
     bool? isReminderEnabled,
-    List<String>? reminderDays,
+    List<Weekday>? reminderDays,
     bool? enableSound,
     bool? enableVibration,
     DateTime? createdAt,
@@ -101,7 +100,7 @@ class UserGoal extends Equatable {
       'reminder_hour': reminderTime.hour,
       'reminder_minute': reminderTime.minute,
       'is_reminder_enabled': isReminderEnabled,
-      'reminder_days': reminderDays.join(','),
+      'reminder_days': reminderDays.stringValues.join(','),
       'enable_sound': enableSound,
       'enable_vibration': enableVibration,
       'created_at': createdAt.millisecondsSinceEpoch,
@@ -129,8 +128,7 @@ class UserGoal extends Equatable {
         minute: map['reminder_minute'] ?? 0,
       ),
       isReminderEnabled: map['is_reminder_enabled'] ?? false,
-      reminderDays: (map['reminder_days'] as String? ?? '周一,周二,周三,周四,周五,周六,周日')
-          .split(','),
+      reminderDays: _parseReminderDaysFromMap(map['reminder_days']),
       enableSound: map['enable_sound'] ?? true,
       enableVibration: map['enable_vibration'] ?? true,
       createdAt: DateTime.fromMillisecondsSinceEpoch(
@@ -140,6 +138,24 @@ class UserGoal extends Equatable {
         map['updated_at'] ?? DateTime.now().millisecondsSinceEpoch,
       ),
     );
+  }
+
+  /// 从Map中解析提醒日期，兼容旧数据
+  static List<Weekday> _parseReminderDaysFromMap(dynamic reminderDaysValue) {
+    if (reminderDaysValue == null) {
+      return WeekdayExtension.allWeekdays;
+    }
+    
+    final reminderDaysString = reminderDaysValue.toString();
+    final dayStrings = reminderDaysString.split(',');
+    
+    // 尝试从枚举名称解析
+    try {
+      return WeekdayListExtension.fromStringList(dayStrings);
+    } catch (_) {
+      // 如果失败，尝试从本地化字符串解析（兼容旧数据）
+      return WeekdayListExtension.fromLocalizedStringList(dayStrings);
+    }
   }
 
   // 转换为 JSON 字符串用于存储
@@ -153,7 +169,7 @@ class UserGoal extends Equatable {
   "reminder_hour": ${reminderTime.hour},
   "reminder_minute": ${reminderTime.minute},
   "is_reminder_enabled": $isReminderEnabled,
-  "reminder_days": "${reminderDays.join(',')}",
+  "reminder_days": "${reminderDays.stringValues.join(',')}",
   "enable_sound": $enableSound,
   "enable_vibration": $enableVibration,
   "created_at": ${createdAt.millisecondsSinceEpoch},
@@ -234,7 +250,7 @@ class UserGoal extends Equatable {
       weeklyGoalUnit: weeklyGoalUnit,
       reminderTime: TimeOfDay(hour: reminderHour, minute: reminderMinute),
       isReminderEnabled: isReminderEnabled,
-      reminderDays: reminderDaysString.split(','),
+      reminderDays: _parseReminderDaysFromMap(reminderDaysString),
       enableSound: enableSound,
       enableVibration: enableVibration,
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdAt),

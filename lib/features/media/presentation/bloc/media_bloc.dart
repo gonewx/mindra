@@ -53,7 +53,11 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       final mediaItems = await _getMediaItemsUseCase();
       emit(MediaLoaded(mediaItems));
     } catch (e) {
-      emit(MediaError('Failed to load media items: ${e.toString()}'));
+      final errorMessage = _getErrorMessage(e, '加载媒体项目');
+      emit(MediaError(errorMessage));
+      if (kDebugMode) {
+        print('Error loading media items: $e');
+      }
     }
   }
 
@@ -63,10 +67,20 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
   ) async {
     try {
       emit(MediaLoading());
+
+      // 验证分类参数
+      if (event.category.isEmpty) {
+        throw ArgumentError('Category cannot be empty');
+      }
+
       final mediaItems = await _getMediaItemsByCategoryUseCase(event.category);
       emit(MediaLoaded(mediaItems, currentCategory: event.category));
     } catch (e) {
-      emit(MediaError('Failed to load media items: ${e.toString()}'));
+      final errorMessage = _getErrorMessage(e, '加载分类媒体项目');
+      emit(MediaError(errorMessage));
+      if (kDebugMode) {
+        print('Error loading media items by category ${event.category}: $e');
+      }
     }
   }
 
@@ -79,7 +93,11 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       final mediaItems = await _getFavoriteMediaItemsUseCase();
       emit(MediaLoaded(mediaItems, currentCategory: '收藏'));
     } catch (e) {
-      emit(MediaError('Failed to load favorite media items: ${e.toString()}'));
+      final errorMessage = _getErrorMessage(e, '加载收藏媒体项目');
+      emit(MediaError(errorMessage));
+      if (kDebugMode) {
+        print('Error loading favorite media items: $e');
+      }
     }
   }
 
@@ -89,6 +107,19 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
   ) async {
     try {
       emit(MediaAdding());
+
+      // 验证输入参数
+      if (event.title.trim().isEmpty) {
+        throw ArgumentError('Media title cannot be empty');
+      }
+
+      if (event.filePath.trim().isEmpty) {
+        throw ArgumentError('Media file path cannot be empty');
+      }
+
+      if (event.duration < 0) {
+        throw ArgumentError('Media duration cannot be negative');
+      }
 
       final mediaId = _uuid.v4();
       debugPrint('Generated media ID: $mediaId');
@@ -105,21 +136,21 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
           debugPrint('Successfully stored media bytes for mediaId: $mediaId');
         } catch (e) {
           debugPrint('Failed to store media bytes: $e');
-          emit(MediaError('Failed to store media file: ${e.toString()}'));
+          emit(MediaError('存储媒体文件失败：${e.toString()}'));
           return;
         }
       }
 
       final mediaItem = MediaItem(
         id: mediaId,
-        title: event.title,
-        description: event.description,
-        filePath: event.filePath,
+        title: event.title.trim(),
+        description: event.description?.trim(),
+        filePath: event.filePath.trim(),
         type: event.type,
         category: event.category,
-        duration: event.duration, // Use actual duration from event
+        duration: event.duration,
         createdAt: DateTime.now(),
-        sourceUrl: event.sourceUrl,
+        sourceUrl: event.sourceUrl?.trim(),
       );
 
       await _addMediaUseCase(mediaItem);
@@ -128,7 +159,11 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       // Reload media items
       add(LoadMediaItems());
     } catch (e) {
-      emit(MediaError('Failed to add media item: ${e.toString()}'));
+      final errorMessage = _getErrorMessage(e, '添加媒体项目');
+      emit(MediaError(errorMessage));
+      if (kDebugMode) {
+        print('Error adding media item: $e');
+      }
     }
   }
 
@@ -137,6 +172,17 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     Emitter<MediaState> emit,
   ) async {
     try {
+      emit(MediaUpdating());
+
+      // 验证媒体项目
+      if (event.mediaItem.id.isEmpty) {
+        throw ArgumentError('Media item ID cannot be empty');
+      }
+
+      if (event.mediaItem.title.trim().isEmpty) {
+        throw ArgumentError('Media item title cannot be empty');
+      }
+
       await _updateMediaItemUseCase(event.mediaItem);
       emit(MediaUpdated());
 
@@ -152,7 +198,11 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
         add(LoadMediaItems());
       }
     } catch (e) {
-      emit(MediaError('Failed to update media item: ${e.toString()}'));
+      final errorMessage = _getErrorMessage(e, '更新媒体项目');
+      emit(MediaError(errorMessage));
+      if (kDebugMode) {
+        print('Error updating media item: $e');
+      }
     }
   }
 
@@ -161,6 +211,13 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     Emitter<MediaState> emit,
   ) async {
     try {
+      emit(FavoriteToggling());
+
+      // 验证ID
+      if (event.id.isEmpty) {
+        throw ArgumentError('Media item ID cannot be empty');
+      }
+
       await _toggleFavoriteUseCase(event.id, event.isFavorite);
       emit(FavoriteToggled(event.id, event.isFavorite));
 
@@ -174,7 +231,11 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
         }
       }
     } catch (e) {
-      emit(MediaError('Failed to toggle favorite: ${e.toString()}'));
+      final errorMessage = _getErrorMessage(e, '切换收藏状态');
+      emit(MediaError(errorMessage));
+      if (kDebugMode) {
+        print('Error toggling favorite for ${event.id}: $e');
+      }
     }
   }
 
@@ -184,6 +245,12 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
   ) async {
     try {
       emit(MediaDeleting());
+
+      // 验证ID
+      if (event.id.isEmpty) {
+        throw ArgumentError('Media item ID cannot be empty');
+      }
+
       await _deleteMediaItemUseCase(event.id);
       emit(MediaDeleted());
 
@@ -195,7 +262,11 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
         add(LoadMediaItems());
       }
     } catch (e) {
-      emit(MediaError('Failed to delete media item: ${e.toString()}'));
+      final errorMessage = _getErrorMessage(e, '删除媒体项目');
+      emit(MediaError(errorMessage));
+      if (kDebugMode) {
+        print('Error deleting media item ${event.id}: $e');
+      }
     }
   }
 
@@ -205,18 +276,55 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
   ) async {
     try {
       emit(MediaLoading());
+
+      // 验证搜索查询
+      if (event.query.trim().isEmpty) {
+        // 如果查询为空，返回所有项目
+        final allItems = await _getMediaItemsUseCase();
+        emit(MediaLoaded(allItems, currentCategory: '全部'));
+        return;
+      }
+
       final allItems = await _getMediaItemsUseCase();
+      final query = event.query.trim().toLowerCase();
+
       final filteredItems = allItems.where((item) {
-        return item.title.toLowerCase().contains(event.query.toLowerCase()) ||
-            item.category.toLowerCase().contains(event.query.toLowerCase()) ||
-            (item.description?.toLowerCase().contains(
-                  event.query.toLowerCase(),
-                ) ??
-                false);
+        return item.title.toLowerCase().contains(query) ||
+            item.category.name.toLowerCase().contains(query) ||
+            (item.description?.toLowerCase().contains(query) ?? false) ||
+            item.tags.any((tag) => tag.toLowerCase().contains(query));
       }).toList();
+
       emit(MediaLoaded(filteredItems, currentCategory: '搜索结果'));
     } catch (e) {
-      emit(MediaError('Failed to search media items: ${e.toString()}'));
+      final errorMessage = _getErrorMessage(e, '搜索媒体项目');
+      emit(MediaError(errorMessage));
+      if (kDebugMode) {
+        print('Error searching media items with query "${event.query}": $e');
+      }
     }
+  }
+
+  /// 获取用户友好的错误信息
+  String _getErrorMessage(dynamic error, String operation) {
+    if (error is ArgumentError) {
+      return '输入参数错误：${error.message}';
+    } else if (error is FormatException) {
+      return '数据格式错误：${error.message}';
+    } else if (error is Exception) {
+      final message = error.toString();
+      if (message.contains('database')) {
+        return '数据库操作失败，请稍后重试';
+      } else if (message.contains('network') ||
+          message.contains('connection')) {
+        return '网络连接失败，请检查网络设置';
+      } else if (message.contains('permission')) {
+        return '权限不足，请检查应用权限设置';
+      } else if (message.contains('storage') || message.contains('file')) {
+        return '存储空间不足或文件访问失败';
+      }
+    }
+
+    return '$operation失败：${error.toString()}';
   }
 }

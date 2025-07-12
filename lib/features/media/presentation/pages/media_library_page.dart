@@ -7,8 +7,9 @@ import '../bloc/media_bloc.dart';
 import '../bloc/media_event.dart';
 import '../bloc/media_state.dart';
 import '../../../../core/router/app_router.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../domain/entities/media_item.dart';
+import '../../../../core/constants/media_category.dart';
 
 class MediaLibraryPage extends StatefulWidget {
   const MediaLibraryPage({super.key});
@@ -39,9 +40,9 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   List<String> get _categories {
     final localizations = AppLocalizations.of(context);
     if (localizations == null) {
-      return ['All', ...AppConstants.defaultCategories];
+      return ['All'];
     }
-    
+
     return [
       localizations.mediaLibraryCategoryAll,
       localizations.categoryNameMeditation,
@@ -86,7 +87,8 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  AppLocalizations.of(context)?.mediaLibraryTitle ?? 'Media Library',
+                  AppLocalizations.of(context)?.mediaLibraryTitle ??
+                      'Media Library',
                   style: theme.textTheme.headlineLarge?.copyWith(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.bold,
@@ -124,7 +126,11 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText: AppLocalizations.of(context)?.mediaLibrarySearchHint ?? 'Search meditation materials...',
+                        hintText:
+                            AppLocalizations.of(
+                              context,
+                            )?.mediaLibrarySearchHint ??
+                            'Search meditation materials...',
                         hintStyle: TextStyle(
                           color: theme.colorScheme.onSurface.withValues(
                             alpha: 0.6,
@@ -263,7 +269,11 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
               children: [
                 const Icon(Icons.error_outline, size: 64, color: Colors.grey),
                 const SizedBox(height: 16),
-                Text(AppLocalizations.of(context)?.mediaLibraryLoadFailed ?? 'Load Failed', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  AppLocalizations.of(context)?.mediaLibraryLoadFailed ??
+                      'Load Failed',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   state.message,
@@ -277,7 +287,9 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                       LoadMediaItemsByCategory(_selectedCategory),
                     );
                   },
-                  child: Text(AppLocalizations.of(context)?.mediaLibraryRetry ?? 'Retry'),
+                  child: Text(
+                    AppLocalizations.of(context)?.mediaLibraryRetry ?? 'Retry',
+                  ),
                 ),
               ],
             ),
@@ -296,10 +308,17 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                     color: Colors.grey,
                   ),
                   const SizedBox(height: 16),
-                  Text(AppLocalizations.of(context)?.mediaLibraryNoMaterials ?? 'No Materials', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    AppLocalizations.of(context)?.mediaLibraryNoMaterials ??
+                        'No Materials',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 8),
                   Text(
-                    AppLocalizations.of(context)?.mediaLibraryAddMaterialsHint ?? 'Click the top-right button to add materials',
+                    AppLocalizations.of(
+                          context,
+                        )?.mediaLibraryAddMaterialsHint ??
+                        'Click the top-right button to add materials',
                     style: const TextStyle(color: Colors.grey),
                   ),
                 ],
@@ -320,7 +339,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
     );
   }
 
-  Widget _buildGridView(List<dynamic> mediaItems) {
+  Widget _buildGridView(List<MediaItem> mediaItems) {
     return LayoutBuilder(
       builder: (context, constraints) {
         // 响应式设计：根据屏幕宽度计算列数和间距
@@ -356,53 +375,144 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
           ),
           itemCount: mediaItems.length,
           itemBuilder: (context, index) {
-            final item = mediaItems[index];
-            return AnimatedMediaCard(
-              title: item.title,
-              duration:
-                  '${item.duration ~/ 60}:${(item.duration % 60).toString().padLeft(2, '0')}',
-              category: item.category,
-              isListView: false,
-              onTap: () => _playMedia(item.id),
-            );
+            try {
+              final item = mediaItems[index];
+              return _buildMediaCard(item, false);
+            } catch (e) {
+              // 如果单个项目渲染失败，显示错误占位符
+              return _buildErrorCard('项目渲染失败');
+            }
           },
         );
       },
     );
   }
 
-  Widget _buildListView(List<dynamic> mediaItems) {
+  Widget _buildListView(List<MediaItem> mediaItems) {
     return ListView.builder(
       itemCount: mediaItems.length,
       itemBuilder: (context, index) {
-        final item = mediaItems[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: AnimatedMediaCard(
-            title: item.title,
-            duration:
-                '${item.duration ~/ 60}:${(item.duration % 60).toString().padLeft(2, '0')}',
-            category: item.category,
-            isListView: true,
-            onTap: () => _playMedia(item.id),
-          ),
-        );
+        try {
+          final item = mediaItems[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildMediaCard(item, true),
+          );
+        } catch (e) {
+          // 如果单个项目渲染失败，显示错误占位符
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildErrorCard('项目渲染失败'),
+          );
+        }
       },
     );
   }
 
+  Widget _buildMediaCard(MediaItem item, bool isListView) {
+    try {
+      // 安全地格式化时长
+      String formattedDuration = '0:00';
+      if (item.duration > 0) {
+        final minutes = item.duration ~/ 60;
+        final seconds = item.duration % 60;
+        formattedDuration = '$minutes:${seconds.toString().padLeft(2, '0')}';
+      }
+
+      // 安全地获取分类显示名称
+      String categoryDisplayName = '未知分类';
+      try {
+        categoryDisplayName = item.category.getDisplayName(context);
+      } catch (e) {
+        // 如果获取分类名称失败，使用默认值
+        categoryDisplayName = item.category.name;
+      }
+
+      return AnimatedMediaCard(
+        title: item.title.isNotEmpty ? item.title : '未命名',
+        duration: formattedDuration,
+        category: categoryDisplayName,
+        isListView: isListView,
+        onTap: () => _playMedia(item.id),
+      );
+    } catch (e) {
+      return _buildErrorCard('卡片渲染失败');
+    }
+  }
+
+  Widget _buildErrorCard(String errorMessage) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: Colors.red),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              errorMessage,
+              style: TextStyle(color: Colors.red),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddMediaDialog() {
-    AddMediaDialog.show(context).then((_) {
-      // Refresh media list after adding
+    try {
+      AddMediaDialog.show(context)
+          .then((_) {
+            // Refresh media list after adding
+            if (mounted) {
+              context.read<MediaBloc>().add(
+                LoadMediaItemsByCategory(_selectedCategory),
+              );
+            }
+          })
+          .catchError((error) {
+            // 处理对话框错误
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('添加媒体对话框错误：$error'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          });
+    } catch (e) {
+      // 处理显示对话框时的错误
       if (mounted) {
-        context.read<MediaBloc>().add(
-          LoadMediaItemsByCategory(_selectedCategory),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('无法打开添加媒体对话框：$e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
-    });
+    }
   }
 
   void _playMedia(String mediaId) {
-    context.go('${AppRouter.player}?mediaId=$mediaId');
+    try {
+      if (mediaId.isEmpty) {
+        throw ArgumentError('Media ID cannot be empty');
+      }
+
+      context.go('${AppRouter.player}?mediaId=$mediaId');
+    } catch (e) {
+      // 处理导航错误
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('无法播放媒体：$e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }

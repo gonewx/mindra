@@ -13,6 +13,7 @@ import '../../../../features/media/presentation/bloc/media_event.dart';
 import '../../../../features/media/presentation/widgets/add_media_dialog.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/constants/media_category.dart';
 
 class PlayerPage extends StatefulWidget {
   final String? mediaId;
@@ -65,9 +66,13 @@ class _PlayerPageState extends State<PlayerPage> {
       debugPrint('Error initializing player: $e');
       if (mounted) {
         final localizations = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(localizations.playerInitializationFailed(e.toString()))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              localizations.playerInitializationFailed(e.toString()),
+            ),
+          ),
+        );
       }
     }
   }
@@ -92,7 +97,9 @@ class _PlayerPageState extends State<PlayerPage> {
             Text(localizations.meditationCongratulations),
             const SizedBox(height: 16),
             Text(
-              localizations.meditationPracticeDuration((_playerService.totalDuration / 60).round()),
+              localizations.meditationPracticeDuration(
+                (_playerService.totalDuration / 60).round(),
+              ),
               style: Theme.of(context).textTheme.bodyLarge,
             ),
           ],
@@ -147,23 +154,24 @@ class _PlayerPageState extends State<PlayerPage> {
     IconData iconData;
     List<Color> gradientColors;
 
-    final category = _currentMedia?.category ?? '';
-    if (category.contains(localizations.categoryMeditation) || category.contains(localizations.categoryMindfulness)) {
+    final category = _currentMedia?.category;
+    if (category == MediaCategory.meditation ||
+        category == MediaCategory.mindfulness) {
       iconData = Icons.self_improvement;
       gradientColors = [const Color(0xFF6B73FF), const Color(0xFF9B59B6)];
-    } else if (category.contains(localizations.categoryBedtime) || category.contains(localizations.categorySleep)) {
+    } else if (category == MediaCategory.sleep) {
       iconData = Icons.bedtime;
       gradientColors = [const Color(0xFF667eea), const Color(0xFF764ba2)];
-    } else if (category.contains(localizations.categoryFocus) || category.contains(localizations.categoryStudy)) {
+    } else if (category == MediaCategory.focus || category == MediaCategory.study) {
       iconData = Icons.psychology;
       gradientColors = [const Color(0xFF11998e), const Color(0xFF38ef7d)];
-    } else if (category.contains(localizations.categoryRelax) || category.contains(localizations.categorySoothing)) {
+    } else if (category == MediaCategory.relaxation || category == MediaCategory.soothing) {
       iconData = Icons.spa;
       gradientColors = [const Color(0xFFa8edea), const Color(0xFFfed6e3)];
-    } else if (category.contains(localizations.categoryNature) || category.contains(localizations.categoryEnvironment)) {
+    } else if (category == MediaCategory.nature || category == MediaCategory.environment) {
       iconData = Icons.nature;
       gradientColors = [const Color(0xFF56ab2f), const Color(0xFFa8e6cf)];
-    } else if (category.contains(localizations.categoryBreathing)) {
+    } else if (category == MediaCategory.breathing) {
       iconData = Icons.air;
       gradientColors = [const Color(0xFF9B59B6), const Color(0xFF8E44AD)];
     } else {
@@ -407,7 +415,11 @@ class _PlayerPageState extends State<PlayerPage> {
                   _playerService.toggleShuffle();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(_isShuffled ? localizations.playerShuffleEnabled : localizations.playerShuffleDisabled),
+                      content: Text(
+                        _isShuffled
+                            ? localizations.playerShuffleEnabled
+                            : localizations.playerShuffleDisabled,
+                      ),
                     ),
                   );
                 },
@@ -420,9 +432,11 @@ class _PlayerPageState extends State<PlayerPage> {
                   final localizations = AppLocalizations.of(context)!;
                   _playerService.toggleRepeatMode();
                   final modeText = _getRepeatModeText(localizations);
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(localizations.playerRepeatMode(modeText))));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.playerRepeatMode(modeText)),
+                    ),
+                  );
                 },
               ),
               const SizedBox(width: 16),
@@ -477,7 +491,7 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _showMoreOptions() {
     final localizations = AppLocalizations.of(context)!;
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -624,20 +638,26 @@ class _PlayerPageState extends State<PlayerPage> {
     // Use MediaBloc to update favorite status in database
     if (mounted) {
       final localizations = AppLocalizations.of(context)!;
-      
+
       context.read<MediaBloc>().add(
         ToggleFavorite(_currentMedia!.id, _isFavorited),
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isFavorited ? localizations.favoritesAdded : localizations.favoritesRemoved)),
+        SnackBar(
+          content: Text(
+            _isFavorited
+                ? localizations.favoritesAdded
+                : localizations.favoritesRemoved,
+          ),
+        ),
       );
     }
   }
 
   void _showAddToPlaylistDialog() {
     if (_currentMedia == null) return;
-    
+
     final localizations = AppLocalizations.of(context)!;
 
     showDialog(
@@ -651,26 +671,42 @@ class _PlayerPageState extends State<PlayerPage> {
             const SizedBox(height: 16),
 
             // Mock playlist options
-            _buildPlaylistOption(localizations.playlistMyFavorites, Icons.favorite, () {
-              Navigator.pop(context);
-              _addToPlaylist(localizations.playlistMyFavorites);
-            }),
-            _buildPlaylistOption(localizations.playlistMindfulnessPractice, Icons.spa, () {
-              Navigator.pop(context);
-              _addToPlaylist(localizations.playlistMindfulnessPractice);
-            }),
-            _buildPlaylistOption(localizations.playlistSleepAlbum, Icons.bedtime, () {
-              Navigator.pop(context);
-              _addToPlaylist(localizations.playlistSleepAlbum);
-            }),
+            _buildPlaylistOption(
+              localizations.playlistMyFavorites,
+              Icons.favorite,
+              () {
+                Navigator.pop(context);
+                _addToPlaylist(localizations.playlistMyFavorites);
+              },
+            ),
+            _buildPlaylistOption(
+              localizations.playlistMindfulnessPractice,
+              Icons.spa,
+              () {
+                Navigator.pop(context);
+                _addToPlaylist(localizations.playlistMindfulnessPractice);
+              },
+            ),
+            _buildPlaylistOption(
+              localizations.playlistSleepAlbum,
+              Icons.bedtime,
+              () {
+                Navigator.pop(context);
+                _addToPlaylist(localizations.playlistSleepAlbum);
+              },
+            ),
 
             const Divider(),
 
             // Create new playlist option
-            _buildPlaylistOption(localizations.playlistCreateNew, Icons.add, () {
-              Navigator.pop(context);
-              _showCreatePlaylistDialog();
-            }),
+            _buildPlaylistOption(
+              localizations.playlistCreateNew,
+              Icons.add,
+              () {
+                Navigator.pop(context);
+                _showCreatePlaylistDialog();
+              },
+            ),
           ],
         ),
         actions: [
@@ -694,13 +730,18 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _addToPlaylist(String playlistName) {
     if (_currentMedia == null) return;
-    
+
     final localizations = AppLocalizations.of(context)!;
 
     // TODO: Implement actual playlist functionality
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(localizations.playlistAddedToPlaylist(_currentMedia!.title, playlistName)),
+        content: Text(
+          localizations.playlistAddedToPlaylist(
+            _currentMedia!.title,
+            playlistName,
+          ),
+        ),
         backgroundColor: Colors.green,
       ),
     );
@@ -742,7 +783,7 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _downloadCurrentMedia() {
     if (_currentMedia == null) return;
-    
+
     final localizations = AppLocalizations.of(context)!;
 
     showDialog(
@@ -779,7 +820,7 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _startDownload() {
     if (_currentMedia == null) return;
-    
+
     final localizations = AppLocalizations.of(context)!;
 
     // TODO: Implement actual download functionality
@@ -797,7 +838,9 @@ class _PlayerPageState extends State<PlayerPage> {
         final localizations = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(localizations.downloadCompleted(_currentMedia!.title)),
+            content: Text(
+              localizations.downloadCompleted(_currentMedia!.title),
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -807,12 +850,13 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _shareCurrentMedia() {
     if (_currentMedia == null) return;
-    
+
     final localizations = AppLocalizations.of(context)!;
 
-    final shareText = '''
+    final shareText =
+        '''
 ${localizations.shareListeningTo(_currentMedia!.title)}
-${localizations.shareCategory(_currentMedia!.category)}
+  ${localizations.shareCategory(_currentMedia!.category.getDisplayName(context))}
 ${_currentMedia!.description?.isNotEmpty == true ? localizations.shareDescription(_currentMedia!.description!) : ''}
 
 ${localizations.shareAppSignature}
@@ -861,7 +905,7 @@ ${localizations.shareAppSignature}
 
   void _showTimerDialog() {
     final localizations = AppLocalizations.of(context)!;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -876,7 +920,9 @@ ${localizations.shareAppSignature}
                   Navigator.pop(context);
                   _playerService.setSleepTimer(minutes);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(localizations.timerSetMessage(minutes))),
+                    SnackBar(
+                      content: Text(localizations.timerSetMessage(minutes)),
+                    ),
                   );
                 },
               ),
@@ -886,9 +932,9 @@ ${localizations.shareAppSignature}
               onTap: () {
                 Navigator.pop(context);
                 _playerService.cancelSleepTimer();
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(localizations.timerCancelled)));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(localizations.timerCancelled)),
+                );
               },
             ),
           ],

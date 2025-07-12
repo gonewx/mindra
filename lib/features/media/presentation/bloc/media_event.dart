@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import '../../domain/entities/media_item.dart';
+import '../../../../core/constants/media_category.dart';
 
 abstract class MediaEvent extends Equatable {
   @override
@@ -10,7 +11,7 @@ abstract class MediaEvent extends Equatable {
 class LoadMediaItems extends MediaEvent {}
 
 class LoadMediaItemsByCategory extends MediaEvent {
-  final String category;
+  final String category; // 保持String类型以支持"全部"等特殊分类
 
   LoadMediaItemsByCategory(this.category);
 
@@ -24,7 +25,7 @@ class AddMediaItem extends MediaEvent {
   final String title;
   final String? description;
   final String filePath;
-  final String category;
+  final MediaCategory category;
   final String? sourceUrl;
   final MediaType type;
   final int duration;

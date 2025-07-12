@@ -3,6 +3,7 @@ import '../../../goals/domain/entities/user_goal.dart';
 import '../../../goals/data/services/goal_service.dart';
 import '../../../../core/services/reminder_scheduler_service.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/constants/weekday.dart';
 
 class ReminderSettingsDialog extends StatefulWidget {
   final UserGoal? currentGoal;
@@ -22,7 +23,7 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
   late TimeOfDay _selectedReminderTime;
   bool _isReminderEnabled = true;
   bool _isLoading = false;
-  List<String> _selectedDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  List<Weekday> _selectedDays = WeekdayExtension.allWeekdays;
   bool _enableSound = true;
   bool _enableVibration = true;
 
@@ -35,8 +36,7 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
         widget.currentGoal?.reminderTime ?? const TimeOfDay(hour: 9, minute: 0);
     _isReminderEnabled = widget.currentGoal?.isReminderEnabled ?? false;
     _selectedDays =
-        widget.currentGoal?.reminderDays ??
-        ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        widget.currentGoal?.reminderDays ?? WeekdayExtension.allWeekdays;
     _enableSound = widget.currentGoal?.enableSound ?? true;
     _enableVibration = widget.currentGoal?.enableVibration ?? true;
   }
@@ -94,7 +94,11 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
 
               // 提醒时间
               if (_isReminderEnabled) ...[
-                _buildSectionTitle(l10n.remindersTime, Icons.access_time_outlined, theme),
+                _buildSectionTitle(
+                  l10n.remindersTime,
+                  Icons.access_time_outlined,
+                  theme,
+                ),
                 const SizedBox(height: 12),
                 _buildTimeSelector(theme, l10n),
                 const SizedBox(height: 24),
@@ -110,7 +114,11 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
                 const SizedBox(height: 24),
 
                 // 提醒方式
-                _buildSectionTitle(l10n.remindersMethod, Icons.notifications_outlined, theme),
+                _buildSectionTitle(
+                  l10n.remindersMethod,
+                  Icons.notifications_outlined,
+                  theme,
+                ),
                 const SizedBox(height: 12),
                 _buildNotificationOptions(theme, l10n),
                 const SizedBox(height: 32),
@@ -257,7 +265,9 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
                     Text(
                       l10n.remindersTimeLabel,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -282,10 +292,15 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
               icon: Icon(Icons.access_time, size: 18),
               label: Text(l10n.remindersSelectTime),
               style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                backgroundColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.1,
+                ),
                 foregroundColor: theme.colorScheme.primary,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -298,15 +313,7 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
   }
 
   Widget _buildDaySelector(ThemeData theme, AppLocalizations l10n) {
-    final days = [
-      l10n.weekdaysMonday,
-      l10n.weekdaysTuesday,
-      l10n.weekdaysWednesday,
-      l10n.weekdaysThursday,
-      l10n.weekdaysFriday,
-      l10n.weekdaysSaturday,
-      l10n.weekdaysSunday,
-    ];
+    final days = WeekdayExtension.allWeekdays;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -344,10 +351,7 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
-                  constraints: BoxConstraints(
-                    minWidth: 60,
-                    maxWidth: 120,
-                  ),
+                  constraints: BoxConstraints(minWidth: 60, maxWidth: 120),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 8,
@@ -364,7 +368,7 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
                     ),
                   ),
                   child: Text(
-                    day,
+                    day.getDisplayName(context),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: isSelected
                           ? theme.colorScheme.onPrimary
@@ -603,7 +607,11 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isReminderEnabled ? l10n.remindersSettingsSaved : l10n.remindersDisabled),
+            content: Text(
+              _isReminderEnabled
+                  ? l10n.remindersSettingsSaved
+                  : l10n.remindersDisabled,
+            ),
             backgroundColor: Theme.of(context).colorScheme.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(

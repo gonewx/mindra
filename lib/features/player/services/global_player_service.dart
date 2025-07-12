@@ -50,7 +50,7 @@ class GlobalPlayerService extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
 
   String get title => _currentMedia?.title ?? '未选择素材';
-  String get category => _currentMedia?.category ?? '';
+  String get category => _currentMedia?.category.name ?? '';
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -152,7 +152,7 @@ class GlobalPlayerService extends ChangeNotifier {
 
     try {
       final sessionType = MeditationSessionManager.getSessionTypeFromCategory(
-        _currentMedia!.category,
+        _currentMedia!.category.name,
       );
       final soundEffects = _soundEffectsService.getActiveSoundEffects();
 

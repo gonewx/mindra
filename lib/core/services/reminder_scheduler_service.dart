@@ -3,6 +3,7 @@ import '../services/notification_service.dart';
 import '../../features/goals/domain/entities/user_goal.dart';
 import '../../features/goals/data/services/goal_service.dart';
 import '../localization/app_localizations.dart';
+import '../constants/weekday.dart';
 
 /// 提醒调度服务
 /// 负责管理和调度所有冥想提醒
@@ -129,22 +130,8 @@ class ReminderSchedulerService {
   }
 
   /// 解析提醒日期
-  List<int> _parseReminderDays(List<String> reminderDays) {
-    final Map<String, int> dayMap = {
-      '周一': 1,
-      '周二': 2,
-      '周三': 3,
-      '周四': 4,
-      '周五': 5,
-      '周六': 6,
-      '周日': 7,
-    };
-
-    return reminderDays
-        .map((day) => dayMap[day])
-        .where((day) => day != null)
-        .cast<int>()
-        .toList();
+  List<int> _parseReminderDays(List<Weekday> reminderDays) {
+    return reminderDays.flutterWeekdays;
   }
 
   /// 请求通知权限
@@ -276,7 +263,7 @@ class ReminderSchedulerService {
   }
 
   /// 更新提醒日期
-  Future<void> updateReminderDays(List<String> days) async {
+  Future<void> updateReminderDays(List<Weekday> days) async {
     try {
       final goal = await GoalService.getGoal();
       final updatedGoal = goal.copyWith(

@@ -6,6 +6,7 @@ import '../../domain/entities/media_item.dart';
 import '../bloc/media_bloc.dart';
 import '../bloc/media_event.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/media_category.dart';
 import '../../../../core/audio/cross_platform_audio_player.dart';
 import '../../../../core/localization/app_localizations.dart';
 
@@ -44,26 +45,15 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
   final _urlController = TextEditingController();
   final _thumbnailController = TextEditingController();
   final _durationController = TextEditingController();
-  String _selectedCategory = '';
+  MediaCategory? _selectedCategory;
   bool _isFromFile = true;
   String? _selectedFilePath;
   String? _selectedFileName;
   Uint8List? _selectedFileBytes;
   bool _isLoadingDuration = false;
 
-  List<String> get _categories {
-    final l10n = AppLocalizations.of(context);
-    if (l10n == null) {
-      return AppConstants.defaultCategories;
-    }
-    
-    return [
-      l10n.categoryNameMeditation,
-      l10n.categoryNameBedtime,
-      l10n.categoryNameFocus,
-      l10n.categoryNameRelax,
-      l10n.categoryNameNatureSounds,
-    ];
+  List<MediaCategory> get _categories {
+    return MediaCategoryExtension.defaultCategories;
   }
 
   bool get _isEditMode => widget.editingMedia != null;
@@ -75,11 +65,11 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {
-          if (_selectedCategory.isEmpty && _categories.isNotEmpty) {
+          if (_selectedCategory == null && _categories.isNotEmpty) {
             _selectedCategory = _categories.first;
           }
         });
-        
+
         if (_isEditMode) {
           _initializeForEdit();
         }
@@ -153,7 +143,9 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                 children: [
                   Expanded(
                     child: Text(
-                      _isEditMode ? l10n.dialogEditMediaTitle : l10n.dialogAddMediaTitle,
+                      _isEditMode
+                          ? l10n.dialogEditMediaTitle
+                          : l10n.dialogAddMediaTitle,
                       style: theme.textTheme.titleLarge?.copyWith(
                         color: isDark
                             ? const Color(0xFF32B8C6)
@@ -606,7 +598,9 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                             : theme.colorScheme.onSurface,
                       ),
                       decoration: InputDecoration(
-                        hintText: _isLoadingDuration ? l10n.dialogDurationLoading : l10n.dialogDurationHint,
+                        hintText: _isLoadingDuration
+                            ? l10n.dialogDurationLoading
+                            : l10n.dialogDurationHint,
                         hintStyle: TextStyle(
                           color: isDark
                               ? Colors.white54
@@ -685,7 +679,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                               : theme.colorScheme.outline,
                         ),
                       ),
-                      child: DropdownButtonFormField<String>(
+                      child: DropdownButtonFormField<MediaCategory>(
                         value: _selectedCategory,
                         style: TextStyle(
                           color: isDark
@@ -704,7 +698,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                           return DropdownMenuItem(
                             value: category,
                             child: Text(
-                              category,
+                              category.getDisplayName(context),
                               style: TextStyle(
                                 color: isDark
                                     ? Colors.white
@@ -921,7 +915,9 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Text(_isEditMode ? l10n.dialogUpdate : l10n.dialogSave),
+                      child: Text(
+                        _isEditMode ? l10n.dialogUpdate : l10n.dialogSave,
+                      ),
                     ),
                   ),
                 ],
@@ -935,7 +931,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
   void _pickFile() async {
     final l10n = AppLocalizations.of(context)!;
-    
+
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -973,16 +969,16 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
         await _getDurationFromFile();
 
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.dialogFileSelectedSuccess(file.name))));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.dialogFileSelectedSuccess(file.name))),
+          );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.dialogFileSelectionFailed(e.toString()))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.dialogFileSelectionFailed(e.toString()))),
+        );
       }
     }
   }
@@ -1042,7 +1038,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
   void _addMedia() {
     final l10n = AppLocalizations.of(context)!;
-    
+
     if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -1098,7 +1094,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
             ? null
             : _descriptionController.text,
         filePath: filePath,
-        category: _selectedCategory,
+        category: _selectedCategory!,
         sourceUrl: _isFromFile ? null : _urlController.text,
         type: mediaType,
         duration: duration,
@@ -1116,7 +1112,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
   void _updateMedia() {
     final l10n = AppLocalizations.of(context)!;
-    
+
     if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -1143,7 +1139,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
       description: _descriptionController.text.isEmpty
           ? null
           : _descriptionController.text,
-      category: _selectedCategory,
+      category: _selectedCategory!,
       thumbnailPath: _thumbnailController.text.isEmpty
           ? null
           : _thumbnailController.text,

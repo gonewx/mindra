@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import '../../features/media/domain/entities/media_item.dart';
 import '../../features/meditation/domain/entities/meditation_session.dart';
+import '../constants/media_category.dart';
 
 // Conditional import for web-only functionality
 import 'web_storage_helper_io.dart' as html if (dart.library.html) 'dart:html';
@@ -85,7 +86,7 @@ class WebStorageHelper {
   ) async {
     final items = await getMediaItems();
     if (category == '全部') return items;
-    return items.where((item) => item.category == category).toList();
+    return items.where((item) => item.category.name == category).toList();
   }
 
   static Future<List<MediaItem>> getFavoriteMediaItems() async {
@@ -101,6 +102,24 @@ class WebStorageHelper {
     final index = items.indexWhere((item) => item.id == id);
     if (index >= 0) {
       final currentItem = items[index];
+      
+      // Parse category from updates if provided
+      MediaCategory category = currentItem.category;
+      if (updates['category'] != null) {
+        final categoryValue = updates['category'];
+        if (categoryValue is MediaCategory) {
+          category = categoryValue;
+                 } else if (categoryValue is String) {
+           // Parse category from string (could be enum name or localized string)
+           try {
+             category = MediaCategory.values.firstWhere((e) => e.name == categoryValue);
+           } catch (_) {
+             // If failed, try from localized string (compatible with old data)
+             category = MediaCategoryExtension.fromLocalizedString(categoryValue);
+           }
+         }
+      }
+      
       final updatedItem = MediaItem(
         id: currentItem.id,
         title: updates['title'] ?? currentItem.title,
@@ -110,7 +129,7 @@ class WebStorageHelper {
         type: MediaType.values.firstWhere(
           (type) => type.name == (updates['type'] ?? currentItem.type.name),
         ),
-        category: updates['category'] ?? currentItem.category,
+        category: category,
         duration: updates['duration'] ?? currentItem.duration,
         createdAt: currentItem.createdAt,
         lastPlayedAt: updates['last_played_at'] != null
