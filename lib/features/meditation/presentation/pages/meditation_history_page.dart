@@ -482,7 +482,8 @@ class _CalendarGrid extends StatelessWidget {
     final localizations = AppLocalizations.of(context)!;
     final today = DateTime.now();
     final daysInMonth = DateTime(today.year, today.month + 1, 0).day;
-    final firstDayWeekday = DateTime(today.year, today.month, 1).weekday;
+    // Convert weekday to Sunday-based index (0=Sunday, 1=Monday, ..., 6=Saturday)
+    final firstDayWeekday = DateTime(today.year, today.month, 1).weekday % 7;
 
     // Create a map for quick lookup of meditation records
     final Map<int, MeditationDayRecord> recordsMap = {};
@@ -532,7 +533,7 @@ class _CalendarGrid extends StatelessWidget {
           ),
           itemCount: 42, // 6周 * 7天
           itemBuilder: (context, index) {
-            final dayNumber = index - firstDayWeekday + 2;
+            final dayNumber = index - firstDayWeekday + 1;
             final isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
             final isToday = isCurrentMonth && dayNumber == today.day;
             final dayRecord = recordsMap[dayNumber];
