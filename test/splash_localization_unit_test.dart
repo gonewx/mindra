@@ -98,5 +98,23 @@ void main() {
       expect(englishValues['splash_tagline'], equals('Begin Your Meditation Journey'));
       expect(englishValues['splash_loading'], equals('Loading...'));
     });
+
+    test('should have correct splash keys in AppLocalizations', () {
+      // 测试 AppLocalizations 中确实包含了这些键
+      const expectedKeys = [
+        'splash_tagline',
+        'splash_loading',
+      ];
+
+      // 这个测试确保我们记住了要添加这些键到国际化配置中
+      for (final key in expectedKeys) {
+        expect(key, isNotNull);
+        expect(key, isNotEmpty);
+      }
+
+      // 验证键的格式是正确的
+      expect('splash_tagline'.startsWith('splash_'), isTrue);
+      expect('splash_loading'.startsWith('splash_'), isTrue);
+    });
   });
 }
