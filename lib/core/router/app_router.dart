@@ -29,12 +29,18 @@ class AppRouter {
       GoRoute(
         path: splash,
         name: 'splash',
-        builder: (context, state) => const SplashPage(),
+        pageBuilder: (context, state) => NoTransitionPage<void>(
+          key: state.pageKey,
+          child: const SplashPage(),
+        ),
       ),
       GoRoute(
         path: onboarding,
         name: 'onboarding',
-        builder: (context, state) => const OnboardingPage(),
+        pageBuilder: (context, state) => NoTransitionPage<void>(
+          key: state.pageKey,
+          child: const OnboardingPage(),
+        ),
       ),
       ShellRoute(
         builder: (context, state, child) {
@@ -47,36 +53,51 @@ class AppRouter {
           GoRoute(
             path: home,
             name: 'home',
-            builder: (context, state) => const HomePage(),
+            pageBuilder: (context, state) => NoTransitionPage<void>(
+              key: state.pageKey,
+              child: const HomePage(),
+            ),
           ),
           GoRoute(
             path: mediaLibrary,
             name: 'media-library',
-            builder: (context, state) => const MediaLibraryPage(),
+            pageBuilder: (context, state) => NoTransitionPage<void>(
+              key: state.pageKey,
+              child: const MediaLibraryPage(),
+            ),
           ),
           GoRoute(
             path: player,
             name: 'player',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final mediaId = state.uri.queryParameters['mediaId'];
               final timerMinutes = state.uri.queryParameters['timer'];
-              return PlayerPage(
-                mediaId: mediaId,
-                timerMinutes: timerMinutes != null
-                    ? int.tryParse(timerMinutes)
-                    : null,
+              return NoTransitionPage<void>(
+                key: state.pageKey,
+                child: PlayerPage(
+                  mediaId: mediaId,
+                  timerMinutes: timerMinutes != null
+                      ? int.tryParse(timerMinutes)
+                      : null,
+                ),
               );
             },
           ),
           GoRoute(
             path: meditationHistory,
             name: 'meditation-history',
-            builder: (context, state) => const MeditationHistoryPage(),
+            pageBuilder: (context, state) => NoTransitionPage<void>(
+              key: state.pageKey,
+              child: const MeditationHistoryPage(),
+            ),
           ),
           GoRoute(
             path: settings,
             name: 'settings',
-            builder: (context, state) => const SettingsPage(),
+            pageBuilder: (context, state) => NoTransitionPage<void>(
+              key: state.pageKey,
+              child: const SettingsPage(),
+            ),
           ),
         ],
       ),
