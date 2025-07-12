@@ -208,6 +208,16 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  '提醒时间可能会有几分钟的偏差，这是为了节省电池并符合系统政策。',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    fontSize: 11,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),

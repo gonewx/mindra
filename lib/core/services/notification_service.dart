@@ -71,28 +71,18 @@ class NotificationService {
         // 检查并请求通知权限
         final notificationStatus = await Permission.notification.request();
 
-        // 请求精确闹钟权限（Android 12+）
-        final alarmStatus = await Permission.scheduleExactAlarm.request();
-
         // Android 13+ 需要特殊处理
-        if (Platform.isAndroid) {
-          final androidInfo = await _flutterLocalNotificationsPlugin
-              .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin
-              >()
-              ?.requestNotificationsPermission();
+        final androidInfo = await _flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >()
+            ?.requestNotificationsPermission();
 
-          debugPrint('Android notification permission: $androidInfo');
-          debugPrint('Notification status: $notificationStatus');
-          debugPrint('Alarm status: $alarmStatus');
+        debugPrint('Android notification permission: $androidInfo');
+        debugPrint('Notification status: $notificationStatus');
 
-          return androidInfo == true &&
-              notificationStatus == PermissionStatus.granted &&
-              (alarmStatus == PermissionStatus.granted ||
-                  alarmStatus == PermissionStatus.limited);
-        }
-
-        return notificationStatus == PermissionStatus.granted;
+        return androidInfo == true &&
+            notificationStatus == PermissionStatus.granted;
       }
 
       // iOS 权限处理
@@ -121,15 +111,10 @@ class NotificationService {
     try {
       if (Platform.isAndroid) {
         final notificationStatus = await Permission.notification.status;
-        final alarmStatus = await Permission.scheduleExactAlarm.status;
 
-        debugPrint(
-          'Checking permissions - Notification: $notificationStatus, Alarm: $alarmStatus',
-        );
+        debugPrint('Checking permissions - Notification: $notificationStatus');
 
-        return notificationStatus == PermissionStatus.granted &&
-            (alarmStatus == PermissionStatus.granted ||
-                alarmStatus == PermissionStatus.limited);
+        return notificationStatus == PermissionStatus.granted;
       }
 
       if (Platform.isIOS) {
@@ -206,6 +191,7 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
       debugPrint('Notification scheduled: $title at $scheduledDate');
     } catch (e) {
@@ -256,6 +242,7 @@ class NotificationService {
           scheduledDate = scheduledDate.add(const Duration(days: 7));
         }
 
+        // 使用非精确定时的方式调度通知
         await _flutterLocalNotificationsPlugin.zonedSchedule(
           notificationId,
           title,
@@ -266,6 +253,7 @@ class NotificationService {
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
           matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         );
       }
 
