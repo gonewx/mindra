@@ -69,9 +69,17 @@ void main() {
       
       await themeProvider.initialize();
       
-      // 应该回退到系统语言或默认语言
+      // 当传入无效locale时，应该回退到系统语言或默认语言
       final locale = themeProvider.locale;
-      expect(['zh', 'en'], contains(locale.languageCode));
+      
+      // 验证locale不为null并且有有效的languageCode
+      expect(locale, isNotNull);
+      expect(locale.languageCode, isNotNull);
+      expect(locale.languageCode, isNotEmpty);
+      
+      // 验证它是支持的语言之一
+      final isValidLanguage = locale.languageCode == 'zh' || locale.languageCode == 'en';
+      expect(isValidLanguage, isTrue, reason: 'Language code should be zh or en, but got: ${locale.languageCode}');
     });
 
     test('should fallback to Chinese when system locale is unsupported', () async {

@@ -55,7 +55,18 @@ class ThemeProvider extends ChangeNotifier {
       }
       
       final parts = localeString.split('_');
-      _locale = Locale(parts[0], parts.length > 1 ? parts[1] : '');
+      final languageCode = parts[0];
+      
+      // 验证解析出的语言代码是否在支持的列表中
+      const supportedLanguages = ['zh', 'en'];
+      if (supportedLanguages.contains(languageCode)) {
+        _locale = Locale(languageCode, parts.length > 1 ? parts[1] : '');
+      } else {
+        // 如果语言代码无效，回退到系统语言
+        debugPrint('Invalid language code: $languageCode, falling back to system locale');
+        _locale = _getSystemLocale();
+      }
+      
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading locale: $e');
