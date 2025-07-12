@@ -53,6 +53,30 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
     ];
   }
 
+  // 将显示名称映射到枚举名称
+  String _getCategoryEnumName(String displayName) {
+    final localizations = AppLocalizations.of(context);
+    if (localizations == null) {
+      return displayName;
+    }
+
+    if (displayName == localizations.mediaLibraryCategoryAll) {
+      return '全部'; // 特殊处理"全部"分类
+    } else if (displayName == localizations.categoryNameMeditation) {
+      return 'meditation';
+    } else if (displayName == localizations.categoryNameBedtime) {
+      return 'sleep';
+    } else if (displayName == localizations.categoryNameFocus) {
+      return 'focus';
+    } else if (displayName == localizations.categoryNameRelax) {
+      return 'relaxation';
+    } else if (displayName == localizations.categoryNameNatureSounds) {
+      return 'nature';
+    }
+
+    return displayName; // 默认返回原始名称
+  }
+
   @override
   void initState() {
     super.initState();
@@ -208,8 +232,10 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                         setState(() {
                           _selectedCategory = category;
                         });
+                        // 使用枚举名称进行查询
+                        final enumName = _getCategoryEnumName(category);
                         context.read<MediaBloc>().add(
-                          LoadMediaItemsByCategory(category),
+                          LoadMediaItemsByCategory(enumName),
                         );
                       },
                       child: Container(
@@ -283,8 +309,10 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
+                    // 使用枚举名称进行查询
+                    final enumName = _getCategoryEnumName(_selectedCategory);
                     context.read<MediaBloc>().add(
-                      LoadMediaItemsByCategory(_selectedCategory),
+                      LoadMediaItemsByCategory(enumName),
                     );
                   },
                   child: Text(
