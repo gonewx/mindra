@@ -223,7 +223,13 @@ upload_with_fastlane() {
         log_success "Fastlane 上传成功"
     else
         log_error "Fastlane 上传失败"
-        exit 1
+        log_warning "如果这是首次上传，请先在 Google Play Console 中手动创建应用"
+        log_info "或者使用手动上传流程"
+        
+        # 显示手动上传指导
+        cd ..
+        manual_upload_guide
+        return 1
     fi
     cd ..
 }
@@ -356,7 +362,9 @@ main() {
     pre_release_validation
     
     if check_api_config; then
-        upload_with_fastlane
+        if ! upload_with_fastlane; then
+            log_warning "Fastlane 上传失败，显示手动上传指导"
+        fi
     else
         manual_upload_guide
     fi
