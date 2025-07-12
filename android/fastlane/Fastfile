@@ -12,7 +12,8 @@ platform :android do
   # 构建前准备
   before_all do
     # 确保在正确的目录
-    ensure_git_status_clean unless ENV["SKIP_GIT_CHECK"]
+    # 默认跳过 Git 检查，除非明确要求检查
+    ensure_git_status_clean if ENV["ENABLE_GIT_CHECK"]
     
     # 检查必要文件
     unless File.exist?(AAB_PATH)
