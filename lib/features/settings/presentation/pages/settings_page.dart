@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/theme_provider.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/localization/app_localizations.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -135,6 +137,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: Icons.info,
                   title: localizations.aboutApp,
                   onTap: _showAboutDialog,
+                ),
+                _SettingItem(
+                  icon: Icons.privacy_tip,
+                  title: localizations.privacyPolicy,
+                  onTap: _navigateToPrivacyPolicy,
                 ),
               ],
             ),
@@ -534,6 +541,10 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       children: [Text(localizations.aboutAppDescription)],
     );
+  }
+
+  void _navigateToPrivacyPolicy() {
+    context.go(AppRouter.privacyPolicy);
   }
 
   Widget _buildSettingsSection({

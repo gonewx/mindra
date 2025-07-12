@@ -8,6 +8,7 @@ import 'dart:io';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/di/injection_container.dart';
+import 'core/config/app_config_service.dart';
 import 'core/database/database_helper.dart';
 import 'core/services/reminder_scheduler_service.dart';
 import 'core/localization/app_localizations.dart';
@@ -50,6 +51,9 @@ class _MindraAppState extends State<MindraApp> {
 
       // 初始化依赖注入
       await configureDependencies();
+
+      // 初始化应用配置服务
+      await AppConfigService.initialize();
 
       // 初始化数据库
       await _initializeDatabaseServices();

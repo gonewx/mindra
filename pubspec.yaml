@@ -60,6 +60,9 @@ dependencies:
   # Network
   dio: ^5.7.0
   youtube_explode_dart: ^2.3.4
+
+  # Markdown
+  flutter_markdown: ^0.7.4+1
   
   # Internationalization
   flutter_localizations:

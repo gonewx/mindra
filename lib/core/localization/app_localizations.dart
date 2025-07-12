@@ -364,6 +364,16 @@ class AppLocalizations {
       'about_app_contact': 'Contact Us',
       'about_app_privacy_policy': 'Privacy Policy',
       'about_app_terms_of_service': 'Terms of Service',
+      // Privacy Policy
+      'privacy_policy': 'Privacy Policy',
+      'privacy_policy_loading': 'Loading privacy policy...',
+      'privacy_policy_error': 'Failed to load privacy policy',
+      'privacy_policy_retry': 'Retry',
+      'privacy_policy_offline': 'Privacy policy is not available offline',
+      'privacy_policy_not_found': 'Privacy policy file not found (404)',
+      'privacy_policy_access_denied': 'Privacy policy file access denied (403)',
+      'privacy_policy_server_error': 'Server error, please try again later',
+      'privacy_policy_request_cancelled': 'Request cancelled',
     },
     'zh': {
       'personal_center': '个人中心',
@@ -710,6 +720,16 @@ class AppLocalizations {
       'about_app_contact': '联系我们',
       'about_app_privacy_policy': '隐私政策',
       'about_app_terms_of_service': '服务条款',
+      // Privacy Policy
+      'privacy_policy': '隐私政策',
+      'privacy_policy_loading': '正在加载隐私政策...',
+      'privacy_policy_error': '加载隐私政策失败',
+      'privacy_policy_retry': '重试',
+      'privacy_policy_offline': '离线状态下无法查看隐私政策',
+      'privacy_policy_not_found': '隐私政策文件未找到 (404)',
+      'privacy_policy_access_denied': '隐私政策文件访问被拒绝 (403)',
+      'privacy_policy_server_error': '服务器错误，请稍后重试',
+      'privacy_policy_request_cancelled': '请求已取消',
     },
   };
 
@@ -750,6 +770,18 @@ class AppLocalizations {
   String get storageManagement => getString('storage_management');
   String get about => getString('about');
   String get aboutApp => getString('about_app');
+  String get privacyPolicy => getString('privacy_policy');
+  String get privacyPolicyLoading => getString('privacy_policy_loading');
+  String get privacyPolicyError => getString('privacy_policy_error');
+  String get privacyPolicyRetry => getString('privacy_policy_retry');
+  String get privacyPolicyOffline => getString('privacy_policy_offline');
+  String get privacyPolicyNotFound => getString('privacy_policy_not_found');
+  String get privacyPolicyAccessDenied =>
+      getString('privacy_policy_access_denied');
+  String get privacyPolicyServerError =>
+      getString('privacy_policy_server_error');
+  String get privacyPolicyRequestCancelled =>
+      getString('privacy_policy_request_cancelled');
   String get selectTheme => getString('select_theme');
   String get selectLanguage => getString('select_language');
   String get simplifiedChinese => getString('simplified_chinese');

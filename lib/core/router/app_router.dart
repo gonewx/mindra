@@ -8,6 +8,7 @@ import '../../features/media/presentation/pages/media_library_page.dart';
 import '../../features/player/presentation/pages/player_page.dart';
 import '../../features/meditation/presentation/pages/meditation_history_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/settings/presentation/pages/privacy_policy_page.dart';
 import '../../features/media/presentation/bloc/media_bloc.dart';
 import '../../shared/widgets/animated_bottom_navigation.dart';
 import '../../features/player/presentation/widgets/floating_player.dart';
@@ -22,6 +23,7 @@ class AppRouter {
   static const String player = '/player';
   static const String meditationHistory = '/meditation-history';
   static const String settings = '/settings';
+  static const String privacyPolicy = '/settings/privacy-policy';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash, // Start with splash screen
@@ -98,6 +100,16 @@ class AppRouter {
               key: state.pageKey,
               child: const SettingsPage(),
             ),
+            routes: [
+              GoRoute(
+                path: 'privacy-policy',
+                name: 'privacy-policy',
+                pageBuilder: (context, state) => NoTransitionPage<void>(
+                  key: state.pageKey,
+                  child: const PrivacyPolicyPage(),
+                ),
+              ),
+            ],
           ),
         ],
       ),
