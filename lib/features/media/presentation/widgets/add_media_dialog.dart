@@ -117,7 +117,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
       child: Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.9,
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
+          maxHeight: MediaQuery.of(context).size.height * 0.60,
           minWidth: 320, // 最小宽度确保内容不会过于拥挤
         ),
         decoration: BoxDecoration(
@@ -202,6 +202,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
                               child: InkWell(
@@ -508,7 +509,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                           ),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
-                            vertical: 16,
+                            vertical: 8,
                           ),
                         ),
                       ),
@@ -571,11 +572,11 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 16,
+                          vertical: 8,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
 
                     // Duration
                     Text(
@@ -638,7 +639,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 16,
+                          vertical: 8,
                         ),
                         suffixIcon: _isLoadingDuration
                             ? const Padding(
@@ -691,7 +692,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(
                             horizontal: 16,
-                            vertical: 16,
+                            vertical: 8,
                           ),
                         ),
                         items: _categories.map((category) {
