@@ -163,7 +163,16 @@ class GlobalPlayerService extends ChangeNotifier {
       final sessionType = MeditationSessionManager.getSessionTypeFromCategory(
         _currentMedia!.category.name,
       );
-      final soundEffects = _soundEffectsService.getActiveSoundEffects();
+      
+      // 安全地获取音效列表
+      List<String> soundEffects = [];
+      try {
+        soundEffects = _soundEffectsService.getActiveSoundEffects();
+      } catch (e) {
+        debugPrint('Error getting active sound effects: $e');
+        // 使用空列表作为默认值
+        soundEffects = [];
+      }
 
       await MeditationSessionManager.startSession(
         mediaItem: _currentMedia!,

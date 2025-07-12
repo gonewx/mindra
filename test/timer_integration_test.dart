@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mindra/features/player/services/global_player_service.dart';
-import 'dart:async';
 
 void main() {
   group('Timer Integration Tests', () {

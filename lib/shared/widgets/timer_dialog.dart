@@ -88,8 +88,6 @@ class TimerDialog extends StatelessWidget {
                   onTimerSet?.call();
                 },
               ),
-
-
             ],
           ),
         ),
@@ -136,8 +134,11 @@ class TimerDialog extends StatelessWidget {
           children: [5, 10, 15, 30, 45, 60].map((minutes) {
             final isSelected = currentTimerMinutes == minutes;
             return InkWell(
-              onTap: () =>
-                  _handleTimerSelection(context, minutes, localizations),
+              onTap: () => _handleTimerSelection(
+                context,
+                minutes.toDouble(),
+                localizations,
+              ),
               borderRadius: BorderRadius.circular(20),
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -189,16 +190,16 @@ class TimerDialog extends StatelessWidget {
 
   void _handleTimerSelection(
     BuildContext context,
-    int minutes,
+    double minutes,
     AppLocalizations localizations,
   ) {
     Navigator.pop(context);
 
     final playerService = getIt<GlobalPlayerService>();
-    playerService.setSleepTimer(minutes);
+    playerService.setSleepTimer(minutes.toInt());
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(localizations.timerSetMessage(minutes))),
+      SnackBar(content: Text(localizations.timerSetMessage(minutes.toInt()))),
     );
 
     onTimerSet?.call();

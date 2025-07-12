@@ -54,17 +54,20 @@ class AppLocalizations {
       'good_morning': 'Good Morning!',
       'good_afternoon': 'Good Afternoon!',
       'good_evening': 'Good Evening!',
-      'ready_to_start_meditation': 'Ready to start today\'s meditation journey?',
+      'ready_to_start_meditation':
+          'Ready to start today\'s meditation journey?',
       'recent_sessions': 'Recent Sessions',
       // Player
       'player_initialization_failed': 'Player initialization failed: {error}',
       'player_now_playing': 'Now Playing',
       'player_no_material_selected': 'No Material Selected',
-      'player_select_material_message': 'Please select an audio or video material from the media library first',
+      'player_select_material_message':
+          'Please select an audio or video material from the media library first',
       'player_shuffle_enabled': 'Shuffle enabled',
       'player_shuffle_disabled': 'Shuffle disabled',
       'player_repeat_mode': 'Repeat mode: {mode}',
-      'player_reload_media_data': 'Reload media data to get updated information',
+      'player_reload_media_data':
+          'Reload media data to get updated information',
       // Categories
       'category_meditation': 'Meditation',
       'category_mindfulness': 'Mindfulness',
@@ -79,7 +82,8 @@ class AppLocalizations {
       'category_breathing': 'Breathing',
       // Meditation
       'meditation_completed': 'Meditation Completed',
-      'meditation_congratulations': 'Congratulations! You have completed this meditation practice.',
+      'meditation_congratulations':
+          'Congratulations! You have completed this meditation practice.',
       'meditation_practice_duration': 'Practice duration: {minutes} minutes',
       // Navigation
       'navigation_view_progress': 'View Progress',
@@ -112,7 +116,8 @@ class AppLocalizations {
       'playlist_add_media_message': 'Add "{title}" to:',
       // Download
       'download_confirm_message': 'Download "{title}" to local storage?',
-      'download_warning': 'Note: This feature requires internet connection and will consume storage space.',
+      'download_warning':
+          'Note: This feature requires internet connection and will consume storage space.',
       'download_start': 'Start Download',
       'download_downloading': 'Downloading "{title}"...',
       'download_completed': 'Download completed: {title}',
@@ -136,7 +141,8 @@ class AppLocalizations {
       'sound_effects_birds': 'Birds',
       'sound_effects_loading': 'Loading sound effects...',
       'sound_effects_background_title': 'Background Sound Effects',
-      'sound_effects_background_description': 'Soft background effects that won\'t interfere with main audio',
+      'sound_effects_background_description':
+          'Soft background effects that won\'t interfere with main audio',
       'sound_effects_volume_control': 'Volume Control',
       'sound_effects_settings_saved': 'Background sound effects settings saved',
       'sound_effects_builtin_config': 'Built-in effect configuration',
@@ -145,7 +151,8 @@ class AppLocalizations {
       'repeat_mode_all': 'Repeat All',
       'repeat_mode_one': 'Repeat One',
       // Audio Focus
-      'audio_focus_manager_description': 'Audio focus manager - coordinates main audio and background effects playback',
+      'audio_focus_manager_description':
+          'Audio focus manager - coordinates main audio and background effects playback',
       // Progress
       'progress_my_progress': 'My Progress',
       'progress_settings': 'Progress Settings',
@@ -160,17 +167,22 @@ class AppLocalizations {
       // Achievements
       'achievements_title': 'Achievement Badges',
       'achievements_first_meditation_title': 'First Timer',
-      'achievements_first_meditation_description': 'Complete your first meditation session',
+      'achievements_first_meditation_description':
+          'Complete your first meditation session',
       'achievements_week_streak_title': '7-Day Streak',
       'achievements_week_streak_description': 'Meditate for 7 consecutive days',
       'achievements_focus_master_title': 'Focus Expert',
-      'achievements_focus_master_description': 'Complete 30+ minute meditation sessions',
+      'achievements_focus_master_description':
+          'Complete 30+ minute meditation sessions',
       'achievements_meditation_expert_title': 'Master Meditator',
-      'achievements_meditation_expert_description': 'Accumulate 10 hours of meditation time',
+      'achievements_meditation_expert_description':
+          'Accumulate 10 hours of meditation time',
       'achievements_consistency_champion_title': 'Consistent Soul',
-      'achievements_consistency_champion_description': 'Meditate for 30 consecutive days',
+      'achievements_consistency_champion_description':
+          'Meditate for 30 consecutive days',
       'achievements_variety_seeker_title': 'Explorer',
-      'achievements_variety_seeker_description': 'Try 5 different meditation types',
+      'achievements_variety_seeker_description':
+          'Try 5 different meditation types',
       // History
       'history_meditation_history': 'Meditation History',
       // Weekdays
@@ -215,7 +227,8 @@ class AppLocalizations {
       'reminders_select_dates': 'Select Reminder Dates',
       'reminders_method_label': 'Reminder Method',
       'reminders_notification': 'Notification Reminder',
-      'reminders_notification_description': 'Display reminder message in notification bar',
+      'reminders_notification_description':
+          'Display reminder message in notification bar',
       'reminders_sound': 'Sound Reminder',
       'reminders_sound_description': 'Play reminder sound',
       'reminders_vibration': 'Vibration Reminder',
@@ -225,7 +238,8 @@ class AppLocalizations {
       'reminders_save_failed': 'Save failed: {error}',
       // Permissions
       'permissions_title': 'Permissions Required',
-      'permissions_description': 'To send meditation reminders, the following permissions are required:\n\n• Notification permission - Display reminder messages\n• Exact alarm permission - Send timely reminders\n\nPlease manually enable these permissions in system settings.',
+      'permissions_description':
+          'To send meditation reminders, the following permissions are required:\n\n• Notification permission - Display reminder messages\n• Exact alarm permission - Send timely reminders\n\nPlease manually enable these permissions in system settings.',
       // Session Types
       'session_types_meditation': 'Meditation',
       'session_types_breathing': 'Breathing',
@@ -234,9 +248,11 @@ class AppLocalizations {
       'session_types_relaxation': 'Relaxation',
       // Reminder Notifications
       'reminder_notification_title': 'Meditation Time!',
-      'reminder_notification_body': 'Time to start your {goal} meditation and let your mind relax.',
+      'reminder_notification_body':
+          'Time to start your {goal} meditation and let your mind relax.',
       'test_notification_title': 'Test Notification',
-      'test_notification_body': 'This is a test notification to verify that the reminder function works properly.',
+      'test_notification_body':
+          'This is a test notification to verify that the reminder function works properly.',
       // Session Categories
       'session_categories_breathing_practice': 'Breathing Practice',
       'session_categories_sleep_guidance': 'Sleep Guidance',
@@ -248,7 +264,7 @@ class AppLocalizations {
       // Daily Goal
       'daily_goal_title': 'Daily Goal',
       'daily_goal_meditation_suffix': ' meditation',
-      'daily_goal_default': '20 minutes meditation',
+      'daily_goal_default': '20 minutes',
       // Dialog
       'dialog_add_media_title': 'Add Meditation Material',
       'dialog_edit_media_title': 'Edit Media Information',
@@ -322,7 +338,8 @@ class AppLocalizations {
       'media_library_title': 'Media Library',
       'media_library_search_hint': 'Search meditation materials...',
       'media_library_no_materials': 'No Materials',
-      'media_library_add_materials_hint': 'Click the top-right button to add materials',
+      'media_library_add_materials_hint':
+          'Click the top-right button to add materials',
       'media_library_load_failed': 'Load Failed',
       'media_library_retry': 'Retry',
       'media_library_category_all': 'All',
@@ -341,7 +358,8 @@ class AppLocalizations {
       'personal_center_theme_system': 'Follow System',
       // About App Content
       'about_app_version': 'Version',
-      'about_app_description': 'Mindra is a meditation app designed to help you achieve inner peace and mindfulness.',
+      'about_app_description':
+          'Mindra is a meditation app designed to help you achieve inner peace and mindfulness.',
       'about_app_developer': 'Developer',
       'about_app_contact': 'Contact Us',
       'about_app_privacy_policy': 'Privacy Policy',
@@ -570,7 +588,8 @@ class AppLocalizations {
       'reminders_save_failed': '保存失败: {error}',
       // Permissions
       'permissions_title': '需要权限',
-      'permissions_description': '为了发送冥想提醒，需要开启以下权限：\n\n• 通知权限 - 显示提醒消息\n• 精确闹钟权限 - 准时发送提醒\n\n请在系统设置中手动开启这些权限。',
+      'permissions_description':
+          '为了发送冥想提醒，需要开启以下权限：\n\n• 通知权限 - 显示提醒消息\n• 精确闹钟权限 - 准时发送提醒\n\n请在系统设置中手动开启这些权限。',
       // Session Types
       'session_types_meditation': '冥想',
       'session_types_breathing': '呼吸',
@@ -771,8 +790,10 @@ class AppLocalizations {
 
   // Player getters
   String get playerNowPlaying => getString('player_now_playing');
-  String get playerNoMaterialSelected => getString('player_no_material_selected');
-  String get playerSelectMaterialMessage => getString('player_select_material_message');
+  String get playerNoMaterialSelected =>
+      getString('player_no_material_selected');
+  String get playerSelectMaterialMessage =>
+      getString('player_select_material_message');
   String get playerShuffleEnabled => getString('player_shuffle_enabled');
   String get playerShuffleDisabled => getString('player_shuffle_disabled');
   String get playerReloadMediaData => getString('player_reload_media_data');
@@ -792,11 +813,13 @@ class AppLocalizations {
 
   // Meditation getters
   String get meditationCompleted => getString('meditation_completed');
-  String get meditationCongratulations => getString('meditation_congratulations');
+  String get meditationCongratulations =>
+      getString('meditation_congratulations');
 
   // Navigation getters
   String get navigationViewProgress => getString('navigation_view_progress');
-  String get navigationGoToMediaLibrary => getString('navigation_go_to_media_library');
+  String get navigationGoToMediaLibrary =>
+      getString('navigation_go_to_media_library');
 
   // Action getters
   String get actionComplete => getString('action_complete');
@@ -818,7 +841,8 @@ class AppLocalizations {
 
   // Playlist getters
   String get playlistMyFavorites => getString('playlist_my_favorites');
-  String get playlistMindfulnessPractice => getString('playlist_mindfulness_practice');
+  String get playlistMindfulnessPractice =>
+      getString('playlist_mindfulness_practice');
   String get playlistSleepAlbum => getString('playlist_sleep_album');
   String get playlistCreateNew => getString('playlist_create_new');
   String get playlistCreatePlaylist => getString('playlist_create_playlist');
@@ -845,10 +869,14 @@ class AppLocalizations {
   String get soundEffectsWindChimes => getString('sound_effects_wind_chimes');
   String get soundEffectsBirds => getString('sound_effects_birds');
   String get soundEffectsLoading => getString('sound_effects_loading');
-  String get soundEffectsBackgroundTitle => getString('sound_effects_background_title');
-  String get soundEffectsBackgroundDescription => getString('sound_effects_background_description');
-  String get soundEffectsVolumeControl => getString('sound_effects_volume_control');
-  String get soundEffectsSettingsSaved => getString('sound_effects_settings_saved');
+  String get soundEffectsBackgroundTitle =>
+      getString('sound_effects_background_title');
+  String get soundEffectsBackgroundDescription =>
+      getString('sound_effects_background_description');
+  String get soundEffectsVolumeControl =>
+      getString('sound_effects_volume_control');
+  String get soundEffectsSettingsSaved =>
+      getString('sound_effects_settings_saved');
 
   // Repeat Mode getters
   String get repeatModeOff => getString('repeat_mode_off');
@@ -863,25 +891,39 @@ class AppLocalizations {
   String get statsConsecutiveDays => getString('stats_consecutive_days');
   String get statsWeeklyDuration => getString('stats_weekly_duration');
   String get statsTotalSessions => getString('stats_total_sessions');
-  String get statsWeeklyMeditationDuration => getString('stats_weekly_meditation_duration');
+  String get statsWeeklyMeditationDuration =>
+      getString('stats_weekly_meditation_duration');
 
   // Achievements getters
   String get achievementsTitle => getString('achievements_title');
-  String get achievementsFirstMeditationTitle => getString('achievements_first_meditation_title');
-  String get achievementsFirstMeditationDescription => getString('achievements_first_meditation_description');
-  String get achievementsWeekStreakTitle => getString('achievements_week_streak_title');
-  String get achievementsWeekStreakDescription => getString('achievements_week_streak_description');
-  String get achievementsFocusMasterTitle => getString('achievements_focus_master_title');
-  String get achievementsFocusMasterDescription => getString('achievements_focus_master_description');
-  String get achievementsMeditationExpertTitle => getString('achievements_meditation_expert_title');
-  String get achievementsMeditationExpertDescription => getString('achievements_meditation_expert_description');
-  String get achievementsConsistencyChampionTitle => getString('achievements_consistency_champion_title');
-  String get achievementsConsistencyChampionDescription => getString('achievements_consistency_champion_description');
-  String get achievementsVarietySeekerTitle => getString('achievements_variety_seeker_title');
-  String get achievementsVarietySeekerDescription => getString('achievements_variety_seeker_description');
+  String get achievementsFirstMeditationTitle =>
+      getString('achievements_first_meditation_title');
+  String get achievementsFirstMeditationDescription =>
+      getString('achievements_first_meditation_description');
+  String get achievementsWeekStreakTitle =>
+      getString('achievements_week_streak_title');
+  String get achievementsWeekStreakDescription =>
+      getString('achievements_week_streak_description');
+  String get achievementsFocusMasterTitle =>
+      getString('achievements_focus_master_title');
+  String get achievementsFocusMasterDescription =>
+      getString('achievements_focus_master_description');
+  String get achievementsMeditationExpertTitle =>
+      getString('achievements_meditation_expert_title');
+  String get achievementsMeditationExpertDescription =>
+      getString('achievements_meditation_expert_description');
+  String get achievementsConsistencyChampionTitle =>
+      getString('achievements_consistency_champion_title');
+  String get achievementsConsistencyChampionDescription =>
+      getString('achievements_consistency_champion_description');
+  String get achievementsVarietySeekerTitle =>
+      getString('achievements_variety_seeker_title');
+  String get achievementsVarietySeekerDescription =>
+      getString('achievements_variety_seeker_description');
 
   // History getters
-  String get historyMeditationHistory => getString('history_meditation_history');
+  String get historyMeditationHistory =>
+      getString('history_meditation_history');
 
   // Weekdays getters
   String get weekdaysMonday => getString('weekdays_monday');
@@ -914,23 +956,28 @@ class AppLocalizations {
 
   // Reminders getters
   String get remindersSettings => getString('reminders_settings');
-  String get remindersSetReminderTime => getString('reminders_set_reminder_time');
+  String get remindersSetReminderTime =>
+      getString('reminders_set_reminder_time');
   String get remindersSettingsTitle => getString('reminders_settings_title');
   String get remindersTime => getString('reminders_time');
   String get remindersDate => getString('reminders_date');
   String get remindersMethod => getString('reminders_method');
   String get remindersEnable => getString('reminders_enable');
-  String get remindersEnableDescription => getString('reminders_enable_description');
+  String get remindersEnableDescription =>
+      getString('reminders_enable_description');
   String get remindersTimeLabel => getString('reminders_time_label');
   String get remindersSelectTime => getString('reminders_select_time');
   String get remindersSelectDates => getString('reminders_select_dates');
   String get remindersMethodLabel => getString('reminders_method_label');
   String get remindersNotification => getString('reminders_notification');
-  String get remindersNotificationDescription => getString('reminders_notification_description');
+  String get remindersNotificationDescription =>
+      getString('reminders_notification_description');
   String get remindersSound => getString('reminders_sound');
-  String get remindersSoundDescription => getString('reminders_sound_description');
+  String get remindersSoundDescription =>
+      getString('reminders_sound_description');
   String get remindersVibration => getString('reminders_vibration');
-  String get remindersVibrationDescription => getString('reminders_vibration_description');
+  String get remindersVibrationDescription =>
+      getString('reminders_vibration_description');
   String get remindersSettingsSaved => getString('reminders_settings_saved');
   String get remindersDisabled => getString('reminders_disabled');
 
@@ -947,7 +994,8 @@ class AppLocalizations {
 
   // Daily Goal getters
   String get dailyGoalTitle => getString('daily_goal_title');
-  String get dailyGoalMeditationSuffix => getString('daily_goal_meditation_suffix');
+  String get dailyGoalMeditationSuffix =>
+      getString('daily_goal_meditation_suffix');
   String get dailyGoalDefault => getString('daily_goal_default');
 
   // Dialog getters
@@ -980,10 +1028,12 @@ class AppLocalizations {
   String get dialogMediaUpdated => getString('dialog_media_updated');
 
   // Quick Actions getters
-  String get quickActionStartMeditation => getString('quick_action_start_meditation');
+  String get quickActionStartMeditation =>
+      getString('quick_action_start_meditation');
   String get quickActionBrowseMedia => getString('quick_action_browse_media');
   String get quickActionViewProgress => getString('quick_action_view_progress');
-  String get quickActionTimedMeditation => getString('quick_action_timed_meditation');
+  String get quickActionTimedMeditation =>
+      getString('quick_action_timed_meditation');
 
   // Timer Dialog getters
   String get timerDialogTitle => getString('timer_dialog_title');
@@ -1013,20 +1063,26 @@ class AppLocalizations {
   String get recentSessionYesterday => getString('recent_session_yesterday');
 
   // Recommended Content getters
-  String get recommendedMorningMeditation => getString('recommended_morning_meditation');
+  String get recommendedMorningMeditation =>
+      getString('recommended_morning_meditation');
   String get recommendedDeepSleep => getString('recommended_deep_sleep');
   String get recommendedWorkStress => getString('recommended_work_stress');
   String get recommendedNatureSounds => getString('recommended_nature_sounds');
-  String get recommendedCategoryFocus => getString('recommended_category_focus');
-  String get recommendedCategoryBedtime => getString('recommended_category_bedtime');
-  String get recommendedCategoryRelax => getString('recommended_category_relax');
-  String get recommendedCategoryNature => getString('recommended_category_nature');
+  String get recommendedCategoryFocus =>
+      getString('recommended_category_focus');
+  String get recommendedCategoryBedtime =>
+      getString('recommended_category_bedtime');
+  String get recommendedCategoryRelax =>
+      getString('recommended_category_relax');
+  String get recommendedCategoryNature =>
+      getString('recommended_category_nature');
 
   // Media Library getters
   String get mediaLibraryTitle => getString('media_library_title');
   String get mediaLibrarySearchHint => getString('media_library_search_hint');
   String get mediaLibraryNoMaterials => getString('media_library_no_materials');
-  String get mediaLibraryAddMaterialsHint => getString('media_library_add_materials_hint');
+  String get mediaLibraryAddMaterialsHint =>
+      getString('media_library_add_materials_hint');
   String get mediaLibraryLoadFailed => getString('media_library_load_failed');
   String get mediaLibraryRetry => getString('media_library_retry');
   String get mediaLibraryCategoryAll => getString('media_library_category_all');
@@ -1036,16 +1092,20 @@ class AppLocalizations {
   String get categoryNameBedtime => getString('category_name_bedtime');
   String get categoryNameFocus => getString('category_name_focus');
   String get categoryNameRelax => getString('category_name_relax');
-  String get categoryNameNatureSounds => getString('category_name_nature_sounds');
+  String get categoryNameNatureSounds =>
+      getString('category_name_nature_sounds');
 
   // Recent Sessions No Records getters
   String get recentSessionsNoRecords => getString('recent_sessions_no_records');
-  String get recentSessionsStartMeditating => getString('recent_sessions_start_meditating');
+  String get recentSessionsStartMeditating =>
+      getString('recent_sessions_start_meditating');
 
   // Personal Center Theme Selection getters
-  String get personalCenterThemeLight => getString('personal_center_theme_light');
+  String get personalCenterThemeLight =>
+      getString('personal_center_theme_light');
   String get personalCenterThemeDark => getString('personal_center_theme_dark');
-  String get personalCenterThemeSystem => getString('personal_center_theme_system');
+  String get personalCenterThemeSystem =>
+      getString('personal_center_theme_system');
 
   // About App Content getters
   String get aboutAppVersion => getString('about_app_version');
@@ -1078,7 +1138,9 @@ class AppLocalizations {
 
   String playlistAddedToPlaylist(String title, String playlist) {
     final template = getString('playlist_added_to_playlist');
-    return template.replaceAll('{title}', title).replaceAll('{playlist}', playlist);
+    return template
+        .replaceAll('{title}', title)
+        .replaceAll('{playlist}', playlist);
   }
 
   String playlistAddMediaMessage(String title) {
@@ -1187,7 +1249,8 @@ class AppLocalizations {
   }
 
   // Reminder Notifications getters
-  String get reminderNotificationTitle => getString('reminder_notification_title');
+  String get reminderNotificationTitle =>
+      getString('reminder_notification_title');
   String get testNotificationTitle => getString('test_notification_title');
   String get testNotificationBody => getString('test_notification_body');
 
