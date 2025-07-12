@@ -4,6 +4,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -33,6 +34,7 @@ class _SplashPageState extends State<SplashPage> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final localizations = AppLocalizations.of(context);
 
     return Scaffold(
       body: Container(
@@ -78,10 +80,10 @@ class _SplashPageState extends State<SplashPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Tagline
-                const Text(
-                  '开启你的冥想之旅',
-                  style: TextStyle(
+                // Tagline - 国际化
+                Text(
+                  localizations?.splashTagline ?? '开启你的冥想之旅',
+                  style: const TextStyle(
                     fontSize: 18,
                     color: Colors.white,
                     fontWeight: FontWeight.w300,
@@ -96,10 +98,10 @@ class _SplashPageState extends State<SplashPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Loading text
-                const Text(
-                  '加载中...',
-                  style: TextStyle(
+                // Loading text - 国际化
+                Text(
+                  localizations?.splashLoading ?? '加载中...',
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Colors.white,
                     fontWeight: FontWeight.w500,

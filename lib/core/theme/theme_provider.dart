@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:ui' as ui;
 import 'app_theme.dart';
 
 class ThemeProvider extends ChangeNotifier {
@@ -9,12 +10,12 @@ class ThemeProvider extends ChangeNotifier {
   static const String _cardPaddingKey = 'card_padding';
 
   AppThemeMode _themeMode = AppThemeMode.dark; // 默认使用深色主题
-  Locale _locale = const Locale('zh', 'CN');
+  Locale? _locale; // 初始为 null，在 initialize 时设置为系统语言
   double _cardSpacing = 8.0; // 默认卡片间距 16px，匹配原型设计
   double _cardPadding = 20.0; // 默认卡片内边距 20px，匹配原型设计
 
   AppThemeMode get themeMode => _themeMode;
-  Locale get locale => _locale;
+  Locale get locale => _locale ?? _getSystemLocale(); // 如果 _locale 为 null，返回系统语言
   ThemeData get themeData => _themeMode.themeData;
   double get cardSpacing => _cardSpacing;
   double get cardPadding => _cardPadding;
@@ -43,12 +44,53 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> _loadLocale() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final localeString = prefs.getString(_localeKey) ?? 'zh_CN';
+      String localeString = prefs.getString(_localeKey) ?? '';
+      
+      // 如果没有保存过语言设置，则使用系统语言
+      if (localeString.isEmpty) {
+        final systemLocale = _getSystemLocale();
+        localeString = '${systemLocale.languageCode}_${systemLocale.countryCode ?? ''}';
+        // 保存系统语言作为默认设置
+        await prefs.setString(_localeKey, localeString);
+      }
+      
       final parts = localeString.split('_');
       _locale = Locale(parts[0], parts.length > 1 ? parts[1] : '');
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading locale: $e');
+      // 出错时回退到系统语言
+      _locale = _getSystemLocale();
+      notifyListeners();
+    }
+  }
+
+  /// Get system locale with fallback to supported locales
+  Locale _getSystemLocale() {
+    try {
+      final systemLocale = ui.PlatformDispatcher.instance.locale;
+      
+      // 检查系统语言是否在支持的语言列表中
+      const supportedLanguages = ['zh', 'en'];
+      
+      if (supportedLanguages.contains(systemLocale.languageCode)) {
+        // 如果系统语言是中文，设置为简体中文
+        if (systemLocale.languageCode == 'zh') {
+          return const Locale('zh', 'CN');
+        }
+        // 如果系统语言是英文，设置为美式英文
+        if (systemLocale.languageCode == 'en') {
+          return const Locale('en', 'US');
+        }
+        return systemLocale;
+      } else {
+        // 如果系统语言不支持，默认使用简体中文
+        return const Locale('zh', 'CN');
+      }
+    } catch (e) {
+      debugPrint('Error getting system locale: $e');
+      // 出错时默认使用简体中文
+      return const Locale('zh', 'CN');
     }
   }
 
@@ -101,6 +143,24 @@ class ThemeProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error saving locale: $e');
     }
+  }
+
+  /// Reset locale to system language
+  Future<void> resetToSystemLocale() async {
+    try {
+      final systemLocale = _getSystemLocale();
+      await setLocale(systemLocale);
+    } catch (e) {
+      debugPrint('Error resetting to system locale: $e');
+    }
+  }
+
+  /// Check if current locale matches system locale
+  bool get isUsingSystemLocale {
+    final systemLocale = _getSystemLocale();
+    final currentLocale = locale;
+    return currentLocale.languageCode == systemLocale.languageCode &&
+           currentLocale.countryCode == systemLocale.countryCode;
   }
 
   /// Update card spacing and save to preferences

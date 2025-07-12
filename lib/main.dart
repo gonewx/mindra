@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/di/injection_container.dart';
@@ -173,7 +174,21 @@ class ErrorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 简单的语言检测，用于错误页面
+    final isEnglish = _isSystemEnglish();
+    
     return MaterialApp(
+      locale: isEnglish ? const Locale('en', 'US') : const Locale('zh', 'CN'),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('zh', 'CN'),
+        Locale('en', 'US'),
+      ],
       home: Scaffold(
         body: Center(
           child: Padding(
@@ -183,9 +198,9 @@ class ErrorApp extends StatelessWidget {
               children: [
                 const Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
-                const Text(
-                  '应用初始化失败',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                Text(
+                  isEnglish ? 'App Initialization Failed' : '应用初始化失败',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -199,7 +214,7 @@ class ErrorApp extends StatelessWidget {
                     // Restart the app
                     main();
                   },
-                  child: const Text('重试'),
+                  child: Text(isEnglish ? 'Retry' : '重试'),
                 ),
               ],
             ),
@@ -207,5 +222,15 @@ class ErrorApp extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// 简单检测系统是否为英文
+  bool _isSystemEnglish() {
+    try {
+      final systemLocale = ui.PlatformDispatcher.instance.locale;
+      return systemLocale.languageCode == 'en';
+    } catch (e) {
+      return false; // 默认中文
+    }
   }
 }

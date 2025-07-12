@@ -374,6 +374,12 @@ class AppLocalizations {
       'privacy_policy_access_denied': 'Privacy policy file access denied (403)',
       'privacy_policy_server_error': 'Server error, please try again later',
       'privacy_policy_request_cancelled': 'Request cancelled',
+      // Splash page
+      'splash_tagline': 'Begin Your Meditation Journey',
+      'splash_loading': 'Loading...',
+      // Error page
+      'error_initialization_failed': 'App Initialization Failed',
+      'error_retry': 'Retry',
     },
     'zh': {
       'personal_center': '个人中心',
@@ -730,6 +736,12 @@ class AppLocalizations {
       'privacy_policy_access_denied': '隐私政策文件访问被拒绝 (403)',
       'privacy_policy_server_error': '服务器错误，请稍后重试',
       'privacy_policy_request_cancelled': '请求已取消',
+      // Splash page
+      'splash_tagline': '开启你的冥想之旅',
+      'splash_loading': '加载中...',
+      // Error page
+      'error_initialization_failed': '应用初始化失败',
+      'error_retry': '重试',
     },
   };
 
@@ -1146,6 +1158,14 @@ class AppLocalizations {
   String get aboutAppContact => getString('about_app_contact');
   String get aboutAppPrivacyPolicy => getString('about_app_privacy_policy');
   String get aboutAppTermsOfService => getString('about_app_terms_of_service');
+
+  // Splash page getters
+  String get splashTagline => getString('splash_tagline');
+  String get splashLoading => getString('splash_loading');
+
+  // Error page getters
+  String get errorInitializationFailed => getString('error_initialization_failed');
+  String get errorRetry => getString('error_retry');
 
   String meditatedTimes(int count) {
     final template = getString('meditated_times');
