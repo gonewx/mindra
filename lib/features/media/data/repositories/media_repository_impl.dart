@@ -18,6 +18,11 @@ class MediaRepositoryImpl implements MediaRepository {
   }
 
   @override
+  Future<MediaItem?> getMediaItemById(String id) async {
+    return await _localDataSource.getMediaItemById(id);
+  }
+
+  @override
   Future<List<MediaItem>> getMediaItemsByCategory(String category) async {
     if (category == '全部') {
       return await getMediaItems();

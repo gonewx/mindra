@@ -3,6 +3,7 @@ import '../entities/media_item.dart';
 abstract class MediaRepository {
   Future<void> addMediaItem(MediaItem mediaItem);
   Future<List<MediaItem>> getMediaItems();
+  Future<MediaItem?> getMediaItemById(String id);
   Future<List<MediaItem>> getMediaItemsByCategory(String category);
   Future<List<MediaItem>> getFavoriteMediaItems();
   Future<List<MediaItem>> getRecentMediaItems(int limit);

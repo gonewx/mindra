@@ -151,6 +151,17 @@ class DatabaseHelper {
     return await db.query(_mediaItemsTable, orderBy: 'created_at DESC');
   }
 
+  static Future<Map<String, dynamic>?> getMediaItemById(String id) async {
+    final db = await database;
+    final results = await db.query(
+      _mediaItemsTable,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return results.isNotEmpty ? results.first : null;
+  }
+
   static Future<List<Map<String, dynamic>>> getMediaItemsByCategory(
     String category,
   ) async {

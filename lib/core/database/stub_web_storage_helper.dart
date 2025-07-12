@@ -11,6 +11,10 @@ class WebStorageHelper {
     throw UnsupportedError('WebStorageHelper is only available on web');
   }
 
+  static Future<MediaItem?> getMediaItemById(String id) async {
+    throw UnsupportedError('WebStorageHelper is only available on web');
+  }
+
   static Future<List<MediaItem>> getMediaItemsByCategory(
     String category,
   ) async {

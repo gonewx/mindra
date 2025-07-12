@@ -31,6 +31,22 @@ class MediaLocalDataSource {
     }, 'getMediaItems');
   }
 
+  Future<MediaItem?> getMediaItemById(String id) async {
+    if (id.isEmpty) {
+      throw ArgumentError('Media item ID cannot be empty');
+    }
+
+    return await _executeWithRetry(() async {
+      if (kIsWeb) {
+        return await WebStorageHelper.getMediaItemById(id);
+      } else {
+        final map = await DatabaseHelper.getMediaItemById(id);
+        if (map == null) return null;
+        return MediaItem.fromMap(map);
+      }
+    }, 'getMediaItemById');
+  }
+
   Future<List<MediaItem>> getMediaItemsByCategory(String category) async {
     return await _executeWithRetry(() async {
       if (kIsWeb) {

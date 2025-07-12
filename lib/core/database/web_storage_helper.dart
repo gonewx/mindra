@@ -81,6 +81,15 @@ class WebStorageHelper {
     return jsonList.map((json) => MediaItem.fromMap(json)).toList();
   }
 
+  static Future<MediaItem?> getMediaItemById(String id) async {
+    final items = await getMediaItems();
+    try {
+      return items.firstWhere((item) => item.id == id);
+    } catch (e) {
+      return null; // 如果没找到，返回null
+    }
+  }
+
   static Future<List<MediaItem>> getMediaItemsByCategory(
     String category,
   ) async {
@@ -102,24 +111,28 @@ class WebStorageHelper {
     final index = items.indexWhere((item) => item.id == id);
     if (index >= 0) {
       final currentItem = items[index];
-      
+
       // Parse category from updates if provided
       MediaCategory category = currentItem.category;
       if (updates['category'] != null) {
         final categoryValue = updates['category'];
         if (categoryValue is MediaCategory) {
           category = categoryValue;
-                 } else if (categoryValue is String) {
-           // Parse category from string (could be enum name or localized string)
-           try {
-             category = MediaCategory.values.firstWhere((e) => e.name == categoryValue);
-           } catch (_) {
-             // If failed, try from localized string (compatible with old data)
-             category = MediaCategoryExtension.fromLocalizedString(categoryValue);
-           }
-         }
+        } else if (categoryValue is String) {
+          // Parse category from string (could be enum name or localized string)
+          try {
+            category = MediaCategory.values.firstWhere(
+              (e) => e.name == categoryValue,
+            );
+          } catch (_) {
+            // If failed, try from localized string (compatible with old data)
+            category = MediaCategoryExtension.fromLocalizedString(
+              categoryValue,
+            );
+          }
+        }
       }
-      
+
       final updatedItem = MediaItem(
         id: currentItem.id,
         title: updates['title'] ?? currentItem.title,

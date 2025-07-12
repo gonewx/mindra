@@ -266,6 +266,16 @@ class GlobalPlayerService extends ChangeNotifier {
   Future<void> play() async {
     await _audioPlayer.play();
 
+    // 更新播放次数和最后播放时间
+    if (_currentMedia != null) {
+      try {
+        await _mediaDataSource.updatePlayCount(_currentMedia!.id);
+        debugPrint('Updated play count for: ${_currentMedia!.title}');
+      } catch (e) {
+        debugPrint('Error updating play count: $e');
+      }
+    }
+
     // 恢复背景音效播放
     await _restoreSoundEffects();
   }

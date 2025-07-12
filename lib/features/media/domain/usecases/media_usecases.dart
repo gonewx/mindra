@@ -21,6 +21,16 @@ class GetMediaItemsUseCase {
   }
 }
 
+class GetMediaItemByIdUseCase {
+  final MediaRepository _repository;
+
+  GetMediaItemByIdUseCase(this._repository);
+
+  Future<MediaItem?> call(String id) async {
+    return await _repository.getMediaItemById(id);
+  }
+}
+
 class GetMediaItemsByCategoryUseCase {
   final MediaRepository _repository;
 
