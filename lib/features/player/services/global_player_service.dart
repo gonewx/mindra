@@ -11,7 +11,8 @@ import 'simple_sound_effects_player.dart';
 class GlobalPlayerService extends ChangeNotifier {
   late final CrossPlatformAudioPlayer _audioPlayer;
   final SoundEffectsService _soundEffectsService = SoundEffectsService();
-  final SimpleSoundEffectsPlayer _simpleSoundEffectsPlayer = SimpleSoundEffectsPlayer();
+  final SimpleSoundEffectsPlayer _simpleSoundEffectsPlayer =
+      SimpleSoundEffectsPlayer();
   final MediaLocalDataSource _mediaDataSource = MediaLocalDataSource();
 
   // Subscription management
@@ -60,6 +61,12 @@ class GlobalPlayerService extends ChangeNotifier {
       await _setupAudioPlayer();
       await _soundEffectsService.initialize();
       await _simpleSoundEffectsPlayer.initialize();
+
+      // 设置音效状态变化回调
+      _simpleSoundEffectsPlayer.setStateChangeCallback(() {
+        notifyListeners();
+      });
+
       _isInitialized = true;
       debugPrint('Global player service initialized successfully');
     } catch (e) {
@@ -247,24 +254,24 @@ class GlobalPlayerService extends ChangeNotifier {
 
   Future<void> play() async {
     await _audioPlayer.play();
-    
+
     // 恢复背景音效播放
     await _restoreSoundEffects();
   }
 
   Future<void> pause() async {
     await _audioPlayer.pause();
-    
+
     // 暂停背景音效
     await _pauseSoundEffects();
   }
 
   Future<void> stop() async {
     await _audioPlayer.stop();
-    
+
     // 停止背景音效
     await _pauseSoundEffects();
-    
+
     if (MeditationSessionManager.hasActiveSession) {
       await MeditationSessionManager.stopSession();
     }
@@ -434,8 +441,9 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   SoundEffectsService get soundEffectsService => _soundEffectsService;
-  SimpleSoundEffectsPlayer get simpleSoundEffectsPlayer => _simpleSoundEffectsPlayer;
-  
+  SimpleSoundEffectsPlayer get simpleSoundEffectsPlayer =>
+      _simpleSoundEffectsPlayer;
+
   // 检查是否有激活的背景音效
   bool get hasActiveSoundEffects {
     return _simpleSoundEffectsPlayer.hasActiveEffects();

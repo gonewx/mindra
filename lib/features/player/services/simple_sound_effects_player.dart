@@ -13,6 +13,9 @@ class SimpleSoundEffectsPlayer {
   final Map<String, double> _volumes = {};
   double _masterVolume = 1.0; // 默认主音量设为1.0
   final AudioFocusManager _audioFocusManager = AudioFocusManager();
+  
+  // 状态变化回调
+  VoidCallback? _onStateChanged;
 
   // 音效文件路径映射
   final Map<String, String> _soundPaths = {
@@ -22,9 +25,17 @@ class SimpleSoundEffectsPlayer {
     'birds': 'audio/effects/birds.mp3',
   };
 
+  // 设置状态变化回调
+  void setStateChangeCallback(VoidCallback? callback) {
+    _onStateChanged = callback;
+  }
+
   // 初始化音效播放器
   Future<void> initialize() async {
     debugPrint('Initializing sound effects player...');
+
+    // 设置主音频状态变化回调
+    _audioFocusManager.setMainAudioStateCallback(_onMainAudioStateChanged);
 
     // 先加载保存的设置
     await _loadSettings();
@@ -157,7 +168,16 @@ class SimpleSoundEffectsPlayer {
 
     try {
       if (volume > 0) {
-        // 开启音效 - 使用音频焦点管理器建议的音量
+        // 开启音效 - 检查是否可以播放背景音效
+        if (!_audioFocusManager.canPlaySoundEffects()) {
+          debugPrint('Cannot play sound effects - main audio not playing');
+          // 仍然保存音量设置，但不实际播放
+          await _saveSettings();
+          _audioFocusManager.notifySoundEffectsChanged(hasActiveEffects());
+          return;
+        }
+
+        // 使用音频焦点管理器建议的音量
         final suggestedVolume = _audioFocusManager
             .getSuggestedSoundEffectVolume();
         final finalVolume = (volume * _masterVolume * suggestedVolume).clamp(
@@ -233,6 +253,9 @@ class SimpleSoundEffectsPlayer {
 
       // 通知音频焦点管理器背景音效状态变化
       _audioFocusManager.notifySoundEffectsChanged(hasActiveEffects());
+      
+      // 通知状态变化
+      _onStateChanged?.call();
     } catch (e) {
       debugPrint('Error toggling sound effect $effectId: $e');
       debugPrint('Stack trace: ${StackTrace.current}');
@@ -284,6 +307,35 @@ class SimpleSoundEffectsPlayer {
     }
   }
 
+  // 主音频状态变化回调
+  void _onMainAudioStateChanged(bool isPlaying) {
+    debugPrint('Main audio state changed: $isPlaying');
+
+    if (isPlaying) {
+      // 主音频开始播放，恢复所有已选择的背景音效
+      _resumeSelectedEffects();
+    } else {
+      // 主音频停止播放，暂停所有背景音效（但不改变选择状态）
+      _pauseAllEffects();
+    }
+  }
+
+  // 恢复所有已选择的背景音效
+  Future<void> _resumeSelectedEffects() async {
+    for (final entry in _volumes.entries) {
+      if (entry.value > 0) {
+        await resumeEffect(entry.key);
+      }
+    }
+  }
+
+  // 暂停所有背景音效（不改变音量设置）
+  Future<void> _pauseAllEffects() async {
+    for (final effectId in _volumes.keys) {
+      await pauseEffect(effectId);
+    }
+  }
+
   // 设置主音量
   Future<void> setMasterVolume(double volume) async {
     _masterVolume = volume.clamp(0.0, 1.0);
@@ -308,12 +360,15 @@ class SimpleSoundEffectsPlayer {
 
     // 保存主音量设置
     await _saveSettings();
+    
+    // 通知状态变化
+    _onStateChanged?.call();
   }
 
   // 暂停音效（不改变音量设置）
   Future<void> pauseEffect(String effectId) async {
     if (!_players.containsKey(effectId)) return;
-    
+
     final player = _players[effectId]!;
     try {
       debugPrint('Pausing effect: $effectId');
@@ -326,16 +381,20 @@ class SimpleSoundEffectsPlayer {
   // 恢复音效播放
   Future<void> resumeEffect(String effectId) async {
     if (!_players.containsKey(effectId)) return;
-    
+
     final player = _players[effectId]!;
     final volume = _volumes[effectId] ?? 0.0;
-    
+
     if (volume > 0) {
       try {
         // 获取音频焦点管理器建议的音量
-        final suggestedVolume = _audioFocusManager.getSuggestedSoundEffectVolume();
-        final finalVolume = (volume * _masterVolume * suggestedVolume).clamp(0.0, 1.0);
-        
+        final suggestedVolume = _audioFocusManager
+            .getSuggestedSoundEffectVolume();
+        final finalVolume = (volume * _masterVolume * suggestedVolume).clamp(
+          0.0,
+          1.0,
+        );
+
         debugPrint('Resuming effect: $effectId with volume $finalVolume');
         await player.setVolume(finalVolume);
         await player.resume();
@@ -351,22 +410,49 @@ class SimpleSoundEffectsPlayer {
       debugPrint('Effect $effectId not found');
       return;
     }
-    
+
     final player = _players[effectId]!;
     try {
       debugPrint('Testing effect $effectId with full volume');
-      await player.setVolume(1.0); // 设置最大音量
+      await player.setVolume(0.8); // 设置适中的试听音量
       await player.play(AssetSource(_soundPaths[effectId]!));
-      
+
       // 等待一下让播放开始
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       // 获取播放状态
       final position = await player.getCurrentPosition();
       final duration = await player.getDuration();
-      debugPrint('Test playback status: position=${position?.inMilliseconds}ms, duration=${duration?.inMilliseconds}ms');
+      debugPrint(
+        'Test playback status: position=${position?.inMilliseconds}ms, duration=${duration?.inMilliseconds}ms',
+      );
     } catch (e) {
       debugPrint('Error testing effect $effectId: $e');
+    }
+  }
+
+    // 预览音效播放（临时播放，不保存状态）
+  Future<void> previewEffect(String effectId) async {
+    if (!_players.containsKey(effectId)) {
+      debugPrint('Effect $effectId not found for preview');
+      return;
+    }
+    
+    // 检查是否可以预览音效
+    if (!_audioFocusManager.canPreviewSoundEffects()) {
+      debugPrint('Cannot preview sound effects at this time');
+      return;
+    }
+    
+    final player = _players[effectId]!;
+    try {
+      debugPrint('Previewing effect $effectId');
+      // 使用适中的预览音量
+      await player.setVolume(0.6);
+      await player.play(AssetSource(_soundPaths[effectId]!));
+      debugPrint('Started previewing effect $effectId');
+    } catch (e) {
+      debugPrint('Error previewing effect $effectId: $e');
     }
   }
 

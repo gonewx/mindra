@@ -20,7 +20,24 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
     'birds': 0.0,
   };
 
+  // 保存原始设置用于取消时恢复
+  final Map<String, double> _originalEffectVolumes = {
+    'rain': 0.0,
+    'ocean': 0.0,
+    'wind_chimes': 0.0,
+    'birds': 0.0,
+  };
+
+  // 试听状态管理
+  final Map<String, bool> _previewingEffects = {
+    'rain': false,
+    'ocean': false,
+    'wind_chimes': false,
+    'birds': false,
+  };
+
   double _masterVolume = 0.5;
+  double _originalMasterVolume = 0.5;
   bool _isInitialized = false;
 
   @override
@@ -67,31 +84,180 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
       for (final entry in currentVolumes.entries) {
         if (_effectVolumes.containsKey(entry.key)) {
           _effectVolumes[entry.key] = entry.value;
+          _originalEffectVolumes[entry.key] = entry.value;
         }
       }
 
       // 同步主音量
       _masterVolume = currentMasterVolume;
+      _originalMasterVolume = currentMasterVolume;
     });
+
+    // 自动恢复当前选中音效的播放状态
+    _restoreCurrentlySelectedEffects();
 
     debugPrint('Synced sound effects state: $_effectVolumes');
     debugPrint('Synced master volume: $_masterVolume');
   }
 
+  // 恢复当前选中音效的播放状态
+  Future<void> _restoreCurrentlySelectedEffects() async {
+    try {
+      for (final entry in _effectVolumes.entries) {
+        if (entry.value > 0) {
+          // 标记为试听状态并开始播放
+          setState(() {
+            _previewingEffects[entry.key] = true;
+          });
+
+          // 恢复播放当前选中的音效
+          await _soundPlayer.previewEffect(entry.key);
+          debugPrint('Restored playback for selected effect: ${entry.key}');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error restoring selected effects playback: $e');
+    }
+  }
+
+  // 停止试听
+  Future<void> _stopPreview(String effectId) async {
+    try {
+      await _soundPlayer.pauseEffect(effectId);
+      if (mounted) {
+        setState(() {
+          _previewingEffects[effectId] = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error stopping preview for $effectId: $e');
+    }
+  }
+
+  // 停止所有试听
+  Future<void> _stopAllPreviews() async {
+    for (final effectId in _previewingEffects.keys) {
+      if (_previewingEffects[effectId] == true) {
+        await _stopPreview(effectId);
+      }
+    }
+  }
+
+  // 切换音效选择状态并试听
+  Future<void> _toggleEffectSelection(String effectId) async {
+    final isSelected = (_effectVolumes[effectId] ?? 0.0) > 0;
+
+    if (isSelected) {
+      // 取消选择，停止试听
+      setState(() {
+        _effectVolumes[effectId] = 0.0;
+        _previewingEffects[effectId] = false;
+      });
+      await _soundPlayer.pauseEffect(effectId);
+
+      // 立即更新音效播放器状态以触发UI更新
+      await _soundPlayer.toggleEffect(effectId, 0.0);
+    } else {
+      // 选择音效，开始试听
+      setState(() {
+        _effectVolumes[effectId] = 0.5;
+        _previewingEffects[effectId] = true;
+      });
+
+      // 开始试听当前音效（不停止其他音效）
+      await _soundPlayer.previewEffect(effectId);
+    }
+  }
+
+  // 确认设置
+  Future<void> _confirmSettings() async {
+    try {
+      // 停止所有试听
+      await _stopAllPreviews();
+
+      // 应用选择的音效设置
+      for (final entry in _effectVolumes.entries) {
+        await _soundPlayer.toggleEffect(entry.key, entry.value);
+      }
+
+      // 应用主音量设置
+      await _soundPlayer.setMasterVolume(_masterVolume);
+
+      debugPrint('Sound effects confirmed with settings: $_effectVolumes');
+      debugPrint('Master volume: $_masterVolume');
+
+      // 显示确认消息
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.soundEffectsSettingsSaved,
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      debugPrint('Error confirming settings: $e');
+    }
+  }
+
+  // 取消设置
+  Future<void> _cancelSettings() async {
+    try {
+      // 停止所有试听
+      await _stopAllPreviews();
+
+      // 恢复原始设置
+      for (final entry in _originalEffectVolumes.entries) {
+        await _soundPlayer.toggleEffect(entry.key, entry.value);
+      }
+
+      // 恢复原始主音量
+      await _soundPlayer.setMasterVolume(_originalMasterVolume);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      debugPrint('Error canceling settings: $e');
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
   @override
   void dispose() {
-    // 注意：不在这里调用 _soundPlayer.dispose()，因为它是单例
-    // 音效播放器应该在应用生命周期结束时才被销毁
+    // 停止所有试听
+    _stopAllPreviews();
     super.dispose();
   }
 
   // 音效配置
   List<Map<String, dynamic>> _getEffects(AppLocalizations localizations) {
     return [
-      {'id': 'rain', 'name': localizations.soundEffectsRain, 'icon': Icons.grain},
-      {'id': 'ocean', 'name': localizations.soundEffectsOcean, 'icon': Icons.waves},
-      {'id': 'wind_chimes', 'name': localizations.soundEffectsWindChimes, 'icon': Icons.air},
-      {'id': 'birds', 'name': localizations.soundEffectsBirds, 'icon': Icons.flutter_dash},
+      {
+        'id': 'rain',
+        'name': localizations.soundEffectsRain,
+        'icon': Icons.grain,
+      },
+      {
+        'id': 'ocean',
+        'name': localizations.soundEffectsOcean,
+        'icon': Icons.waves,
+      },
+      {
+        'id': 'wind_chimes',
+        'name': localizations.soundEffectsWindChimes,
+        'icon': Icons.air,
+      },
+      {
+        'id': 'birds',
+        'name': localizations.soundEffectsBirds,
+        'icon': Icons.flutter_dash,
+      },
     ];
   }
 
@@ -142,38 +308,44 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
         // Sound Effects Grid - responsive layout
         LayoutBuilder(
           builder: (context, constraints) {
-            // 根据屏幕宽度调整列数
-            int crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
-            double childAspectRatio = constraints.maxWidth > 600 ? 2.5 : 2.8;
-            
+            // 根据屏幕宽度调整列数和比例
+            int crossAxisCount;
+            double childAspectRatio;
+
+            if (constraints.maxWidth > 400) {
+              crossAxisCount = 4;
+              childAspectRatio = 3;
+            } else if (constraints.maxWidth > 300) {
+              crossAxisCount = 2;
+              childAspectRatio = 2.8;
+            } else {
+              crossAxisCount = 2;
+              childAspectRatio = 2.5;
+            }
+
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
                 childAspectRatio: childAspectRatio,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
               ),
               itemCount: effects.length,
               itemBuilder: (context, index) {
                 final effect = effects[index];
                 final effectId = effect['id'] as String;
-                final isActive = (_effectVolumes[effectId] ?? 0.0) > 0;
+                final isSelected = (_effectVolumes[effectId] ?? 0.0) > 0;
+                final isPreviewing = _previewingEffects[effectId] ?? false;
+
                 return _SoundEffectButton(
                   effect: effectId,
                   name: effect['name'] as String,
                   icon: effect['icon'] as IconData,
-                  isActive: isActive,
-                  onTap: () async {
-                    final newVolume = isActive ? 0.0 : 0.5;
-                    setState(() {
-                      _effectVolumes[effectId] = newVolume;
-                    });
-
-                    // 实际播放音效
-                    await _soundPlayer.toggleEffect(effectId, newVolume);
-                  },
+                  isSelected: isSelected,
+                  isPreviewing: isPreviewing,
+                  onTap: () => _toggleEffectSelection(effectId),
                 );
               },
             );
@@ -210,7 +382,7 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
                 _masterVolume = value;
               });
 
-              // 实际设置主音量
+              // 立即应用音量变化到正在播放的音效
               await _soundPlayer.setMasterVolume(value);
             },
             min: 0.0,
@@ -219,40 +391,55 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
         ),
         const SizedBox(height: 24),
 
-        // Confirm Button
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () {
-              // 确定时保持当前音效设置，不停止播放
-              debugPrint(
-                'Sound effects confirmed with settings: $_effectVolumes',
-              );
-              debugPrint('Master volume: $_masterVolume');
-
-              // 显示确认消息
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(localizations.soundEffectsSettingsSaved),
-                  duration: const Duration(seconds: 2),
+        // Action Buttons
+        Row(
+          children: [
+            // Cancel Button
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _cancelSettings,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                    color: isDark ? Colors.white54 : Colors.grey,
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              );
-
-              Navigator.of(context).pop();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF32B8C6),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                child: Text(
+                  localizations.actionCancel,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white70 : Colors.grey[700],
+                  ),
+                ),
               ),
             ),
-            child: Text(
-              localizations.actionConfirm,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            const SizedBox(width: 12),
+            // Confirm Button
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _confirmSettings,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF32B8C6),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  localizations.actionConfirm,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -263,14 +450,16 @@ class _SoundEffectButton extends StatelessWidget {
   final String effect;
   final String name;
   final IconData icon;
-  final bool isActive;
+  final bool isSelected;
+  final bool isPreviewing;
   final VoidCallback onTap;
 
   const _SoundEffectButton({
     required this.effect,
     required this.name,
     required this.icon,
-    required this.isActive,
+    required this.isSelected,
+    required this.isPreviewing,
     required this.onTap,
   });
 
@@ -279,25 +468,24 @@ class _SoundEffectButton extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque, // 确保整个区域都能响应点击
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
         child: Container(
-          constraints: BoxConstraints(
-            minWidth: 100,
-            maxWidth: 140,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          constraints: const BoxConstraints(minWidth: 100, maxWidth: 140),
           decoration: BoxDecoration(
-            color: isActive
+            color: isSelected
                 ? const Color(0xFF32B8C6)
-                : (isDark
-                      ? const Color(0xFF3A4A5C)
-                      : Colors.grey.withValues(alpha: 0.1)),
+                : (isPreviewing
+                      ? const Color(0xFF32B8C6).withValues(alpha: 0.3)
+                      : (isDark
+                            ? const Color(0xFF3A4A5C)
+                            : Colors.grey.withValues(alpha: 0.1))),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isActive
+              color: isSelected || isPreviewing
                   ? const Color(0xFF32B8C6)
                   : (isDark
                         ? Colors.white.withValues(alpha: 0.2)
@@ -305,33 +493,45 @@ class _SoundEffectButton extends StatelessWidget {
               width: 1,
             ),
           ),
-          child: Row(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
-                color: isActive
+                color: isSelected
                     ? Colors.white
                     : (isDark ? Colors.white70 : Colors.grey[600]),
-                size: 16,
+                size: 20,
               ),
-              const SizedBox(width: 6),
-              Expanded(
+              const SizedBox(height: 4),
+              Flexible(
                 child: Text(
                   name,
                   style: TextStyle(
-                    color: isActive
+                    color: isSelected
                         ? Colors.white
                         : (isDark ? Colors.white70 : Colors.grey[600]),
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                   textAlign: TextAlign.center,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (isPreviewing) ...[
+                const SizedBox(height: 2),
+                Container(
+                  width: 16,
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

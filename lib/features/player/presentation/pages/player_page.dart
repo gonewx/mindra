@@ -958,66 +958,82 @@ ${localizations.shareAppSignature}
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF2A3441) : theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header with title and close button
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.1)
-                          : theme.colorScheme.outline.withValues(alpha: 0.2),
-                      width: 1,
+        insetPadding: const EdgeInsets.all(16), // 添加外边距防止溢出
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // 根据屏幕大小动态调整弹出框尺寸
+            final maxWidth = constraints.maxWidth > 450 ? 400.0 : constraints.maxWidth - 32;
+            final maxHeight = constraints.maxHeight > 600 ? 500.0 : constraints.maxHeight - 100;
+            
+            return Container(
+              constraints: BoxConstraints(
+                maxWidth: maxWidth,
+                maxHeight: maxHeight,
+              ),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF2A3441) : theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header with title and close button
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : theme.colorScheme.outline.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            localizations.soundEffectsSettings,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: isDark
+                                  ? const Color(0xFF32B8C6)
+                                  : theme.colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: Icon(
+                            Icons.close,
+                            color: isDark
+                                ? Colors.white70
+                                : theme.colorScheme.onSurface.withValues(
+                                    alpha: 0.7,
+                                  ),
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      localizations.soundEffectsSettings,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: isDark
-                            ? const Color(0xFF32B8C6)
-                            : theme.colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                  // Content - 使用Flexible让内容可以收缩
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      child: const SingleChildScrollView(
+                        child: SoundEffectsPanel(),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(
-                        Icons.close,
-                        color: isDark
-                            ? Colors.white70
-                            : theme.colorScheme.onSurface.withValues(
-                                alpha: 0.7,
-                              ),
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              // Content
-              Container(
-                padding: const EdgeInsets.all(20),
-                constraints: const BoxConstraints(
-                  maxHeight: 400, // 限制最大高度
-                ),
-                child: const SingleChildScrollView(child: SoundEffectsPanel()),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
