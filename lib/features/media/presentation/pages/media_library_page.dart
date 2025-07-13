@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:get_it/get_it.dart';
 import '../../../../shared/widgets/animated_media_card.dart';
 import '../widgets/add_media_dialog.dart';
 import '../bloc/media_bloc.dart';
@@ -10,6 +11,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../domain/entities/media_item.dart';
 import '../../../../core/constants/media_category.dart';
+import '../../data/datasources/media_local_datasource.dart';
 
 class MediaLibraryPage extends StatefulWidget {
   const MediaLibraryPage({super.key});
@@ -35,6 +37,8 @@ class _MediaLibraryView extends StatefulWidget {
 class _MediaLibraryViewState extends State<_MediaLibraryView> {
   String _selectedCategory = 'All';
   bool _isGridView = true;
+  bool _isBatchDeleteMode = false;
+  Set<String> _selectedForDelete = {};
   final TextEditingController _searchController = TextEditingController();
 
   List<String> get _categories {
@@ -97,6 +101,93 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
     super.dispose();
   }
 
+  Widget _buildNormalHeader() {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          AppLocalizations.of(context)?.mediaLibraryTitle ?? 'Media Library',
+          style: theme.textTheme.headlineLarge?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Row(
+          children: [
+            // 批量删除按钮
+            IconButton(
+              onPressed: _enterBatchDeleteMode,
+              icon: const Icon(Icons.delete_sweep),
+              tooltip: '批量删除',
+            ),
+            const SizedBox(width: 8),
+            // 添加素材按钮
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.colorScheme.primary,
+              ),
+              child: IconButton(
+                onPressed: _showAddMediaDialog,
+                icon: const Icon(Icons.add, color: Colors.white),
+                tooltip: '添加素材',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBatchDeleteHeader() {
+    final theme = Theme.of(context);
+    final localizations = AppLocalizations.of(context)!;
+    
+    return Row(
+      children: [
+        IconButton(
+          onPressed: _exitBatchDeleteMode,
+          icon: const Icon(Icons.close),
+          tooltip: '取消',
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            '已选择 ${_selectedForDelete.length} 项',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        if (_selectedForDelete.isNotEmpty)
+          ElevatedButton.icon(
+            onPressed: _deleteSelectedItems,
+            icon: const Icon(Icons.delete),
+            label: Text(localizations.delete),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: theme.colorScheme.onError,
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _enterBatchDeleteMode() {
+    setState(() {
+      _isBatchDeleteMode = true;
+      _selectedForDelete.clear();
+    });
+  }
+
+  void _exitBatchDeleteMode() {
+    setState(() {
+      _isBatchDeleteMode = false;
+      _selectedForDelete.clear();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -107,29 +198,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
           // Header
           Padding(
             padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  AppLocalizations.of(context)?.mediaLibraryTitle ??
-                      'Media Library',
-                  style: theme.textTheme.headlineLarge?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.colorScheme.primary,
-                  ),
-                  child: IconButton(
-                    onPressed: _showAddMediaDialog,
-                    icon: const Icon(Icons.add, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
+            child: _isBatchDeleteMode ? _buildBatchDeleteHeader() : _buildNormalHeader(),
           ),
 
           // Search Bar with View Toggle
@@ -456,15 +525,226 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
         categoryDisplayName = item.category.name;
       }
 
-      return AnimatedMediaCard(
-        title: item.title.isNotEmpty ? item.title : '未命名',
-        duration: formattedDuration,
-        category: categoryDisplayName,
-        isListView: isListView,
-        onTap: () => _playMedia(item.id),
-      );
+      if (_isBatchDeleteMode) {
+        // 批量删除模式下的卡片
+        final isSelected = _selectedForDelete.contains(item.id);
+        
+        return GestureDetector(
+          onTap: () => _toggleDeleteSelection(item.id),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected 
+                    ? Theme.of(context).colorScheme.error
+                    : Colors.transparent,
+                width: 2,
+              ),
+            ),
+            child: Stack(
+              children: [
+                AnimatedMediaCard(
+                  title: item.title.isNotEmpty ? item.title : '未命名',
+                  duration: formattedDuration,
+                  category: categoryDisplayName,
+                  isListView: isListView,
+                  onTap: () => _toggleDeleteSelection(item.id),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isSelected 
+                          ? Theme.of(context).colorScheme.error
+                          : Colors.white.withValues(alpha: 0.8),
+                    ),
+                    child: Icon(
+                      isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                      color: isSelected 
+                          ? Colors.white
+                          : Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        // 正常模式下的卡片 - 支持右键菜单和长按
+        return GestureDetector(
+          onTap: () => _playMedia(item.id),
+          onLongPress: () => _showMediaContextMenu(context, item),
+          onSecondaryTapDown: (details) => _showMediaContextMenu(
+            context, 
+            item, 
+            position: details.globalPosition,
+          ),
+          child: AnimatedMediaCard(
+            title: item.title.isNotEmpty ? item.title : '未命名',
+            duration: formattedDuration,
+            category: categoryDisplayName,
+            isListView: isListView,
+            onTap: () => _playMedia(item.id),
+          ),
+        );
+      }
     } catch (e) {
       return _buildErrorCard('卡片渲染失败');
+    }
+  }
+
+  void _toggleDeleteSelection(String itemId) {
+    setState(() {
+      if (_selectedForDelete.contains(itemId)) {
+        _selectedForDelete.remove(itemId);
+      } else {
+        _selectedForDelete.add(itemId);
+      }
+    });
+  }
+
+  // 显示媒体上下文菜单（右键菜单或长按菜单）
+  void _showMediaContextMenu(BuildContext context, MediaItem item, {Offset? position}) {
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final localizations = AppLocalizations.of(context)!;
+    
+    showMenu(
+      context: context,
+      position: position != null 
+          ? RelativeRect.fromLTRB(
+              position.dx, 
+              position.dy, 
+              overlay.size.width - position.dx, 
+              overlay.size.height - position.dy,
+            )
+          : RelativeRect.fromLTRB(100, 100, 100, 100), // 长按时的默认位置
+      items: [
+        PopupMenuItem(
+          value: 'play',
+          child: ListTile(
+            leading: const Icon(Icons.play_arrow),
+            title: Text(localizations.play),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'edit',
+          child: ListTile(
+            leading: const Icon(Icons.edit),
+            title: Text(localizations.actionEdit),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: ListTile(
+            leading: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+            title: Text(
+              localizations.delete,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value != null) {
+        _handleContextMenuAction(value, item);
+      }
+    });
+  }
+
+  // 处理上下文菜单操作
+  void _handleContextMenuAction(String action, MediaItem item) {
+    switch (action) {
+      case 'play':
+        _playMedia(item.id);
+        break;
+      case 'edit':
+        _editSingleItem(item);
+        break;
+      case 'delete':
+        _deleteSingleItem(item);
+        break;
+    }
+  }
+
+  // 编辑单个素材
+  void _editSingleItem(MediaItem item) async {
+    try {
+      if (mounted) {
+        AddMediaDialog.showEdit(context, item).then((_) {
+          // 刷新列表
+          _refreshMediaList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('无法编辑媒体项: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  // 删除单个素材
+  void _deleteSingleItem(MediaItem item) async {
+    final localizations = AppLocalizations.of(context)!;
+    
+    // 确认删除
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(localizations.confirmDelete),
+        content: Text('确定要删除素材"${item.title}"吗？此操作无法撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(localizations.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: Text(localizations.delete),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed != true) return;
+    
+    try {
+      final dataSource = GetIt.instance<MediaLocalDataSource>();
+      await dataSource.deleteMediaItem(item.id);
+      
+      _refreshMediaList();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已删除素材"${item.title}"'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('删除失败: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -542,5 +822,80 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
         );
       }
     }
+  }
+
+  void _deleteSelectedItems() async {
+    if (_selectedForDelete.isEmpty) return;
+    
+    final localizations = AppLocalizations.of(context)!;
+    
+    // 确认删除
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(localizations.confirmDelete),
+        content: Text(
+          localizations.deleteConfirmMessage(_selectedForDelete.length),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(localizations.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: Text(localizations.delete),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed != true) return;
+    
+    try {
+      final dataSource = GetIt.instance<MediaLocalDataSource>();
+      
+      // 删除选中的项目
+      for (final itemId in _selectedForDelete) {
+        await dataSource.deleteMediaItem(itemId);
+      }
+      
+      // 刷新列表
+      _refreshMediaList();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              localizations.deleteSuccessMessage(_selectedForDelete.length),
+            ),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+      }
+      
+      _exitBatchDeleteMode();
+      
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('删除失败: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _refreshMediaList() {
+    final enumName = _getCategoryEnumName(_selectedCategory);
+    context.read<MediaBloc>().add(
+      LoadMediaItemsByCategory(enumName),
+    );
   }
 }

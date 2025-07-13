@@ -158,8 +158,18 @@ class CrossPlatformAudioPlayer {
   Future<void> setUrl(String url) async {
     if (_useAudioPlayers) {
       debugPrint('AudioPlayers: Setting URL: $url');
-      await _audioPlayersInstance!.setSourceUrl(url);
+      try {
+        await _audioPlayersInstance!.setSourceUrl(url);
+      } catch (e) {
+        if (Platform.isLinux && e.toString().contains('gst-resource-error')) {
+          debugPrint('Linux网络音频播放失败，audioplayers在Linux平台对某些网络音频格式支持有限');
+          // 抛出更友好的错误信息
+          throw Exception('Linux平台暂不支持此网络音频格式，请尝试下载到本地播放');
+        }
+        rethrow;
+      }
     } else {
+      debugPrint('JustAudio: Setting URL: $url');
       await _justAudioInstance!.setUrl(url);
     }
   }
@@ -275,8 +285,9 @@ class CrossPlatformAudioPlayer {
 
   /// Get duration of a media file without keeping it loaded
   static Future<Duration?> getMediaDuration(String filePath) async {
+    CrossPlatformAudioPlayer? tempPlayer;
     try {
-      final tempPlayer = CrossPlatformAudioPlayer();
+      tempPlayer = CrossPlatformAudioPlayer();
 
       if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
         await tempPlayer.setUrl(filePath);
@@ -288,22 +299,58 @@ class CrossPlatformAudioPlayer {
       await Future.delayed(const Duration(milliseconds: 500));
 
       final duration = await tempPlayer.getDuration();
-      await tempPlayer.dispose();
-
       return duration;
     } catch (e) {
       debugPrint('Failed to get media duration: $e');
       return null;
+    } finally {
+      // 确保在 finally 块中清理，无论是否出现异常
+      if (tempPlayer != null) {
+        try {
+          await tempPlayer.dispose();
+          debugPrint('Temporary audio player disposed successfully');
+        } catch (e) {
+          debugPrint('Error disposing temporary audio player: $e');
+        }
+      }
     }
   }
 
   Future<void> dispose() async {
-    _positionTimer?.cancel();
-    await _audioPlayersInstance?.dispose();
-    await _justAudioInstance?.dispose();
-    await _playingController.close();
-    await _positionController.close();
-    await _durationController.close();
-    await _playerStateController.close();
+    try {
+      // 首先停止播放
+      await stop();
+      
+      // 取消定时器
+      _positionTimer?.cancel();
+      
+      // 通知音频焦点管理器停止
+      _audioFocusManager.notifyMainAudioStopped();
+      
+      // 处理音频播放器实例
+      if (_audioPlayersInstance != null) {
+        await _audioPlayersInstance!.dispose();
+        _audioPlayersInstance = null;
+      }
+      
+      if (_justAudioInstance != null) {
+        await _justAudioInstance!.dispose();
+        _justAudioInstance = null;
+      }
+      
+      // 关闭所有流控制器
+      await _playingController.close();
+      await _positionController.close();
+      await _durationController.close();
+      await _playerStateController.close();
+      
+      debugPrint('CrossPlatformAudioPlayer disposed successfully');
+    } catch (e) {
+      debugPrint('Error during audio player disposal: $e');
+      // 即使出错也要尝试清理基本资源
+      _positionTimer?.cancel();
+      _audioPlayersInstance = null;
+      _justAudioInstance = null;
+    }
   }
 }

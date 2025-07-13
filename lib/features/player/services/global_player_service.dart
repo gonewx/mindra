@@ -4,13 +4,11 @@ import '../../../core/audio/cross_platform_audio_player.dart';
 import '../../../features/media/domain/entities/media_item.dart';
 import '../../../features/meditation/data/services/meditation_session_manager.dart';
 import '../../media/data/datasources/media_local_datasource.dart';
-import '../domain/services/sound_effects_service.dart';
 import '../presentation/widgets/player_controls.dart';
 import 'simple_sound_effects_player.dart';
 
 class GlobalPlayerService extends ChangeNotifier {
   late final CrossPlatformAudioPlayer _audioPlayer;
-  final SoundEffectsService _soundEffectsService = SoundEffectsService();
   final SimpleSoundEffectsPlayer _simpleSoundEffectsPlayer =
       SimpleSoundEffectsPlayer();
   final MediaLocalDataSource _mediaDataSource = MediaLocalDataSource();
@@ -61,7 +59,7 @@ class GlobalPlayerService extends ChangeNotifier {
     try {
       _audioPlayer = CrossPlatformAudioPlayer();
       await _setupAudioPlayer();
-      await _soundEffectsService.initialize();
+      // 只初始化 SimpleSoundEffectsPlayer，移除重复的 SoundEffectsService 初始化
       await _simpleSoundEffectsPlayer.initialize();
 
       // 设置音效状态变化回调
@@ -167,7 +165,11 @@ class GlobalPlayerService extends ChangeNotifier {
       // 安全地获取音效列表
       List<String> soundEffects = [];
       try {
-        soundEffects = _soundEffectsService.getActiveSoundEffects();
+        // 使用 SimpleSoundEffectsPlayer 获取激活的音效
+        soundEffects = _simpleSoundEffectsPlayer.currentVolumes.entries
+            .where((entry) => entry.value > 0.0)
+            .map((entry) => entry.key)
+            .toList();
       } catch (e) {
         debugPrint('Error getting active sound effects: $e');
         // 使用空列表作为默认值
@@ -235,8 +237,14 @@ class GlobalPlayerService extends ChangeNotifier {
         }
       }
 
-      await _audioPlayer.setFilePath(filePath);
-      debugPrint('Audio file loaded: $filePath');
+      // 检查是否为网络URL
+      if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+        await _audioPlayer.setUrl(filePath);
+        debugPrint('Network audio loaded: $filePath');
+      } else {
+        await _audioPlayer.setFilePath(filePath);
+        debugPrint('Local audio file loaded: $filePath');
+      }
     } catch (e) {
       debugPrint('Error loading audio file: $e');
       rethrow;
@@ -466,7 +474,6 @@ class GlobalPlayerService extends ChangeNotifier {
     notifyListeners();
   }
 
-  SoundEffectsService get soundEffectsService => _soundEffectsService;
   SimpleSoundEffectsPlayer get simpleSoundEffectsPlayer =>
       _simpleSoundEffectsPlayer;
 
@@ -507,7 +514,8 @@ class GlobalPlayerService extends ChangeNotifier {
     }
 
     await _audioPlayer.dispose();
-    _soundEffectsService.dispose();
+    // 清理音效播放器
+    await _simpleSoundEffectsPlayer.dispose();
     _isInitialized = false;
   }
 

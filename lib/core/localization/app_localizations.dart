@@ -15,6 +15,18 @@ class AppLocalizations {
       'app_settings': 'App Settings',
       'privacy_settings': 'Privacy Settings',
       'storage_management': 'Storage Management',
+      'data_management': 'Data Management',
+      'manage_media_library': 'Manage Media Library',
+      'refresh_list': 'Refresh List',
+      'delete_selected': 'Delete Selected',
+      'select_all': 'Select All',
+      'close': 'Close',
+      'no_media_items': 'No media items found',
+      'confirm_delete': 'Confirm Delete',
+      'delete': 'Delete',
+      'selected_count': '{selected} of {total} selected',
+      'delete_confirm_message': 'Are you sure you want to delete {count} item(s)? This action cannot be undone.',
+      'delete_success_message': 'Successfully deleted {count} item(s)',
       'about': 'About',
       'about_app': 'About App',
       'select_theme': 'Select Theme',
@@ -394,6 +406,18 @@ class AppLocalizations {
       'app_settings': '应用设置',
       'privacy_settings': '隐私设置',
       'storage_management': '存储管理',
+      'data_management': '数据管理',
+      'manage_media_library': '管理媒体库',
+      'refresh_list': '刷新列表',
+      'delete_selected': '删除选中',
+      'select_all': '全选',
+      'close': '关闭',
+      'no_media_items': '未找到媒体素材',
+      'confirm_delete': '确认删除',
+      'delete': '删除',
+      'selected_count': '已选择 {selected}/{total} 项',
+      'delete_confirm_message': '确定要删除 {count} 个项目吗？此操作无法撤销。',
+      'delete_success_message': '成功删除了 {count} 个项目',
       'about': '关于',
       'about_app': '关于应用',
       'select_theme': '选择主题',
@@ -780,6 +804,15 @@ class AppLocalizations {
   String get appSettings => getString('app_settings');
   String get privacySettings => getString('privacy_settings');
   String get storageManagement => getString('storage_management');
+  String get dataManagement => getString('data_management');
+  String get manageMediaLibrary => getString('manage_media_library');
+  String get refreshList => getString('refresh_list');
+  String get deleteSelected => getString('delete_selected');
+  String get selectAll => getString('select_all');
+  String get close => getString('close');
+  String get noMediaItems => getString('no_media_items');
+  String get confirmDelete => getString('confirm_delete');
+  String get delete => getString('delete');
   String get about => getString('about');
   String get aboutApp => getString('about_app');
   String get privacyPolicy => getString('privacy_policy');
@@ -1298,6 +1331,23 @@ class AppLocalizations {
   String dialogFileSelectionFailed(String error) {
     final template = getString('dialog_file_selection_failed');
     return template.replaceAll('{error}', error);
+  }
+
+  String selectedCount(int selected, int total) {
+    final template = getString('selected_count');
+    return template
+        .replaceAll('{selected}', selected.toString())
+        .replaceAll('{total}', total.toString());
+  }
+
+  String deleteConfirmMessage(int count) {
+    final template = getString('delete_confirm_message');
+    return template.replaceAll('{count}', count.toString());
+  }
+
+  String deleteSuccessMessage(int count) {
+    final template = getString('delete_success_message');
+    return template.replaceAll('{count}', count.toString());
   }
 
   // Reminder Notifications getters

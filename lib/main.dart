@@ -13,7 +13,6 @@ import 'core/config/app_config_service.dart';
 import 'core/database/database_helper.dart';
 import 'core/services/reminder_scheduler_service.dart';
 import 'core/localization/app_localizations.dart';
-import 'features/player/services/simple_sound_effects_player.dart';
 import 'features/player/services/global_player_service.dart';
 
 void main() async {
@@ -112,13 +111,7 @@ class _MindraAppState extends State<MindraApp> {
     } catch (e) {
       debugPrint('Failed to initialize global player service: $e');
     }
-
-    try {
-      await SimpleSoundEffectsPlayer().initialize();
-      debugPrint('Sound effects service initialized successfully');
-    } catch (e) {
-      debugPrint('Failed to initialize sound effects service: $e');
-    }
+    // 移除重复的音效服务初始化 - 已经在 GlobalPlayerService 中初始化了
   }
 
   Future<void> _initializeOtherServices() async {

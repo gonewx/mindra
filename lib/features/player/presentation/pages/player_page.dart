@@ -10,7 +10,6 @@ import '../../services/global_player_service.dart';
 import '../../../../features/media/domain/entities/media_item.dart';
 import '../../../../features/media/presentation/bloc/media_bloc.dart';
 import '../../../../features/media/presentation/bloc/media_event.dart';
-import '../../../../features/media/presentation/widgets/add_media_dialog.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/constants/media_category.dart';
@@ -618,14 +617,6 @@ class _PlayerPageState extends State<PlayerPage> {
               child: Column(
                 children: [
                   _buildOptionTile(
-                    icon: Icons.edit,
-                    title: localizations.actionEdit,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _editCurrentMedia();
-                    },
-                  ),
-                  _buildOptionTile(
                     icon: Icons.share,
                     title: localizations.actionShare,
                     onTap: () {
@@ -751,15 +742,6 @@ ${localizations.shareAppSignature}
     // TODO: Implement clipboard copy functionality
     // This would typically use the clipboard package
     debugPrint('Copying to clipboard: $text');
-  }
-
-  void _editCurrentMedia() {
-    if (_currentMedia == null) return;
-
-    AddMediaDialog.showEdit(context, _currentMedia!).then((_) {
-      // 重新加载媒体数据以获取更新后的信息
-      _initializePlayer();
-    });
   }
 
   void _showTimerDialog() {
