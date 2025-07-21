@@ -6,6 +6,8 @@ import '../../../features/meditation/data/services/meditation_session_manager.da
 import '../../media/data/datasources/media_local_datasource.dart';
 import '../presentation/widgets/player_controls.dart';
 import 'simple_sound_effects_player.dart';
+import '../../../core/database/database_helper.dart';
+import '../../../core/database/web_storage_helper.dart';
 
 class GlobalPlayerService extends ChangeNotifier {
   late final CrossPlatformAudioPlayer _audioPlayer;
@@ -39,6 +41,10 @@ class GlobalPlayerService extends ChangeNotifier {
   RepeatMode _repeatMode = RepeatMode.none;
   Timer? _sleepTimer;
   int _sleepTimerMinutes = 0; // 保存当前设置的定时器时长
+
+  // 添加保存上次播放媒体的常量
+  static const String _lastPlayedMediaIdKey = 'last_played_media_id';
+  static const String _lastPlayedPositionKey = 'last_played_position';
 
   // Getters
   bool get isPlaying => _isPlaying;
@@ -79,6 +85,9 @@ class GlobalPlayerService extends ChangeNotifier {
 
       // 初始化音效播放器
       await _initializeSoundEffectsPlayer();
+
+      // 恢复上次播放的媒体
+      await _restoreLastPlayedMedia();
 
       _isInitialized = true;
       _initializationCompleter!.complete();
@@ -151,9 +160,17 @@ class GlobalPlayerService extends ChangeNotifier {
 
     // Listen to position changes
     _positionSubscription = _audioPlayer.positionStream.listen((position) {
-      _currentPosition = position.inSeconds.toDouble();
+      final newPosition = position.inSeconds.toDouble();
+      final positionDiff = (newPosition - _currentPosition).abs();
+
+      _currentPosition = newPosition;
       notifyListeners();
       MeditationSessionManager.updateSessionProgress(position.inSeconds);
+
+      // 每隔10秒或者位置变化超过5秒时保存播放位置（避免频繁保存）
+      if (positionDiff > 5.0 || (_currentPosition % 10 == 0)) {
+        _saveLastPlayedPosition();
+      }
     });
 
     // Listen to duration changes
@@ -184,6 +201,8 @@ class GlobalPlayerService extends ChangeNotifier {
     switch (state) {
       case CrossPlatformPlayerState.completed:
         _completeMeditationSession();
+        // 音频播放完成时清除播放位置记录
+        _clearLastPlayedRecord();
         _handleTrackCompletion();
         break;
       case CrossPlatformPlayerState.playing:
@@ -264,7 +283,42 @@ class GlobalPlayerService extends ChangeNotifier {
     }
   }
 
-  Future<void> loadMedia(String mediaId) async {
+  /// 恢复上次播放的媒体
+  Future<void> _restoreLastPlayedMedia() async {
+    try {
+      String? lastPlayedMediaId;
+
+      if (kIsWeb) {
+        lastPlayedMediaId = await WebStorageHelper.getPreference(
+          _lastPlayedMediaIdKey,
+        );
+      } else {
+        lastPlayedMediaId = await DatabaseHelper.getPreference(
+          _lastPlayedMediaIdKey,
+        );
+      }
+
+      if (lastPlayedMediaId != null && lastPlayedMediaId.isNotEmpty) {
+        debugPrint('Restoring last played media: $lastPlayedMediaId');
+
+        // 加载媒体但不自动播放
+        await _loadMediaById(lastPlayedMediaId, autoPlay: false);
+
+        // 恢复播放位置
+        await _restoreLastPlayedPosition();
+
+        debugPrint('Successfully restored last played media');
+      } else {
+        debugPrint('No last played media found');
+      }
+    } catch (e) {
+      debugPrint('Error restoring last played media: $e');
+      // 恢复失败不影响应用正常运行
+    }
+  }
+
+  /// 根据媒体ID加载媒体（内部方法）
+  Future<void> _loadMediaById(String mediaId, {bool autoPlay = false}) async {
     try {
       _mediaItems = await _mediaDataSource.getMediaItems();
       _currentIndex = _mediaItems.indexWhere((item) => item.id == mediaId);
@@ -276,11 +330,106 @@ class GlobalPlayerService extends ChangeNotifier {
         notifyListeners();
 
         await _loadAudioFile(media.filePath);
+
+        // 保存为上次播放的媒体
+        await _saveLastPlayedMedia();
+
+        // 如果需要自动播放
+        if (autoPlay) {
+          await play();
+        }
       }
     } catch (e) {
       debugPrint('Error loading media: $e');
       rethrow;
     }
+  }
+
+  /// 恢复上次播放位置
+  Future<void> _restoreLastPlayedPosition() async {
+    try {
+      String? positionString;
+
+      if (kIsWeb) {
+        positionString = await WebStorageHelper.getPreference(
+          _lastPlayedPositionKey,
+        );
+      } else {
+        positionString = await DatabaseHelper.getPreference(
+          _lastPlayedPositionKey,
+        );
+      }
+
+      if (positionString != null && positionString.isNotEmpty) {
+        final positionSeconds = double.tryParse(positionString);
+        if (positionSeconds != null && positionSeconds > 0) {
+          await seek(Duration(seconds: positionSeconds.toInt()));
+          debugPrint('Restored playback position: ${positionSeconds}s');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error restoring playback position: $e');
+    }
+  }
+
+  /// 保存当前播放的媒体ID
+  Future<void> _saveLastPlayedMedia() async {
+    if (_currentMedia == null) return;
+
+    try {
+      if (kIsWeb) {
+        await WebStorageHelper.setPreference(
+          _lastPlayedMediaIdKey,
+          _currentMedia!.id,
+        );
+      } else {
+        await DatabaseHelper.setPreference(
+          _lastPlayedMediaIdKey,
+          _currentMedia!.id,
+        );
+      }
+      debugPrint('Saved last played media: ${_currentMedia!.id}');
+    } catch (e) {
+      debugPrint('Error saving last played media: $e');
+    }
+  }
+
+  /// 保存当前播放位置
+  Future<void> _saveLastPlayedPosition() async {
+    try {
+      final positionString = _currentPosition.toString();
+      if (kIsWeb) {
+        await WebStorageHelper.setPreference(
+          _lastPlayedPositionKey,
+          positionString,
+        );
+      } else {
+        await DatabaseHelper.setPreference(
+          _lastPlayedPositionKey,
+          positionString,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving playback position: $e');
+    }
+  }
+
+  /// 清除上次播放记录（当音频播放完成时调用）
+  Future<void> _clearLastPlayedRecord() async {
+    try {
+      if (kIsWeb) {
+        await WebStorageHelper.setPreference(_lastPlayedPositionKey, '0');
+      } else {
+        await DatabaseHelper.setPreference(_lastPlayedPositionKey, '0');
+      }
+      debugPrint('Cleared last played position');
+    } catch (e) {
+      debugPrint('Error clearing last played record: $e');
+    }
+  }
+
+  Future<void> loadMedia(String mediaId, {bool autoPlay = true}) async {
+    await _loadMediaById(mediaId, autoPlay: autoPlay);
   }
 
   Future<void> _loadAudioFile(String filePath) async {
@@ -357,12 +506,18 @@ class GlobalPlayerService extends ChangeNotifier {
   Future<void> pause() async {
     await _audioPlayer.pause();
 
+    // 保存当前播放位置
+    await _saveLastPlayedPosition();
+
     // 暂停背景音效
     await _pauseSoundEffects();
   }
 
   Future<void> stop() async {
     await _audioPlayer.stop();
+
+    // 保存当前播放位置
+    await _saveLastPlayedPosition();
 
     // 停止背景音效
     await _pauseSoundEffects();
@@ -406,6 +561,10 @@ class GlobalPlayerService extends ChangeNotifier {
 
   Future<void> seek(Duration position) async {
     await _audioPlayer.seek(position);
+
+    // 保存新的播放位置
+    _currentPosition = position.inSeconds.toDouble();
+    await _saveLastPlayedPosition();
   }
 
   Future<void> playNext() async {
@@ -445,6 +604,10 @@ class GlobalPlayerService extends ChangeNotifier {
 
     try {
       await _loadAudioFile(media.filePath);
+
+      // 保存为上次播放的媒体
+      await _saveLastPlayedMedia();
+
       // Auto-play the new track if currently playing
       if (_isPlaying) {
         await _audioPlayer.play();

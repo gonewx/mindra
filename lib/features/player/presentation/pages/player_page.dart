@@ -61,10 +61,12 @@ class _PlayerPageState extends State<PlayerPage> {
       // Load media if specified, otherwise check if service already has media
       if (widget.mediaId != null) {
         debugPrint('PlayerPage: Loading media with ID: ${widget.mediaId}');
-        await _playerService.loadMedia(widget.mediaId!);
+        await _playerService.loadMedia(widget.mediaId!, autoPlay: false);
       } else if (_playerService.currentMedia != null) {
-        // Service already has media loaded, just trigger a rebuild
-        debugPrint('PlayerPage: Using existing media from service');
+        // Service already has media loaded (possibly restored from last session)
+        debugPrint(
+          'PlayerPage: Using existing media from service: ${_playerService.currentMedia!.title}',
+        );
         setState(() {});
       } else {
         debugPrint(
