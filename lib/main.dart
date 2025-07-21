@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'dart:async';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/di/injection_container.dart';
@@ -46,29 +47,34 @@ class _MindraAppState extends State<MindraApp> {
 
   Future<void> _initializeBackgroundServices() async {
     try {
-      // 初始化主题
-      await _themeProvider.initialize();
-
-      // 初始化依赖注入
+      // 优先初始化依赖注入，这样音频服务就可以被注册
       await configureDependencies();
+      debugPrint('Dependency injection configured');
 
-      // 初始化应用配置服务
-      await AppConfigService.initialize();
-
-      // 初始化数据库
-      await _initializeDatabaseServices();
-
-      // 初始化音频服务
-      await _initializeAudioServices();
-
-      // 初始化其他服务
-      await _initializeOtherServices();
+      // 并行初始化各个服务以提高启动速度
+      await Future.wait([
+        _initializeTheme(),
+        _initializeAppConfig(),
+        _initializeDatabaseServices(),
+        _initializeAudioServices(),
+        _initializeOtherServices(),
+      ]);
 
       debugPrint('Background services initialized');
     } catch (e) {
       debugPrint('Failed to initialize background services: $e');
       // 不影响UI显示
     }
+  }
+
+  Future<void> _initializeTheme() async {
+    await _themeProvider.initialize();
+    debugPrint('Theme initialized');
+  }
+
+  Future<void> _initializeAppConfig() async {
+    await AppConfigService.initialize();
+    debugPrint('App config initialized');
   }
 
   Future<void> _initializeDatabaseServices() async {
@@ -103,15 +109,20 @@ class _MindraAppState extends State<MindraApp> {
   }
 
   Future<void> _initializeAudioServices() async {
-    // Initialize audio services with fallback
+    // Initialize audio services with fallback and prewarming
     try {
+      debugPrint('Starting audio services initialization...');
       final globalPlayerService = getIt<GlobalPlayerService>();
+
+      // 预热音频服务 - 在后台开始初始化但不等待完成
+      // 这样可以减少用户首次打开播放器时的等待时间
       await globalPlayerService.initialize();
-      debugPrint('Global player service initialized successfully');
+
+      debugPrint('Audio services initialization started (background)');
     } catch (e) {
-      debugPrint('Failed to initialize global player service: $e');
+      debugPrint('Failed to start audio services initialization: $e');
+      // 即使预热失败，也不影响应用启动
     }
-    // 移除重复的音效服务初始化 - 已经在 GlobalPlayerService 中初始化了
   }
 
   Future<void> _initializeOtherServices() async {
@@ -169,7 +180,7 @@ class ErrorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // 简单的语言检测，用于错误页面
     final isEnglish = _isSystemEnglish();
-    
+
     return MaterialApp(
       locale: isEnglish ? const Locale('en', 'US') : const Locale('zh', 'CN'),
       localizationsDelegates: const [
@@ -178,10 +189,7 @@ class ErrorApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('zh', 'CN'),
-        Locale('en', 'US'),
-      ],
+      supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
       home: Scaffold(
         body: Center(
           child: Padding(
@@ -193,7 +201,10 @@ class ErrorApp extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   isEnglish ? 'App Initialization Failed' : '应用初始化失败',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(

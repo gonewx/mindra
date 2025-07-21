@@ -24,6 +24,8 @@ class GlobalPlayerService extends ChangeNotifier {
   double _currentPosition = 0.0;
   double _totalDuration = 0.0;
   bool _isInitialized = false;
+  bool _isInitializing = false; // 添加初始化状态标志
+  Completer<void>? _initializationCompleter; // 添加初始化完成器
 
   // Media state
   MediaItem? _currentMedia;
@@ -54,12 +56,76 @@ class GlobalPlayerService extends ChangeNotifier {
   String get category => _currentMedia?.category.name ?? '';
 
   Future<void> initialize() async {
+    // 如果已经初始化完成，直接返回
     if (_isInitialized) return;
 
+    // 如果正在初始化，等待初始化完成
+    if (_isInitializing && _initializationCompleter != null) {
+      return _initializationCompleter!.future;
+    }
+
+    // 设置初始化状态
+    _isInitializing = true;
+    _initializationCompleter = Completer<void>();
+
     try {
-      _audioPlayer = CrossPlatformAudioPlayer();
+      debugPrint('Starting GlobalPlayerService initialization...');
+
+      // 初始化音频播放器，添加重试机制
+      await _initializeAudioPlayerWithRetry();
+
+      // 设置音频播放器监听器
       await _setupAudioPlayer();
-      // 只初始化 SimpleSoundEffectsPlayer，移除重复的 SoundEffectsService 初始化
+
+      // 初始化音效播放器
+      await _initializeSoundEffectsPlayer();
+
+      _isInitialized = true;
+      _initializationCompleter!.complete();
+      debugPrint('GlobalPlayerService initialized successfully');
+    } catch (e) {
+      _initializationCompleter!.completeError(e);
+      debugPrint('Failed to initialize GlobalPlayerService: $e');
+      rethrow;
+    } finally {
+      _isInitializing = false;
+    }
+  }
+
+  Future<void> _initializeAudioPlayerWithRetry() async {
+    const maxRetries = 3;
+    const retryDelay = Duration(milliseconds: 200);
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        debugPrint(
+          'Initializing audio player (attempt $attempt/$maxRetries)...',
+        );
+        _audioPlayer = CrossPlatformAudioPlayer();
+
+        // 等待一小段时间让音频播放器完全初始化
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        debugPrint('Audio player initialized successfully on attempt $attempt');
+        return;
+      } catch (e) {
+        debugPrint('Audio player initialization attempt $attempt failed: $e');
+
+        if (attempt == maxRetries) {
+          throw Exception(
+            'Failed to initialize audio player after $maxRetries attempts: $e',
+          );
+        }
+
+        // 等待后重试
+        await Future.delayed(retryDelay);
+      }
+    }
+  }
+
+  Future<void> _initializeSoundEffectsPlayer() async {
+    try {
+      debugPrint('Initializing sound effects player...');
       await _simpleSoundEffectsPlayer.initialize();
 
       // 设置音效状态变化回调
@@ -67,11 +133,11 @@ class GlobalPlayerService extends ChangeNotifier {
         notifyListeners();
       });
 
-      _isInitialized = true;
-      debugPrint('Global player service initialized successfully');
+      debugPrint('Sound effects player initialized successfully');
     } catch (e) {
-      debugPrint('Failed to initialize global player service: $e');
-      rethrow;
+      debugPrint('Warning: Sound effects player initialization failed: $e');
+      // 音效播放器初始化失败不应该影响主播放器功能
+      // 所以这里不抛出异常，只记录警告
     }
   }
 
@@ -161,7 +227,7 @@ class GlobalPlayerService extends ChangeNotifier {
       final sessionType = MeditationSessionManager.getSessionTypeFromCategory(
         _currentMedia!.category.name,
       );
-      
+
       // 安全地获取音效列表
       List<String> soundEffects = [];
       try {

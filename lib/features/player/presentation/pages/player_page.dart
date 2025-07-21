@@ -49,7 +49,9 @@ class _PlayerPageState extends State<PlayerPage> {
 
   Future<void> _initializePlayer() async {
     try {
+      // 确保全局播放服务已初始化
       if (!_playerService.isInitialized) {
+        debugPrint('PlayerPage: Initializing global player service...');
         await _playerService.initialize();
       }
 
@@ -58,10 +60,16 @@ class _PlayerPageState extends State<PlayerPage> {
 
       // Load media if specified, otherwise check if service already has media
       if (widget.mediaId != null) {
+        debugPrint('PlayerPage: Loading media with ID: ${widget.mediaId}');
         await _playerService.loadMedia(widget.mediaId!);
       } else if (_playerService.currentMedia != null) {
         // Service already has media loaded, just trigger a rebuild
+        debugPrint('PlayerPage: Using existing media from service');
         setState(() {});
+      } else {
+        debugPrint(
+          'PlayerPage: No media specified and no current media in service',
+        );
       }
 
       // Set timer if specified in URL parameters
@@ -78,14 +86,33 @@ class _PlayerPageState extends State<PlayerPage> {
           );
         }
       }
+
+      debugPrint('PlayerPage: Initialization completed successfully');
     } catch (e) {
-      debugPrint('Error initializing player: $e');
+      debugPrint('PlayerPage: Error during initialization: $e');
       if (mounted) {
         final localizations = AppLocalizations.of(context)!;
+
+        // 显示更友好的错误信息
+        String errorMessage;
+        if (e.toString().contains('audio player')) {
+          errorMessage = '音频播放器初始化失败，请重试';
+        } else if (e.toString().contains('media')) {
+          errorMessage = '加载媒体文件失败，请检查文件是否存在';
+        } else {
+          errorMessage = localizations.playerInitializationFailed(e.toString());
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              localizations.playerInitializationFailed(e.toString()),
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: '重试',
+              onPressed: () {
+                // 重新初始化
+                _initializePlayer();
+              },
             ),
           ),
         );

@@ -74,14 +74,14 @@ class CrossPlatformAudioPlayer {
     if (_audioPlayersInstance == null) return;
 
     try {
-      // 添加延迟以确保华为设备有足够时间初始化
-      await Future.delayed(const Duration(milliseconds: 100));
+      // 增加延迟以确保华为设备和其他Android设备有足够时间初始化
+      await Future.delayed(const Duration(milliseconds: 200));
 
       // 使用音频焦点管理器获取配置
       final audioContext = _audioFocusManager.getMainAudioContext();
       await _audioPlayersInstance!.setAudioContext(audioContext);
       debugPrint(
-        'Main audio player context configured safely for Huawei devices',
+        'Main audio player context configured safely for Android devices',
       );
     } catch (e) {
       debugPrint('Failed to configure main audio context safely: $e');
@@ -320,30 +320,30 @@ class CrossPlatformAudioPlayer {
     try {
       // 首先停止播放
       await stop();
-      
+
       // 取消定时器
       _positionTimer?.cancel();
-      
+
       // 通知音频焦点管理器停止
       _audioFocusManager.notifyMainAudioStopped();
-      
+
       // 处理音频播放器实例
       if (_audioPlayersInstance != null) {
         await _audioPlayersInstance!.dispose();
         _audioPlayersInstance = null;
       }
-      
+
       if (_justAudioInstance != null) {
         await _justAudioInstance!.dispose();
         _justAudioInstance = null;
       }
-      
+
       // 关闭所有流控制器
       await _playingController.close();
       await _positionController.close();
       await _durationController.close();
       await _playerStateController.close();
-      
+
       debugPrint('CrossPlatformAudioPlayer disposed successfully');
     } catch (e) {
       debugPrint('Error during audio player disposal: $e');
