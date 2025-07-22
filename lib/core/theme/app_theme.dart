@@ -306,8 +306,13 @@ extension AppThemeModeExtension on AppThemeMode {
   }
 
   String displayNameLocalized(BuildContext context) {
-    final localizations = context.findAncestorWidgetOfExactType<Localizations>()?.locale.languageCode ?? 'zh';
-    
+    final localizations =
+        context
+            .findAncestorWidgetOfExactType<Localizations>()
+            ?.locale
+            .languageCode ??
+        'zh';
+
     switch (this) {
       case AppThemeMode.light:
         return localizations == 'zh' ? '浅色主题' : 'Light Theme';

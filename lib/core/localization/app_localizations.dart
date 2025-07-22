@@ -25,7 +25,8 @@ class AppLocalizations {
       'confirm_delete': 'Confirm Delete',
       'delete': 'Delete',
       'selected_count': '{selected} of {total} selected',
-      'delete_confirm_message': 'Are you sure you want to delete {count} item(s)? This action cannot be undone.',
+      'delete_confirm_message':
+          'Are you sure you want to delete {count} item(s)? This action cannot be undone.',
       'delete_success_message': 'Successfully deleted {count} item(s)',
       'about': 'About',
       'about_app': 'About App',
@@ -1197,7 +1198,8 @@ class AppLocalizations {
   String get splashLoading => getString('splash_loading');
 
   // Error page getters
-  String get errorInitializationFailed => getString('error_initialization_failed');
+  String get errorInitializationFailed =>
+      getString('error_initialization_failed');
   String get errorRetry => getString('error_retry');
 
   String meditatedTimes(int count) {

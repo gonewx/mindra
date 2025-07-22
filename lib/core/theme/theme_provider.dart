@@ -15,7 +15,8 @@ class ThemeProvider extends ChangeNotifier {
   double _cardPadding = 20.0; // 默认卡片内边距 20px，匹配原型设计
 
   AppThemeMode get themeMode => _themeMode;
-  Locale get locale => _locale ?? _getSystemLocale(); // 如果 _locale 为 null，返回系统语言
+  Locale get locale =>
+      _locale ?? _getSystemLocale(); // 如果 _locale 为 null，返回系统语言
   ThemeData get themeData => _themeMode.themeData;
   double get cardSpacing => _cardSpacing;
   double get cardPadding => _cardPadding;
@@ -45,28 +46,31 @@ class ThemeProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       String localeString = prefs.getString(_localeKey) ?? '';
-      
+
       // 如果没有保存过语言设置，则使用系统语言
       if (localeString.isEmpty) {
         final systemLocale = _getSystemLocale();
-        localeString = '${systemLocale.languageCode}_${systemLocale.countryCode ?? ''}';
+        localeString =
+            '${systemLocale.languageCode}_${systemLocale.countryCode ?? ''}';
         // 保存系统语言作为默认设置
         await prefs.setString(_localeKey, localeString);
       }
-      
+
       final parts = localeString.split('_');
       final languageCode = parts[0];
-      
+
       // 验证解析出的语言代码是否在支持的列表中
       const supportedLanguages = ['zh', 'en'];
       if (supportedLanguages.contains(languageCode)) {
         _locale = Locale(languageCode, parts.length > 1 ? parts[1] : '');
       } else {
         // 如果语言代码无效，回退到系统语言
-        debugPrint('Invalid language code: $languageCode, falling back to system locale');
+        debugPrint(
+          'Invalid language code: $languageCode, falling back to system locale',
+        );
         _locale = _getSystemLocale();
       }
-      
+
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading locale: $e');
@@ -80,10 +84,10 @@ class ThemeProvider extends ChangeNotifier {
   Locale _getSystemLocale() {
     try {
       final systemLocale = ui.PlatformDispatcher.instance.locale;
-      
+
       // 检查系统语言是否在支持的语言列表中
       const supportedLanguages = ['zh', 'en'];
-      
+
       if (supportedLanguages.contains(systemLocale.languageCode)) {
         // 如果系统语言是中文，设置为简体中文
         if (systemLocale.languageCode == 'zh') {
@@ -171,7 +175,7 @@ class ThemeProvider extends ChangeNotifier {
     final systemLocale = _getSystemLocale();
     final currentLocale = locale;
     return currentLocale.languageCode == systemLocale.languageCode &&
-           currentLocale.countryCode == systemLocale.countryCode;
+        currentLocale.countryCode == systemLocale.countryCode;
   }
 
   /// Update card spacing and save to preferences

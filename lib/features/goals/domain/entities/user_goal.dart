@@ -29,7 +29,15 @@ class UserGoal extends Equatable {
     this.weeklyGoalUnit = GoalFrequencyUnit.times,
     required this.reminderTime,
     this.isReminderEnabled = false,
-    this.reminderDays = const [Weekday.monday, Weekday.tuesday, Weekday.wednesday, Weekday.thursday, Weekday.friday, Weekday.saturday, Weekday.sunday],
+    this.reminderDays = const [
+      Weekday.monday,
+      Weekday.tuesday,
+      Weekday.wednesday,
+      Weekday.thursday,
+      Weekday.friday,
+      Weekday.saturday,
+      Weekday.sunday,
+    ],
     this.enableSound = true,
     this.enableVibration = true,
     required this.createdAt,
@@ -145,10 +153,10 @@ class UserGoal extends Equatable {
     if (reminderDaysValue == null) {
       return WeekdayExtension.allWeekdays;
     }
-    
+
     final reminderDaysString = reminderDaysValue.toString();
     final dayStrings = reminderDaysString.split(',');
-    
+
     // 尝试从枚举名称解析
     try {
       return WeekdayListExtension.fromStringList(dayStrings);

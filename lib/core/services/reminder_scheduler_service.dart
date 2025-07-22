@@ -27,7 +27,10 @@ class ReminderSchedulerService {
   }
 
   /// 更新用户提醒设置
-  Future<void> updateReminderSettings(UserGoal goal, [BuildContext? context]) async {
+  Future<void> updateReminderSettings(
+    UserGoal goal, [
+    BuildContext? context,
+  ]) async {
     try {
       // 取消现有的提醒
       await _cancelAllReminders();
@@ -45,7 +48,10 @@ class ReminderSchedulerService {
   }
 
   /// 调度提醒
-  Future<void> _scheduleReminders(UserGoal goal, [BuildContext? context]) async {
+  Future<void> _scheduleReminders(
+    UserGoal goal, [
+    BuildContext? context,
+  ]) async {
     if (!goal.isReminderEnabled) {
       debugPrint('Reminders disabled');
       return;
@@ -54,7 +60,7 @@ class ReminderSchedulerService {
     // 获取本地化文本（在异步操作之前）
     String title;
     String body;
-    
+
     if (context != null) {
       final l10n = AppLocalizations.of(context)!;
       title = l10n.reminderNotificationTitle;
@@ -64,9 +70,12 @@ class ReminderSchedulerService {
       // 回退到默认文本（英文）
       title = 'Meditation Time!';
       final goalValue = goal.dailyGoalValue;
-      final unitText = goal.dailyGoalUnit == GoalTimeUnit.minutes ? 'minute' : 'hour';
+      final unitText = goal.dailyGoalUnit == GoalTimeUnit.minutes
+          ? 'minute'
+          : 'hour';
       final pluralSuffix = goalValue == 1 ? '' : 's';
-      body = 'Time to start your $goalValue $unitText$pluralSuffix meditation and let your mind relax.';
+      body =
+          'Time to start your $goalValue $unitText$pluralSuffix meditation and let your mind relax.';
     }
 
     // 检查通知权限
@@ -160,7 +169,7 @@ class ReminderSchedulerService {
       // 获取本地化文本（在异步操作之前）
       String title;
       String body;
-      
+
       if (context != null) {
         final l10n = AppLocalizations.of(context)!;
         title = l10n.testNotificationTitle;
@@ -168,7 +177,8 @@ class ReminderSchedulerService {
       } else {
         // 回退到默认文本（英文）
         title = 'Test Notification';
-        body = 'This is a test notification to verify that the reminder function works properly.';
+        body =
+            'This is a test notification to verify that the reminder function works properly.';
       }
 
       final hasPermission = await _notificationService

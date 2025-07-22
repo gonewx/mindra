@@ -4,7 +4,6 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/animated_action_button.dart';
 import '../../../../shared/widgets/timer_dialog.dart';
-import '../../../goals/data/services/goal_service.dart';
 
 class QuickActionsGrid extends StatelessWidget {
   const QuickActionsGrid({super.key});

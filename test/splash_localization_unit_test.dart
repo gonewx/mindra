@@ -5,7 +5,9 @@ import 'package:mindra/core/localization/app_localizations.dart';
 
 void main() {
   group('Splash Page Internationalization Tests', () {
-    testWidgets('should load Chinese localizations correctly', (WidgetTester tester) async {
+    testWidgets('should load Chinese localizations correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('zh', 'CN'),
@@ -15,10 +17,7 @@ void main() {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          supportedLocales: const [
-            Locale('zh', 'CN'),
-            Locale('en', 'US'),
-          ],
+          supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
           home: Builder(
             builder: (context) {
               final localizations = AppLocalizations.of(context);
@@ -42,7 +41,9 @@ void main() {
       expect(find.text('加载中...'), findsOneWidget);
     });
 
-    testWidgets('should load English localizations correctly', (WidgetTester tester) async {
+    testWidgets('should load English localizations correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en', 'US'),
@@ -52,10 +53,7 @@ void main() {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          supportedLocales: const [
-            Locale('zh', 'CN'),
-            Locale('en', 'US'),
-          ],
+          supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
           home: Builder(
             builder: (context) {
               final localizations = AppLocalizations.of(context);
@@ -84,9 +82,9 @@ void main() {
         'splash_tagline': '开启你的冥想之旅',
         'splash_loading': '加载中...',
       };
-      
+
       const englishValues = {
-        'splash_tagline': 'Begin Your Meditation Journey', 
+        'splash_tagline': 'Begin Your Meditation Journey',
         'splash_loading': 'Loading...',
       };
 
@@ -95,16 +93,16 @@ void main() {
       expect(chineseValues['splash_loading'], equals('加载中...'));
 
       // 验证英文字符串
-      expect(englishValues['splash_tagline'], equals('Begin Your Meditation Journey'));
+      expect(
+        englishValues['splash_tagline'],
+        equals('Begin Your Meditation Journey'),
+      );
       expect(englishValues['splash_loading'], equals('Loading...'));
     });
 
     test('should have correct splash keys in AppLocalizations', () {
       // 测试 AppLocalizations 中确实包含了这些键
-      const expectedKeys = [
-        'splash_tagline',
-        'splash_loading',
-      ];
+      const expectedKeys = ['splash_tagline', 'splash_loading'];
 
       // 这个测试确保我们记住了要添加这些键到国际化配置中
       for (final key in expectedKeys) {

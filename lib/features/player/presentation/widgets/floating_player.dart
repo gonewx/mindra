@@ -190,9 +190,7 @@ class _FloatingPlayerState extends State<FloatingPlayer>
                 child: Stack(
                   children: [
                     // 播放/暂停按钮
-                    Center(
-                      child: _buildFloatingButtonContent(theme),
-                    ),
+                    Center(child: _buildFloatingButtonContent(theme)),
 
                     // 进度环
                     if (_playerService.totalDuration > 0)
@@ -232,8 +230,9 @@ class _FloatingPlayerState extends State<FloatingPlayer>
   }
 
   Widget _buildFloatingButtonContent(ThemeData theme) {
-    final isLoading = _playerService.playerState == MindraPlayerState.loading || 
-                      _playerService.playerState == MindraPlayerState.buffering;
+    final isLoading =
+        _playerService.playerState == MindraPlayerState.loading ||
+        _playerService.playerState == MindraPlayerState.buffering;
 
     if (isLoading) {
       // 显示简单的加载指示器

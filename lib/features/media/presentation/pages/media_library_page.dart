@@ -38,7 +38,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   String _selectedCategory = 'All';
   bool _isGridView = true;
   bool _isBatchDeleteMode = false;
-  Set<String> _selectedForDelete = {};
+  final Set<String> _selectedForDelete = {};
   final TextEditingController _searchController = TextEditingController();
 
   List<String> get _categories {

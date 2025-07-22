@@ -98,35 +98,35 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
                     _buildReminderToggle(theme, l10n),
                     const SizedBox(height: 24),
 
-                                         // 提醒时间
-                     if (_isReminderEnabled) ...[
-                       _buildSectionTitle(
-                         l10n.remindersTime,
-                         Icons.access_time_outlined,
-                         theme,
-                       ),
-                       const SizedBox(height: 12),
-                       _buildTimeSelector(theme, l10n),
-                       const SizedBox(height: 24),
+                    // 提醒时间
+                    if (_isReminderEnabled) ...[
+                      _buildSectionTitle(
+                        l10n.remindersTime,
+                        Icons.access_time_outlined,
+                        theme,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildTimeSelector(theme, l10n),
+                      const SizedBox(height: 24),
 
-                       // 提醒日期
-                       _buildSectionTitle(
-                         l10n.remindersDate,
-                         Icons.calendar_today_outlined,
-                         theme,
-                       ),
-                       const SizedBox(height: 12),
-                       _buildDaySelector(theme, l10n),
-                       const SizedBox(height: 24),
+                      // 提醒日期
+                      _buildSectionTitle(
+                        l10n.remindersDate,
+                        Icons.calendar_today_outlined,
+                        theme,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDaySelector(theme, l10n),
+                      const SizedBox(height: 24),
 
-                       // 提醒方式
-                       _buildSectionTitle(
-                         l10n.remindersMethod,
-                         Icons.notifications_outlined,
-                         theme,
-                       ),
-                       const SizedBox(height: 12),
-                     ],
+                      // 提醒方式
+                      _buildSectionTitle(
+                        l10n.remindersMethod,
+                        Icons.notifications_outlined,
+                        theme,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     const SizedBox(height: 24),
 
                     // 通知选项

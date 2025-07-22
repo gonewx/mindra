@@ -141,7 +141,9 @@ class MeditationDayRecord extends Equatable {
 
 // 预定义的成就
 class AchievementDefinitions {
-  static List<Achievement> getDefaultAchievements(AppLocalizations localizations) {
+  static List<Achievement> getDefaultAchievements(
+    AppLocalizations localizations,
+  ) {
     return [
       Achievement(
         id: 'first_meditation',

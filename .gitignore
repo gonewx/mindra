@@ -61,3 +61,4 @@ release_report*.txt
 report/
 
 build_report*.txt
+coverage/

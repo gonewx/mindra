@@ -7,7 +7,9 @@ import '../../domain/entities/meditation_statistics.dart';
 
 class MeditationStatisticsService {
   /// 获取用户的冥想统计数据
-  static Future<MeditationStatistics> getStatistics([AppLocalizations? localizations]) async {
+  static Future<MeditationStatistics> getStatistics([
+    AppLocalizations? localizations,
+  ]) async {
     try {
       // 获取所有会话记录
       List<MeditationSession> sessions;
@@ -55,7 +57,7 @@ class MeditationStatisticsService {
       final weeklyData = _calculateWeeklyData(sessions, weekStart);
 
       // 生成成就
-      final achievements = localizations != null 
+      final achievements = localizations != null
           ? _generateAchievements(
               sessions,
               streakDays,
@@ -193,7 +195,9 @@ class MeditationStatisticsService {
               60
         : 0;
 
-    for (final achievement in AchievementDefinitions.getDefaultAchievements(localizations)) {
+    for (final achievement in AchievementDefinitions.getDefaultAchievements(
+      localizations,
+    )) {
       bool isEarned = false;
       DateTime? earnedDate;
 
@@ -298,9 +302,9 @@ class MeditationStatisticsService {
   /// 获取特定日期范围的统计数据
   static Future<MeditationStatistics> getStatisticsForDateRange(
     DateTime start,
-    DateTime end,
-    [AppLocalizations? localizations]
-  ) async {
+    DateTime end, [
+    AppLocalizations? localizations,
+  ]) async {
     try {
       List<MeditationSession> allSessions;
 
@@ -352,7 +356,7 @@ class MeditationStatisticsService {
         averageRating: averageRating,
         completedSessions: completedSessions,
         weeklyData: _calculateWeeklyData(filteredSessions, start),
-        achievements: localizations != null 
+        achievements: localizations != null
             ? _generateAchievements(
                 filteredSessions,
                 0,

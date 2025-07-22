@@ -39,8 +39,12 @@ class MeditationSessionManager {
       // 立即保存会话记录（状态为未完成）
       await _saveSessionToDatabase(_currentSession!);
 
-      debugPrint('Started meditation session: ${_currentSession!.id} for ${_currentSession!.title}');
-      debugPrint('Session details: Media ID: ${mediaItem.id}, Duration: ${mediaItem.duration}s, Start time: $startTime');
+      debugPrint(
+        'Started meditation session: ${_currentSession!.id} for ${_currentSession!.title}',
+      );
+      debugPrint(
+        'Session details: Media ID: ${mediaItem.id}, Duration: ${mediaItem.duration}s, Start time: $startTime',
+      );
       return sessionId;
     } catch (e) {
       debugPrint('Error starting meditation session: $e');
@@ -193,18 +197,24 @@ class MeditationSessionManager {
   /// 获取会话类型基于媒体类别
   static SessionType getSessionTypeFromCategory(String category) {
     final lowerCategory = category.toLowerCase();
-    
+
     // 支持中文和英文
     if (lowerCategory.contains('呼吸') || lowerCategory.contains('breathing')) {
       return SessionType.breathing;
-    } else if (lowerCategory.contains('睡眠') || lowerCategory.contains('睡前') || 
-               lowerCategory.contains('sleep') || lowerCategory.contains('bedtime')) {
+    } else if (lowerCategory.contains('睡眠') ||
+        lowerCategory.contains('睡前') ||
+        lowerCategory.contains('sleep') ||
+        lowerCategory.contains('bedtime')) {
       return SessionType.sleep;
-    } else if (lowerCategory.contains('专注') || lowerCategory.contains('focus') ||
-               lowerCategory.contains('学习') || lowerCategory.contains('study')) {
+    } else if (lowerCategory.contains('专注') ||
+        lowerCategory.contains('focus') ||
+        lowerCategory.contains('学习') ||
+        lowerCategory.contains('study')) {
       return SessionType.focus;
-    } else if (lowerCategory.contains('放松') || lowerCategory.contains('舒缓') ||
-               lowerCategory.contains('relaxation') || lowerCategory.contains('relax')) {
+    } else if (lowerCategory.contains('放松') ||
+        lowerCategory.contains('舒缓') ||
+        lowerCategory.contains('relaxation') ||
+        lowerCategory.contains('relax')) {
       return SessionType.relaxation;
     } else {
       return SessionType.meditation;

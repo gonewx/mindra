@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:developer' as developer;
 import '../../features/media/domain/entities/media_item.dart';
 import '../../features/meditation/domain/entities/meditation_session.dart';
 import '../constants/media_category.dart';
@@ -12,8 +13,7 @@ class WebStorageHelper {
   static const String _sessionsKey = 'mindra_sessions';
   static const String _preferencesKey = 'mindra_preferences';
 
-  // Store blob URLs temporarily (not persisted)
-  static final Map<String, String> _blobUrls = {};
+  // Store media bytes in memory for current session
   static final Map<String, Uint8List> _mediaBytes = {};
 
   static html.Storage get _localStorage => html.window.localStorage;
@@ -21,13 +21,21 @@ class WebStorageHelper {
   // Store file bytes in memory for current session
   static Future<void> storeMediaBytes(String mediaId, Uint8List bytes) async {
     try {
-      print(
+      developer.log(
         'Storing media bytes for ID: $mediaId, size: ${bytes.length} bytes',
+        name: 'WebStorageHelper',
       );
       _mediaBytes[mediaId] = bytes;
-      print('Successfully stored media bytes in memory for ID: $mediaId');
+      developer.log(
+        'Successfully stored media bytes in memory for ID: $mediaId',
+        name: 'WebStorageHelper',
+      );
     } catch (e) {
-      print('Failed to store media bytes: $e');
+      developer.log(
+        'Failed to store media bytes: $e',
+        name: 'WebStorageHelper',
+        error: e,
+      );
       throw Exception('Failed to store media bytes: $e');
     }
   }
@@ -38,21 +46,29 @@ class WebStorageHelper {
       // Get bytes from memory storage
       final bytes = _mediaBytes[mediaId];
       if (bytes == null) {
-        print('No stored bytes found for media ID: $mediaId');
+        developer.log(
+          'No stored bytes found for media ID: $mediaId',
+          name: 'WebStorageHelper',
+        );
         return null;
       }
 
-      print(
+      developer.log(
         'Found stored bytes for media ID: $mediaId, length: ${bytes.length}',
+        name: 'WebStorageHelper',
       );
 
       // Create blob and return object URL
       final blob = html.Blob([bytes], mimeType);
       final url = html.Url.createObjectUrl(blob);
-      print('Created blob URL: $url');
+      developer.log('Created blob URL: $url', name: 'WebStorageHelper');
       return url;
     } catch (e) {
-      print('Error creating blob URL: $e');
+      developer.log(
+        'Error creating blob URL: $e',
+        name: 'WebStorageHelper',
+        error: e,
+      );
       return null;
     }
   }
@@ -62,7 +78,11 @@ class WebStorageHelper {
     try {
       html.Url.revokeObjectUrl(url);
     } catch (e) {
-      print('Error revoking blob URL: $e');
+      developer.log(
+        'Error revoking blob URL: $e',
+        name: 'WebStorageHelper',
+        error: e,
+      );
     }
   }
 
@@ -207,11 +227,13 @@ class WebStorageHelper {
     if (jsonString == null) return [];
 
     final jsonList = json.decode(jsonString) as List;
-    final sessions = jsonList.map((json) => MeditationSession.fromMap(json)).toList();
-    
+    final sessions = jsonList
+        .map((json) => MeditationSession.fromMap(json))
+        .toList();
+
     // 按开始时间倒序排列（最新的在前面）
     sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
-    
+
     return sessions;
   }
 
@@ -226,7 +248,9 @@ class WebStorageHelper {
     }).toList();
   }
 
-  static Future<List<MeditationSession>> getRecentMeditationSessions({int limit = 3}) async {
+  static Future<List<MeditationSession>> getRecentMeditationSessions({
+    int limit = 3,
+  }) async {
     final sessions = await getAllMeditationSessions();
     if (sessions.length <= limit) {
       return sessions;

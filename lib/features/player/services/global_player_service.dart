@@ -436,12 +436,14 @@ class GlobalPlayerService extends ChangeNotifier {
       if (MeditationSessionManager.hasActiveSession) {
         try {
           await MeditationSessionManager.stopSession();
-          debugPrint('Stopped previous meditation session when switching media');
+          debugPrint(
+            'Stopped previous meditation session when switching media',
+          );
         } catch (e) {
           debugPrint('Error stopping previous session: $e');
         }
       }
-      
+
       // 立即重置时间显示，给用户即时反馈
       _currentPosition = 0.0;
       _totalDuration = 0.0;

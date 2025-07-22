@@ -12,7 +12,7 @@ jobs:
   quick_check:
     name: Quick Validation
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     
     steps:
     - name: Checkout code
@@ -36,37 +36,32 @@ jobs:
           ${{ runner.os }}-quick-pub-
         
     - name: Get dependencies
-      run: |
-        echo "Installing dependencies..."
-        flutter pub get
+      run: flutter pub get
         
-    - name: Format code
+    - name: Verify code formatting
       run: |
-        echo "Auto-formatting code..."
-        dart format .
-        
-    - name: Check for changes after formatting
-      run: |
-        if [ -n "$(git status --porcelain)" ]; then
-          echo "⚠️ Code was auto-formatted. Please commit the changes."
-          git diff --name-only
-        else
-          echo "✅ Code is properly formatted"
+        echo "检查代码格式..."
+        if ! dart format --output=none --set-exit-if-changed .; then
+          echo "❌ 代码格式不正确"
+          echo "请运行 'make format' 或 'dart format .' 修复格式问题"
+          exit 1
         fi
+        echo "✅ 代码格式正确"
         
-    - name: Analyze code
+    - name: Run static analysis
       run: |
-        echo "Running quick analysis..."
+        echo "运行静态分析..."
         dart analyze --fatal-infos
+        echo "✅ 静态分析通过"
         
-    - name: Run critical tests
+    - name: Run tests
       run: |
-        echo "Running critical tests only..."
-        # 只运行关键测试，跳过覆盖率
+        echo "运行测试..."
         flutter test --reporter=compact
+        echo "✅ 测试通过"
         
     - name: Check build readiness
       run: |
-        echo "Checking if code can build..."
+        echo "检查构建准备..."
         flutter build apk --debug --target-platform android-arm64
-        echo "✅ Build check passed" 
+        echo "✅ 构建检查通过" 

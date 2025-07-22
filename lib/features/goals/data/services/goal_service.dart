@@ -138,7 +138,12 @@ class GoalService {
   }
 
   /// 验证目标设置是否有效
-  static bool isValidGoal(int dailyGoalValue, GoalTimeUnit dailyGoalUnit, int weeklyGoalValue, GoalFrequencyUnit weeklyGoalUnit) {
+  static bool isValidGoal(
+    int dailyGoalValue,
+    GoalTimeUnit dailyGoalUnit,
+    int weeklyGoalValue,
+    GoalFrequencyUnit weeklyGoalUnit,
+  ) {
     // 验证每日目标数值范围
     switch (dailyGoalUnit) {
       case GoalTimeUnit.minutes:

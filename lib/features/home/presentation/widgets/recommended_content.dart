@@ -19,7 +19,7 @@ class RecommendedContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     final recommendations = [
       {
         'title': l10n.recommendedMorningMeditation,

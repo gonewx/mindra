@@ -1,6 +1,60 @@
 {
-    "dart.flutterSdkPath": "${env:HOME}/app/flutter/flutter_linux_3.32.5-stable",
-    "terminal.integrated.env.linux": {
-        "PATH": "${env:PATH}:${env:HOME}/app/flutter/flutter_linux_3.32.5-stable/bin"
-    }
+  "dart.flutterSdkPath": "${env:HOME}/app/flutter/flutter_linux_3.32.5-stable",
+  "terminal.integrated.env.linux": {
+    "PATH": "${env:PATH}:${env:HOME}/app/flutter/flutter_linux_3.32.5-stable/bin"
+  },
+  "dart.lineLength": 80,
+  "editor.formatOnSave": true,
+  "editor.formatOnType": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "dart.showTodos": true,
+  "dart.closingLabels": true,
+  "dart.previewFlutterUiGuides": true,
+  "dart.previewFlutterUiGuidesCustomTracking": true,
+  "editor.rulers": [80],
+  "editor.wordWrap": "bounded",
+  "editor.wordWrapColumn": 80,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "dart.analysisExcludedFolders": [
+    "build",
+    ".dart_tool",
+    ".packages"
+  ],
+  "dart.runPubGetOnPubspecChanges": true,
+  "dart.openDevTools": "flutter",
+  "dart.debugExternalPackageLibraries": false,
+  "dart.debugSdkLibraries": false,
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
+  "editor.tabCompletion": "on",
+  "dart.enableSnippets": true,
+  "dart.includeDependenciesInWorkspaceSymbols": true,
+  "git.enableCommitSigning": false,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "files.watcherExclude": {
+    "**/build/**": true,
+    "**/.dart_tool/**": true,
+    "**/coverage/**": true,
+    "**/android/.gradle/**": true,
+    "**/ios/Pods/**": true
+  },
+  "search.exclude": {
+    "**/build": true,
+    "**/.dart_tool": true,
+    "**/coverage": true,
+    "**/android/.gradle": true,
+    "**/ios/Pods": true,
+    "**/*.lock": true
+  },
+  "dart.warnWhenEditingFilesOutsideWorkspace": true,
+  "dart.showMainCodeLens": true,
+  "dart.showTestCodeLens": true,
+  "dart.promptToGetPackages": true,
+  "dart.hotReloadOnSave": "manual",
+  "dart.flutterHotReloadOnSave": "manual"
 }
