@@ -15,6 +15,7 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     
     steps:
     - name: Checkout code
@@ -33,17 +34,58 @@ jobs:
         channel: 'stable'
         cache: true
         
+    - name: Cache pub dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ env.PUB_CACHE }}
+          ~/.pub-cache
+        key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pub-
+        
     - name: Get dependencies
-      run: flutter pub get
+      run: |
+        echo "Getting Flutter dependencies..."
+        flutter pub get
+        echo "✅ Dependencies installed"
       
     - name: Verify formatting
-      run: dart format --output=none --set-exit-if-changed .
+      run: |
+        echo "Checking code formatting..."
+        if ! dart format --output=none --set-exit-if-changed .; then
+          echo "⚠️ Code formatting issues found"
+          echo "The following files need formatting:"
+          dart format --output=none --show=changed .
+          echo ""
+          echo "💡 To fix locally, run: dart format ."
+          echo "⚠️ Continuing with tests, but please fix formatting in future commits"
+        else
+          echo "✅ Code formatting is correct"
+        fi
       
     - name: Analyze project source
-      run: dart analyze --fatal-infos
+      run: |
+        echo "Running static analysis..."
+        if ! dart analyze --fatal-infos; then
+          echo "❌ Static analysis failed"
+          echo "Please fix the analysis issues shown above"
+          echo "💡 To run analysis locally: dart analyze"
+          exit 1
+        fi
+        echo "✅ Static analysis passed"
       
     - name: Run tests
-      run: flutter test --coverage
+      run: |
+        echo "Running Flutter tests with coverage..."
+        if flutter test --coverage --reporter=expanded; then
+          echo "✅ All tests passed"
+        else
+          echo "❌ Some tests failed"
+          echo "Please check the test output above for details"
+          echo "💡 To run tests locally: flutter test"
+          exit 1
+        fi
       
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
@@ -56,7 +98,8 @@ jobs:
     name: Build Android
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 30
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.test.result == 'success'
     
     steps:
     - name: Checkout code
@@ -75,14 +118,54 @@ jobs:
         channel: 'stable'
         cache: true
         
+    - name: Cache pub dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ env.PUB_CACHE }}
+          ~/.pub-cache
+        key: ${{ runner.os }}-android-pub-${{ hashFiles('**/pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-android-pub-
+        
     - name: Get dependencies
       run: flutter pub get
       
     - name: Build APK
-      run: flutter build apk --release
+      run: |
+        echo "Building Android APK..."
+        flutter build apk --release --verbose
+        echo "✅ APK build completed"
       
-    - name: Build AAB
-      run: flutter build appbundle --release
+    - name: Build AAB  
+      run: |
+        echo "Building Android AAB..."
+        flutter build appbundle --release --verbose
+        echo "✅ AAB build completed"
+      
+    - name: Verify build artifacts
+      run: |
+        echo "Verifying build artifacts..."
+        
+        # 检查APK文件
+        if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+          APK_SIZE=$(du -h build/app/outputs/flutter-apk/app-release.apk | cut -f1)
+          echo "✅ APK found: $APK_SIZE"
+        else
+          echo "❌ APK not found"
+          exit 1
+        fi
+        
+        # 检查AAB文件
+        if [ -f "build/app/outputs/bundle/release/app-release.aab" ]; then
+          AAB_SIZE=$(du -h build/app/outputs/bundle/release/app-release.aab | cut -f1)
+          echo "✅ AAB found: $AAB_SIZE"
+        else
+          echo "❌ AAB not found"
+          exit 1
+        fi
+        
+        echo "✅ All Android build artifacts verified"
       
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
@@ -102,7 +185,7 @@ jobs:
     name: Build iOS
     runs-on: macos-latest
     needs: test
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.test.result == 'success'
     
     steps:
     - name: Checkout code
@@ -132,7 +215,7 @@ jobs:
     name: Build Linux
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.test.result == 'success'
     
     steps:
     - name: Checkout code
@@ -222,22 +305,35 @@ jobs:
   notify:
     name: Notify Build Status
     runs-on: ubuntu-latest
-    needs: [test, build_android, build_ios, security_scan]
+    needs: [test, build_android, build_ios, build_linux, security_scan]
     if: always()
     
     steps:
     - name: Notify success
-      if: needs.test.result == 'success' && needs.build_android.result == 'success' && needs.build_ios.result == 'success'
+      if: |
+        needs.test.result == 'success' && 
+        (needs.build_android.result == 'success' || needs.build_android.result == 'skipped') &&
+        (needs.build_ios.result == 'success' || needs.build_ios.result == 'skipped') &&
+        (needs.build_linux.result == 'success' || needs.build_linux.result == 'skipped')
       run: |
         echo "✅ All builds completed successfully!"
         echo "Branch: ${{ github.ref_name }}"
         echo "Commit: ${{ github.sha }}"
+        echo "Test result: ${{ needs.test.result }}"
+        echo "Android build result: ${{ needs.build_android.result }}"
+        echo "iOS build result: ${{ needs.build_ios.result }}"
+        echo "Linux build result: ${{ needs.build_linux.result }}"
         
     - name: Notify failure
-      if: needs.test.result == 'failure' || needs.build_android.result == 'failure' || needs.build_ios.result == 'failure'
+      if: |
+        needs.test.result == 'failure' || 
+        needs.build_android.result == 'failure' || 
+        needs.build_ios.result == 'failure' ||
+        needs.build_linux.result == 'failure'
       run: |
         echo "❌ Build failed!"
         echo "Test result: ${{ needs.test.result }}"
         echo "Android build result: ${{ needs.build_android.result }}"
         echo "iOS build result: ${{ needs.build_ios.result }}"
+        echo "Linux build result: ${{ needs.build_linux.result }}"
         exit 1

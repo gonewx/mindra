@@ -1,0 +1,72 @@
+name: Quick Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  FLUTTER_VERSION: '3.32.5'
+  JAVA_VERSION: '21'
+
+jobs:
+  quick_check:
+    name: Quick Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Cache pub dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ env.PUB_CACHE }}
+          ~/.pub-cache
+        key: ${{ runner.os }}-quick-pub-${{ hashFiles('**/pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-quick-pub-
+        
+    - name: Get dependencies
+      run: |
+        echo "Installing dependencies..."
+        flutter pub get
+        
+    - name: Format code
+      run: |
+        echo "Auto-formatting code..."
+        dart format .
+        
+    - name: Check for changes after formatting
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "⚠️ Code was auto-formatted. Please commit the changes."
+          git diff --name-only
+        else
+          echo "✅ Code is properly formatted"
+        fi
+        
+    - name: Analyze code
+      run: |
+        echo "Running quick analysis..."
+        dart analyze --fatal-infos
+        
+    - name: Run critical tests
+      run: |
+        echo "Running critical tests only..."
+        # 只运行关键测试，跳过覆盖率
+        flutter test --reporter=compact
+        
+    - name: Check build readiness
+      run: |
+        echo "Checking if code can build..."
+        flutter build apk --debug --target-platform android-arm64
+        echo "✅ Build check passed" 

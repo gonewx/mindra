@@ -30,13 +30,16 @@ jobs:
       
     - name: Verify formatting
       run: |
-        dart format --output=none --set-exit-if-changed .
-        if [ $? -ne 0 ]; then
-          echo "❌ Code formatting issues found"
-          echo "Run 'dart format .' to fix formatting"
+        echo "Checking code formatting..."
+        if ! dart format --output=none --set-exit-if-changed .; then
+          echo "⚠️ Code formatting issues found"
+          echo "Files that need formatting:"
+          dart format --output=none --show=changed .
+          echo "❌ Please run 'dart format .' to fix formatting issues"
           exit 1
+        else
+          echo "✅ Code formatting is correct"
         fi
-        echo "✅ Code formatting is correct"
         
     - name: Analyze project source
       run: |
