@@ -45,18 +45,33 @@ android {
 
     signingConfigs {
         create("release") {
-            if (keystorePropertiesFile.exists()) {
+            if (keystorePropertiesFile.exists() && 
+                keystoreProperties.containsKey("keyAlias") &&
+                keystoreProperties.containsKey("keyPassword") &&
+                keystoreProperties.containsKey("storeFile") &&
+                keystoreProperties.containsKey("storePassword")) {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
                 storeFile = file(keystoreProperties["storeFile"] as String)
                 storePassword = keystoreProperties["storePassword"] as String
+            } else {
+                // 使用 debug 签名配置作为fallback
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                storePassword = "android"
             }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (keystorePropertiesFile.exists() && 
+                               keystoreProperties.containsKey("keyAlias")) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = false
             isShrinkResources = false
         }

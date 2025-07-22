@@ -113,18 +113,22 @@ jobs:
         sed -i "s/^version:.*/version: $VERSION+${{ github.run_number }}/" pubspec.yaml
         echo "Updated version to: $VERSION+${{ github.run_number }}"
         
-    - name: Decode keystore
+    - name: Setup Android signing (if secrets available)
       run: |
-        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/release-keystore.jks
-        
-    - name: Create key.properties
-      run: |
-        cat > android/key.properties << EOF
+        if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] && [ -n "${{ secrets.ANDROID_STORE_PASSWORD }}" ]; then
+          echo "Setting up Android signing with secrets"
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/release-keystore.jks
+          cat > android/key.properties << EOF
         storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
         keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
         keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
         storeFile=release-keystore.jks
         EOF
+        else
+          echo "No Android signing secrets found, will use debug signing"
+          echo "Creating empty key.properties to trigger fallback"
+          touch android/key.properties
+        fi
         
     - name: Build AAB
       run: flutter build appbundle --release
