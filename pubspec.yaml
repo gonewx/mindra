@@ -45,8 +45,7 @@ dependencies:
   
   # Media Player
   audio_service: ^0.18.17
-  just_audio: ^0.9.41
-  audioplayers: ^6.1.0  # Alternative for Linux platform
+  audioplayers: ^6.1.0  # 统一使用audioplayers
   video_player: ^2.8.8
   
   # File Management

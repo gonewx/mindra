@@ -37,17 +37,16 @@ class AudioFocusManager {
   AudioContext getSoundEffectContext() {
     return AudioContext(
       iOS: AudioContextIOS(
-        category: AVAudioSessionCategory.playback, // 使用播放类别以支持 mixWithOthers
+        category: AVAudioSessionCategory.playback,
         options: {
           AVAudioSessionOptions.mixWithOthers, // 允许与其他音频混合
-          AVAudioSessionOptions.duckOthers, // 降低其他音频音量
         },
       ),
       android: AudioContextAndroid(
         isSpeakerphoneOn: false,
         stayAwake: false,
-        contentType: AndroidContentType.music, // 改为音乐类型
-        usageType: AndroidUsageType.media, // 改为媒体类型
+        contentType: AndroidContentType.sonification, // 使用音效类型
+        usageType: AndroidUsageType.assistanceAccessibility, // 使用辅助类型
         // 背景音效使用 gainTransientMayDuck，允许与主音频混合
         audioFocus: AndroidAudioFocus.gainTransientMayDuck,
       ),
@@ -61,16 +60,20 @@ class AudioFocusManager {
 
   /// 通知主音频开始播放
   void notifyMainAudioStarted() {
-    _isMainAudioPlaying = true;
-    debugPrint('AudioFocusManager: Main audio started');
-    _onMainAudioStateChanged?.call(true);
+    if (!_isMainAudioPlaying) {
+      _isMainAudioPlaying = true;
+      debugPrint('AudioFocusManager: Main audio started');
+      _onMainAudioStateChanged?.call(true);
+    }
   }
 
   /// 通知主音频停止播放
   void notifyMainAudioStopped() {
-    _isMainAudioPlaying = false;
-    debugPrint('AudioFocusManager: Main audio stopped');
-    _onMainAudioStateChanged?.call(false);
+    if (_isMainAudioPlaying) {
+      _isMainAudioPlaying = false;
+      debugPrint('AudioFocusManager: Main audio stopped');
+      _onMainAudioStateChanged?.call(false);
+    }
   }
 
   /// 通知背景音效状态改变
@@ -93,9 +96,13 @@ class AudioFocusManager {
     return true;
   }
 
-  /// 获取背景音效的建议音量
-  double getSuggestedSoundEffectVolume() {
-    // 如果主音频正在播放，稍微降低背景音效音量，但不要太低
-    return _isMainAudioPlaying ? 0.6 : 0.8;
+  /// 获取当前状态信息
+  Map<String, dynamic> getStatus() {
+    return {
+      'isMainAudioPlaying': _isMainAudioPlaying,
+      'isSoundEffectsEnabled': _isSoundEffectsEnabled,
+      'canPlaySoundEffects': canPlaySoundEffects(),
+      'canPreviewSoundEffects': canPreviewSoundEffects(),
+    };
   }
 }

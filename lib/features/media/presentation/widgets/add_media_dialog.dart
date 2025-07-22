@@ -5,9 +5,9 @@ import 'package:flutter/foundation.dart';
 import '../../domain/entities/media_item.dart';
 import '../bloc/media_bloc.dart';
 import '../bloc/media_event.dart';
-import '../../../../core/constants/app_constants.dart';
+
 import '../../../../core/constants/media_category.dart';
-import '../../../../core/audio/cross_platform_audio_player.dart';
+import '../../../../core/audio/audio_player.dart';
 import '../../../../core/localization/app_localizations.dart';
 
 class AddMediaDialog extends StatefulWidget {
@@ -999,7 +999,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
         duration = await _getWebDuration();
       } else {
         // For desktop/mobile platforms
-        duration = await CrossPlatformAudioPlayer.getMediaDuration(
+                  duration = await MindraAudioPlayer.getMediaDuration(
           _selectedFilePath!,
         );
       }

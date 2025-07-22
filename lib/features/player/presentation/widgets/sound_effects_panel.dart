@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/simple_sound_effects_player.dart';
+import '../../services/sound_effects_player.dart';
 import '../../../../core/localization/app_localizations.dart';
 
 class SoundEffectsPanel extends StatefulWidget {
@@ -10,7 +10,7 @@ class SoundEffectsPanel extends StatefulWidget {
 }
 
 class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
-  final SimpleSoundEffectsPlayer _soundPlayer = SimpleSoundEffectsPlayer();
+  final SoundEffectsPlayer _soundPlayer = SoundEffectsPlayer();
 
   // 简化的音效状态管理
   final Map<String, double> _effectVolumes = {
@@ -111,7 +111,7 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
           });
 
           // 恢复播放当前选中的音效
-          await _soundPlayer.previewEffect(entry.key);
+          await _soundPlayer.previewEffect(entry.key, entry.value);
           debugPrint('Restored playback for selected effect: ${entry.key}');
         }
       }
@@ -123,7 +123,8 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
   // 停止试听
   Future<void> _stopPreview(String effectId) async {
     try {
-      await _soundPlayer.pauseEffect(effectId);
+      // 使用新的停止预览方法
+      await _soundPlayer.stopPreview();
       if (mounted) {
         setState(() {
           _previewingEffects[effectId] = false;
@@ -136,10 +137,18 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
 
   // 停止所有试听
   Future<void> _stopAllPreviews() async {
-    for (final effectId in _previewingEffects.keys) {
-      if (_previewingEffects[effectId] == true) {
-        await _stopPreview(effectId);
+    try {
+      // 使用统一的停止预览方法，适用于所有平台
+      await _soundPlayer.stopPreview();
+      if (mounted) {
+        setState(() {
+          for (final effectId in _previewingEffects.keys) {
+            _previewingEffects[effectId] = false;
+          }
+        });
       }
+    } catch (e) {
+      debugPrint('Error stopping all previews: $e');
     }
   }
 
@@ -153,19 +162,25 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
         _effectVolumes[effectId] = 0.0;
         _previewingEffects[effectId] = false;
       });
-      await _soundPlayer.pauseEffect(effectId);
+
+      // 停止预览播放
+      await _soundPlayer.stopPreview();
 
       // 立即更新音效播放器状态以触发UI更新
       await _soundPlayer.toggleEffect(effectId, 0.0);
     } else {
+      // 先停止当前预览（一次只能预览一个音效）
+      await _stopAllPreviews();
+
       // 选择音效，开始试听
       setState(() {
         _effectVolumes[effectId] = 0.5;
         _previewingEffects[effectId] = true;
       });
 
-      // 开始试听当前音效（不停止其他音效）
-      await _soundPlayer.previewEffect(effectId);
+      // 开始试听当前音效
+      await _soundPlayer.previewEffect(effectId, 0.5);
+      debugPrint('Started previewing effect: $effectId');
     }
   }
 
