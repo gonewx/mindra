@@ -40,7 +40,7 @@ show_help() {
     echo "  -c, --clean             构建前清理"
     echo "  -r, --release           构建 Release 版本 (默认)"
     echo "  -d, --debug             构建 Debug 版本"
-    echo "  -p, --package           创建安装包 (.deb/.rpm/.tar.gz)"
+    echo "  -p, --package           创建AppImage安装包"
     echo "  -v, --version VERSION   指定版本号 (格式: 1.0.0+1)"
     echo "  -s, --skip-tests        跳过测试"
     echo "  --appimage              创建 AppImage 格式"
@@ -49,7 +49,7 @@ show_help() {
     echo ""
     echo "示例:"
     echo "  $0                      构建 Release 版本"
-    echo "  $0 -c -p               清理后构建并创建安装包"
+    echo "  $0 -c -p               清理后构建并创建AppImage"
     echo "  $0 --appimage          构建 AppImage 格式"
     echo "  $0 -v 1.0.1+2          指定版本号构建"
 }
@@ -280,67 +280,14 @@ EOF
     log_success ".desktop 文件创建完成: $desktop_file"
 }
 
-# 创建传统安装包
+# 创建AppImage（仅支持AppImage格式）
 create_package() {
     if [ "$CREATE_PACKAGE" = true ]; then
-        log_info "创建安装包..."
+        log_info "创建AppImage安装包..."
+        log_warning "注意：仅支持AppImage格式，已移除DEB和TAR.GZ支持"
         
-        local build_dir="build/linux/x64/$BUILD_TYPE/bundle"
-        local package_dir="build/linux/package"
-        local app_name="mindra"
-        local app_version=$(grep "^version:" pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1)
-        
-        # 创建包目录结构
-        mkdir -p "$package_dir"/{DEBIAN,usr/bin,usr/share/applications,usr/share/pixmaps}
-        mkdir -p "$package_dir/usr/lib/$app_name"
-        
-        # 复制应用文件
-        cp -r "$build_dir"/* "$package_dir/usr/lib/$app_name/"
-        
-        # 创建启动脚本
-        cat > "$package_dir/usr/bin/$app_name" << EOF
-#!/bin/bash
-cd /usr/lib/$app_name
-exec ./mindra "\$@"
-EOF
-        chmod +x "$package_dir/usr/bin/$app_name"
-        
-        # 复制 .desktop 文件
-        cp "build/linux/mindra.desktop" "$package_dir/usr/share/applications/"
-        sed -i "s|$PWD/$build_dir|/usr/lib/$app_name|g" "$package_dir/usr/share/applications/mindra.desktop"
-        
-        # 复制图标
-        if [ -f "$build_dir/data/flutter_assets/assets/images/app_icon.png" ]; then
-            cp "$build_dir/data/flutter_assets/assets/images/app_icon.png" "$package_dir/usr/share/pixmaps/mindra.png"
-        fi
-        
-        # 创建 DEBIAN/control 文件
-        cat > "$package_dir/DEBIAN/control" << EOF
-Package: $app_name
-Version: $app_version
-Section: utils
-Priority: optional
-Architecture: amd64
-Depends: libgtk-3-0, libglib2.0-0
-Maintainer: Mindra Team <support@mindra.app>
-Description: 专业的冥想与正念应用
- Mindra 是一款专业的冥想与正念应用，致力于帮助用户在快节奏的生活中
- 找到内心的平静与专注。支持本地和网络音视频素材导入，提供完整的
- 冥想会话管理和进度追踪功能。
-Homepage: https://mindra.app
-EOF
-        
-        # 构建 .deb 包
-        if command -v dpkg-deb &> /dev/null; then
-            local deb_file="build/linux/${app_name}_${app_version}_amd64.deb"
-            dpkg-deb --build "$package_dir" "$deb_file"
-            log_success "DEB 包创建完成: $deb_file"
-        fi
-        
-        # 创建 .tar.gz 包
-        local tar_file="build/linux/${app_name}-${app_version}-linux-x64.tar.gz"
-        tar -czf "$tar_file" -C "build/linux/x64/$BUILD_TYPE" bundle
-        log_success "TAR.GZ 包创建完成: $tar_file"
+        # 直接调用AppImage创建
+        create_appimage_force
     fi
 }
 
@@ -358,6 +305,23 @@ create_appimage() {
         else
             log_error "AppImage 创建脚本不存在: scripts/create_appimage.sh"
         fi
+    fi
+}
+
+# 强制创建AppImage（用于替代传统包格式）
+create_appimage_force() {
+    log_info "强制创建 AppImage..."
+    
+    if [ -f "scripts/create_appimage.sh" ]; then
+        if ./scripts/create_appimage.sh --$BUILD_TYPE; then
+            log_success "AppImage 创建完成"
+        else
+            log_error "AppImage 创建失败"
+            exit 1
+        fi
+    else
+        log_error "AppImage 创建脚本不存在: scripts/create_appimage.sh"
+        exit 1
     fi
 }
 
@@ -485,23 +449,13 @@ generate_report() {
         echo ""
         echo "安装包:"
         
-        # 检查各种安装包
-        if [ -f "build/linux/mindra_"*"_amd64.deb" ]; then
-            local deb_file=$(ls build/linux/mindra_*_amd64.deb 2>/dev/null | head -1)
-            local deb_size=$(du -h "$deb_file" | cut -f1)
-            echo "  DEB 包: $(basename "$deb_file") ($deb_size)"
-        fi
-        
-        if [ -f "build/linux/mindra-"*"-linux-x64.tar.gz" ]; then
-            local tar_file=$(ls build/linux/mindra-*-linux-x64.tar.gz 2>/dev/null | head -1)
-            local tar_size=$(du -h "$tar_file" | cut -f1)
-            echo "  TAR.GZ 包: $(basename "$tar_file") ($tar_size)"
-        fi
-        
+        # 仅检查AppImage包
         if [ -f "build/linux/Mindra-"*"-x86_64.AppImage" ]; then
             local appimage_file=$(ls build/linux/Mindra-*-x86_64.AppImage 2>/dev/null | head -1)
             local appimage_size=$(du -h "$appimage_file" | cut -f1)
             echo "  AppImage: $(basename "$appimage_file") ($appimage_size)"
+        else
+            echo "  无AppImage文件（可能构建失败）"
         fi
         
         echo ""
@@ -514,9 +468,12 @@ generate_report() {
         
         echo ""
         echo "安装方法:"
-        echo "1. DEB 包: sudo dpkg -i mindra_*.deb"
-        echo "2. TAR.GZ: 解压后运行 ./bundle/mindra"
-        echo "3. AppImage: chmod +x Mindra-*.AppImage && ./Mindra-*.AppImage"
+        echo "1. AppImage: chmod +x Mindra-*.AppImage && ./Mindra-*.AppImage"
+        echo ""
+        echo "AppImage优势:"
+        echo "  - 自包含，无需安装依赖"
+        echo "  - 兼容所有Linux发行版"
+        echo "  - 避免GLib版本冲突"
         
         echo ""
         echo "下一步操作:"
@@ -575,26 +532,14 @@ main() {
         echo "  📁 应用包: $build_dir ($size)"
     fi
     
-    # 显示安装包
-    if ls build/linux/*.deb &>/dev/null; then
-        for deb in build/linux/*.deb; do
-            local size=$(du -h "$deb" | cut -f1)
-            echo "  📦 DEB 包: $(basename "$deb") ($size)"
-        done
-    fi
-    
-    if ls build/linux/*.tar.gz &>/dev/null; then
-        for tar in build/linux/*.tar.gz; do
-            local size=$(du -h "$tar" | cut -f1)
-            echo "  📦 TAR.GZ: $(basename "$tar") ($size)"
-        done
-    fi
-    
+    # 显示AppImage安装包
     if ls build/linux/*.AppImage &>/dev/null; then
         for appimage in build/linux/*.AppImage; do
             local size=$(du -h "$appimage" | cut -f1)
             echo "  📦 AppImage: $(basename "$appimage") ($size)"
         done
+    else
+        echo "  ⚠️ 没有找到AppImage文件"
     fi
     
     echo ""
@@ -602,12 +547,11 @@ main() {
     echo "  ./build/linux/x64/$BUILD_TYPE/bundle/mindra"
     
     echo ""
-    log_info "安装命令:"
-    if ls build/linux/*.deb &>/dev/null; then
-        echo "  sudo dpkg -i build/linux/*.deb"
-    fi
+    log_info "运行命令:"
     if ls build/linux/*.AppImage &>/dev/null; then
         echo "  chmod +x build/linux/*.AppImage && ./build/linux/*.AppImage"
+    else
+        echo "  无AppImage文件可运行"
     fi
 }
 

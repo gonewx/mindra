@@ -335,7 +335,7 @@ build_linux() {
             linux_args="$linux_args -c"
         fi
         if [ "$CREATE_ARCHIVE" = true ]; then
-            linux_args="$linux_args -p"  # 创建安装包
+            linux_args="$linux_args -p --appimage"  # 创建AppImage
         fi
         if [ "$SKIP_TESTS" = true ]; then
             linux_args="$linux_args -s"
@@ -485,18 +485,13 @@ generate_summary() {
             echo "  🐧 Linux Bundle: build/linux/x64/release/bundle ($bundle_size)"
         fi
         
-        if ls build/linux/*.deb &>/dev/null; then
-            for deb in build/linux/*.deb; do
-                local deb_size=$(du -h "$deb" | cut -f1)
-                echo "  📦 Linux DEB: $(basename "$deb") ($deb_size)"
-            done
-        fi
-        
         if ls build/linux/*.AppImage &>/dev/null; then
             for appimage in build/linux/*.AppImage; do
                 local appimage_size=$(du -h "$appimage" | cut -f1)
                 echo "  📦 Linux AppImage: $(basename "$appimage") ($appimage_size)"
             done
+        else
+            echo "  ⚠️ 没有找到Linux AppImage文件"
         fi
     fi
     
@@ -514,7 +509,7 @@ generate_summary() {
         echo "  iOS: ./scripts/release_ios.sh -t"
     fi
     if [ "$BUILD_LINUX" = true ]; then
-        echo "  Linux: 手动上传 DEB/AppImage 到软件仓库或应用商店"
+        echo "  Linux: 手动上传 AppImage 到软件仓库或应用商店"
     fi
     echo ""
     echo "=========================================="

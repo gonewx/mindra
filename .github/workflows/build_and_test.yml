@@ -255,31 +255,16 @@ jobs:
     - name: Build Linux
       run: flutter build linux --release
       
-    - name: Create Linux package
-      run: ./scripts/build_linux.sh -p --skip-tests
+    - name: Create Linux AppImage
+      run: ./scripts/build_linux.sh -p --appimage --skip-tests
       
-    - name: Upload Linux bundle artifact
+    - name: Upload Linux AppImage artifact
       uses: actions/upload-artifact@v4
       with:
-        name: linux-bundle
-        path: build/linux/x64/release/bundle
+        name: linux-appimage
+        path: build/linux/*.AppImage
         retention-days: 30
-        
-    - name: Upload Linux DEB artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux-deb
-        path: build/linux/*.deb
-        retention-days: 30
-        if-no-files-found: ignore
-        
-    - name: Upload Linux TAR.GZ artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux-tarball
-        path: build/linux/*.tar.gz
-        retention-days: 30
-        if-no-files-found: ignore
+        if-no-files-found: error
 
   security_scan:
     name: Security Scan

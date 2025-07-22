@@ -20,7 +20,7 @@
 - 🧘 **专业功能** - 完整的冥想会话管理和进度追踪
 - 🎨 **精美界面** - 现代化 Material Design 3 设计语言
 - 🌍 **多语言支持** - 中英文双语界面
-- 📱 **跨平台** - iOS、Android、Web、Desktop 全平台支持
+- 📱 **跨平台** - iOS、Android、Web、Desktop 全平台支持（Linux 仅 AppImage）
 
 ## 🚀 主要功能
 

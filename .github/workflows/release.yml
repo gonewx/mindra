@@ -204,36 +204,13 @@ jobs:
     - name: Build Linux release
       run: ./scripts/build_linux.sh -p --appimage --skip-tests
       
-    - name: Upload Linux bundle artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux-bundle-release
-        path: build/linux/x64/release/bundle
-        retention-days: 90
-        
-    - name: Upload Linux DEB artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux-deb-release
-        path: build/linux/*.deb
-        retention-days: 90
-        if-no-files-found: ignore
-        
-    - name: Upload Linux TAR.GZ artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux-tarball-release
-        path: build/linux/*.tar.gz
-        retention-days: 90
-        if-no-files-found: ignore
-        
     - name: Upload Linux AppImage artifact
       uses: actions/upload-artifact@v4
       with:
         name: linux-appimage-release
         path: build/linux/*.AppImage
         retention-days: 90
-        if-no-files-found: ignore
+        if-no-files-found: error
 
   build_ios:
     name: Build iOS Release
@@ -381,14 +358,13 @@ jobs:
         - Android APK: 见 Release Assets
         - Android AAB: 见 Release Assets  
         - iOS IPA: 见 Release Assets
-        - Linux DEB: 见 Release Assets
-        - Linux TAR.GZ: 见 Release Assets
-        - Linux AppImage: 见 Release Assets
+        - Linux AppImage: 见 Release Assets（推荐，兼容所有Linux发行版）
         
         ### 说明
         - 所有构建产物仅供测试和分发使用
         - Android 应用使用 debug 签名（如需生产发布，请手动签名）
         - iOS 应用需要手动上传到 App Store Connect
+        - Linux 仅提供 AppImage 格式，自包含无依赖，兼容性最佳
         
         ### 更新内容
         请查看 CHANGELOG.md 获取详细更新内容。
@@ -431,29 +407,15 @@ jobs:
             gh release upload "v$VERSION" "./artifacts/ios-ipa-release/Runner.ipa" --clobber
           fi
           
-          # 上传 Linux 构建产物
-          if [ -d "./artifacts/linux-deb-release" ]; then
-            for deb in ./artifacts/linux-deb-release/*.deb; do
-              if [ -f "$deb" ]; then
-                gh release upload "v$VERSION" "$deb" --clobber
-              fi
-            done
-          fi
-          
-          if [ -d "./artifacts/linux-tarball-release" ]; then
-            for tar in ./artifacts/linux-tarball-release/*.tar.gz; do
-              if [ -f "$tar" ]; then
-                gh release upload "v$VERSION" "$tar" --clobber
-              fi
-            done
-          fi
-          
+          # 上传 Linux AppImage
           if [ -d "./artifacts/linux-appimage-release" ]; then
             for appimage in ./artifacts/linux-appimage-release/*.AppImage; do
               if [ -f "$appimage" ]; then
                 gh release upload "v$VERSION" "$appimage" --clobber
               fi
             done
+          else
+            echo "⚠️ 没有找到Linux AppImage文件"
           fi
           
           echo "✅ 构建产物上传完成"

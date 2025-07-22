@@ -30,7 +30,7 @@ log_error() {
 }
 
 echo "=========================================="
-echo "      Mindra 快速 AppImage 构建"
+echo "      Mindra AppImage 构建（唯一支持）"
 echo "=========================================="
 echo ""
 
