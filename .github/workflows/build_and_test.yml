@@ -14,7 +14,7 @@ env:
 jobs:
   test:
     name: Run Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
     
     steps:
@@ -96,7 +96,7 @@ jobs:
 
   build_android:
     name: Build Android
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: test
     timeout-minutes: 30
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.test.result == 'success'
@@ -187,39 +187,11 @@ jobs:
         path: build/app/outputs/bundle/release/app-release.aab
         retention-days: 30
 
-  build_ios:
-    name: Build iOS
-    runs-on: macos-latest
-    needs: test
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.test.result == 'success'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-        
-    - name: Get dependencies
-      run: flutter pub get
-      
-    - name: Build iOS (no codesign)
-      run: flutter build ios --release --no-codesign
-      
-    - name: Upload iOS build artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ios-build
-        path: build/ios/iphoneos/Runner.app
-        retention-days: 30
+
 
   build_linux:
     name: Build Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: test
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.test.result == 'success'
     
@@ -268,7 +240,7 @@ jobs:
 
   security_scan:
     name: Security Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: test
     
     steps:
@@ -296,8 +268,8 @@ jobs:
 
   notify:
     name: Notify Build Status
-    runs-on: ubuntu-latest
-    needs: [test, build_android, build_ios, build_linux, security_scan]
+    runs-on: ubuntu-22.04
+    needs: [test, build_android, build_linux, security_scan]
     if: always()
     
     steps:
@@ -305,7 +277,6 @@ jobs:
       if: |
         needs.test.result == 'success' && 
         (needs.build_android.result == 'success' || needs.build_android.result == 'skipped') &&
-        (needs.build_ios.result == 'success' || needs.build_ios.result == 'skipped') &&
         (needs.build_linux.result == 'success' || needs.build_linux.result == 'skipped')
       run: |
         echo "✅ All builds completed successfully!"
@@ -313,19 +284,16 @@ jobs:
         echo "Commit: ${{ github.sha }}"
         echo "Test result: ${{ needs.test.result }}"
         echo "Android build result: ${{ needs.build_android.result }}"
-        echo "iOS build result: ${{ needs.build_ios.result }}"
         echo "Linux build result: ${{ needs.build_linux.result }}"
         
     - name: Notify failure
       if: |
         needs.test.result == 'failure' || 
         needs.build_android.result == 'failure' || 
-        needs.build_ios.result == 'failure' ||
         needs.build_linux.result == 'failure'
       run: |
         echo "❌ Build failed!"
         echo "Test result: ${{ needs.test.result }}"
         echo "Android build result: ${{ needs.build_android.result }}"
-        echo "iOS build result: ${{ needs.build_ios.result }}"
         echo "Linux build result: ${{ needs.build_linux.result }}"
         exit 1

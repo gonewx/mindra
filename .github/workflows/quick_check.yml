@@ -11,7 +11,7 @@ env:
 jobs:
   quick_check:
     name: Quick Validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     
     steps:

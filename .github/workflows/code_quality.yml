@@ -12,7 +12,7 @@ env:
 jobs:
   analyze:
     name: Code Analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
@@ -62,7 +62,7 @@ jobs:
 
   test_coverage:
     name: Test Coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
@@ -115,7 +115,7 @@ jobs:
 
   security_check:
     name: Security Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
@@ -165,7 +165,7 @@ jobs:
 
   performance_check:
     name: Performance Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
@@ -221,7 +221,7 @@ jobs:
 
   documentation_check:
     name: Documentation Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
@@ -254,7 +254,7 @@ jobs:
 
   summary:
     name: Quality Summary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [analyze, test_coverage, security_check, performance_check, documentation_check]
     if: always()
     
