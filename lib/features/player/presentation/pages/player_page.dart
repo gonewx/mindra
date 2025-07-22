@@ -138,44 +138,6 @@ class _PlayerPageState extends State<PlayerPage> {
     }
   }
 
-  void _showSessionCompletedDialog() {
-    final localizations = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(localizations.meditationCompleted),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 48),
-            const SizedBox(height: 16),
-            Text(localizations.meditationCongratulations),
-            const SizedBox(height: 16),
-            Text(
-              localizations.meditationPracticeDuration(
-                (_playerService.totalDuration / 60).round(),
-              ),
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.go('/meditation-history'); // 跳转到进度页面
-            },
-            child: Text(localizations.navigationViewProgress),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(localizations.actionComplete),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   void dispose() {
     _sessionCompleteTimer?.cancel();
@@ -204,7 +166,6 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   Widget _buildDefaultCover(ThemeData theme) {
-    final localizations = AppLocalizations.of(context)!;
     // 根据类别选择不同的图标和颜色
     IconData iconData;
     List<Color> gradientColors;
@@ -706,8 +667,6 @@ class _PlayerPageState extends State<PlayerPage> {
         return localizations.repeatModeAll;
       case RepeatMode.one:
         return localizations.repeatModeOne;
-      default:
-        return localizations.repeatModeOff;
     }
   }
 
@@ -719,8 +678,6 @@ class _PlayerPageState extends State<PlayerPage> {
         return Icons.repeat;
       case RepeatMode.one:
         return Icons.repeat_one;
-      default:
-        return Icons.repeat;
     }
   }
 

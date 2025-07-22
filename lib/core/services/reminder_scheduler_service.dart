@@ -37,7 +37,10 @@ class ReminderSchedulerService {
 
       // 如果启用了提醒，重新调度
       if (goal.isReminderEnabled) {
-        await _scheduleReminders(goal, context);
+        await _scheduleReminders(
+          goal,
+          context != null && context.mounted ? context : null,
+        );
       }
 
       debugPrint('Reminder settings updated: ${goal.isReminderEnabled}');
@@ -61,7 +64,7 @@ class ReminderSchedulerService {
     String title;
     String body;
 
-    if (context != null) {
+    if (context != null && context.mounted) {
       final l10n = AppLocalizations.of(context)!;
       title = l10n.reminderNotificationTitle;
       final goalText = goal.getDailyGoalText(l10n);

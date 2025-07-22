@@ -17,7 +17,6 @@ class _FloatingPlayerState extends State<FloatingPlayer>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
 
-  bool _isDragging = false;
   Offset _position = const Offset(0, 0); // 初始位置，将在 initState 中设置
   bool _isInitialized = false;
 
@@ -134,9 +133,6 @@ class _FloatingPlayerState extends State<FloatingPlayer>
       top: _position.dy,
       child: GestureDetector(
         onPanStart: (_) {
-          setState(() {
-            _isDragging = true;
-          });
           _animationController.forward();
         },
         onPanUpdate: (details) {
@@ -151,9 +147,6 @@ class _FloatingPlayerState extends State<FloatingPlayer>
           });
         },
         onPanEnd: (_) {
-          setState(() {
-            _isDragging = false;
-          });
           _animationController.reverse();
 
           // 自动吸附到屏幕边缘

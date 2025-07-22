@@ -120,21 +120,6 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
     }
   }
 
-  // 停止试听
-  Future<void> _stopPreview(String effectId) async {
-    try {
-      // 使用新的停止预览方法
-      await _soundPlayer.stopPreview();
-      if (mounted) {
-        setState(() {
-          _previewingEffects[effectId] = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error stopping preview for $effectId: $e');
-    }
-  }
-
   // 停止所有试听
   Future<void> _stopAllPreviews() async {
     try {

@@ -31,7 +31,6 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
   late AnimationController _animationController;
   late Animation<double> _slideAnimation;
   late Animation<double> _elevationAnimation;
-  bool _isHovered = false;
 
   @override
   void initState() {
@@ -69,10 +68,6 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
   }
 
   void _onHoverChange(bool isHovered) {
-    setState(() {
-      _isHovered = isHovered;
-    });
-
     if (isHovered) {
       _animationController.forward();
     } else {
@@ -170,12 +165,6 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
     // 响应式设计：根据屏幕宽度计算组件尺寸
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
-    final isMediumScreen = screenWidth >= 600 && screenWidth < 900;
-
-    // 响应式图片高度
-    final imageHeight = isSmallScreen
-        ? 120.0
-        : (isMediumScreen ? 130.0 : 140.0);
 
     // 响应式字体大小
     final titleFontSize = isSmallScreen ? 14.0 : 14.0;
