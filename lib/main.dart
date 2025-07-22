@@ -12,6 +12,7 @@ import 'core/router/app_router.dart';
 import 'core/di/injection_container.dart';
 import 'core/config/app_config_service.dart';
 import 'core/database/database_helper.dart';
+import 'core/database/database_health_checker.dart';
 import 'core/services/reminder_scheduler_service.dart';
 import 'core/localization/app_localizations.dart';
 import 'features/player/services/global_player_service.dart';
@@ -78,32 +79,199 @@ class _MindraAppState extends State<MindraApp> {
   }
 
   Future<void> _initializeDatabaseServices() async {
-    // Initialize sqflite factory for different platforms
-    if (kIsWeb) {
-      // For web platform - use in-memory database for now
-      debugPrint('Running on web platform - using alternative storage');
-    } else {
-      // Check if we're on mobile or desktop
-      bool isMobile = false;
-      try {
-        isMobile = Platform.isAndroid || Platform.isIOS;
-      } catch (e) {
-        // If Platform is not available, assume desktop
-        isMobile = false;
-      }
+    const maxRetries = 3;
+    const retryDelay = Duration(seconds: 1);
 
-      if (isMobile) {
-        // For mobile platforms - use standard sqflite (no FFI needed)
-        debugPrint('Running on mobile platform - using standard sqflite');
-        // Initialize database for mobile platforms
-        await DatabaseHelper.database;
-      } else {
-        // For desktop platforms - use FFI
-        debugPrint('Running on desktop platform - using sqflite FFI');
-        sqfliteFfiInit();
-        databaseFactory = databaseFactoryFfi;
-        // Initialize database for desktop platforms
-        await DatabaseHelper.database;
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        debugPrint(
+          'Database services initialization attempt $attempt/$maxRetries',
+        );
+
+        // Initialize sqflite factory for different platforms
+        if (kIsWeb) {
+          // For web platform - use alternative storage
+          debugPrint('Running on web platform - using alternative storage');
+          // Web平台不需要数据库初始化，使用WebStorageHelper
+          return;
+        } else {
+          // Check if we're on mobile or desktop
+          bool isMobile = false;
+          String platformInfo = 'unknown';
+
+          try {
+            isMobile = Platform.isAndroid || Platform.isIOS;
+            platformInfo = Platform.operatingSystem;
+            debugPrint('Detected platform: $platformInfo (mobile: $isMobile)');
+          } catch (e) {
+            // If Platform is not available, assume desktop
+            isMobile = false;
+            platformInfo = 'desktop (assumed)';
+            debugPrint('Platform detection failed, assuming desktop: $e');
+          }
+
+          if (isMobile) {
+            // For mobile platforms - use standard sqflite (no FFI needed)
+            debugPrint(
+              'Initializing standard sqflite for mobile platform: $platformInfo',
+            );
+
+            // 移动平台特殊处理
+            if (Platform.isAndroid) {
+              // Android平台额外检查
+              await _initializeAndroidDatabase();
+            } else if (Platform.isIOS) {
+              // iOS平台额外检查
+              await _initializeIOSDatabase();
+            } else {
+              // 其他移动平台
+              await DatabaseHelper.database;
+            }
+          } else {
+            // For desktop platforms - use FFI
+            debugPrint(
+              'Initializing sqflite FFI for desktop platform: $platformInfo',
+            );
+
+            try {
+              sqfliteFfiInit();
+              databaseFactory = databaseFactoryFfi;
+            } catch (e) {
+              debugPrint('Failed to initialize sqflite FFI: $e');
+              throw Exception('Desktop database initialization failed: $e');
+            }
+
+            // Initialize database for desktop platforms
+            await DatabaseHelper.database;
+          }
+        }
+
+        // 验证数据库状态
+        final dbStatus = DatabaseHelper.getInitializationStatus();
+        debugPrint('Database initialization status: $dbStatus');
+
+        if (dbStatus['isOpen'] == true) {
+          debugPrint(
+            'Database services initialized successfully on attempt $attempt',
+          );
+
+          // 执行数据库健康检查（后台异步执行）
+          _performDatabaseHealthCheck();
+
+          return;
+        } else {
+          throw Exception('Database is not open after initialization');
+        }
+      } catch (e) {
+        debugPrint(
+          'Database services initialization attempt $attempt failed: $e',
+        );
+
+        if (attempt == maxRetries) {
+          debugPrint('All database initialization attempts failed');
+          // 最后一次尝试失败，但不抛出异常，让应用继续运行
+          // 应用可以在需要数据库时再次尝试初始化
+          debugPrint(
+            'Warning: Database initialization failed, app will continue with limited functionality',
+          );
+          return;
+        }
+
+        // 等待后重试
+        debugPrint('Waiting ${retryDelay.inSeconds}s before retry...');
+        await Future.delayed(retryDelay * attempt);
+      }
+    }
+  }
+
+  /// Android平台数据库初始化
+  Future<void> _initializeAndroidDatabase() async {
+    try {
+      debugPrint('Initializing Android database...');
+
+      // Android特定的初始化逻辑
+      // 检查Android版本和权限
+      final androidInfo = Platform.version;
+      debugPrint('Android version info: $androidInfo');
+
+      // 初始化数据库
+      await DatabaseHelper.database;
+
+      debugPrint('Android database initialized successfully');
+    } catch (e) {
+      debugPrint('Android database initialization failed: $e');
+
+      // 尝试强制重新初始化
+      try {
+        debugPrint('Attempting Android database recovery...');
+        await DatabaseHelper.forceReinitialize();
+        debugPrint('Android database recovery successful');
+      } catch (recoveryError) {
+        debugPrint('Android database recovery failed: $recoveryError');
+        rethrow;
+      }
+    }
+  }
+
+  /// 执行数据库健康检查（后台异步执行）
+  void _performDatabaseHealthCheck() {
+    // 在后台异步执行健康检查，不阻塞UI
+    Future.microtask(() async {
+      try {
+        if (!DatabaseHealthChecker.shouldPerformHealthCheck()) {
+          return; // 不需要检查
+        }
+
+        debugPrint('Starting background database health check...');
+        final report = await DatabaseHealthChecker.performHealthCheck();
+
+        if (!report.isHealthy) {
+          debugPrint(
+            'Database health issues detected, attempting auto-repair...',
+          );
+          final repairedIssues = await DatabaseHealthChecker.autoRepairIssues(
+            report,
+          );
+
+          if (repairedIssues.isNotEmpty) {
+            debugPrint(
+              'Successfully repaired ${repairedIssues.length} database issues',
+            );
+          }
+        } else {
+          debugPrint('Database health check passed - all systems healthy');
+        }
+      } catch (e) {
+        debugPrint('Background database health check failed: $e');
+        // 健康检查失败不影响应用正常运行
+      }
+    });
+  }
+
+  /// iOS平台数据库初始化
+  Future<void> _initializeIOSDatabase() async {
+    try {
+      debugPrint('Initializing iOS database...');
+
+      // iOS特定的初始化逻辑
+      final iosInfo = Platform.version;
+      debugPrint('iOS version info: $iosInfo');
+
+      // 初始化数据库
+      await DatabaseHelper.database;
+
+      debugPrint('iOS database initialized successfully');
+    } catch (e) {
+      debugPrint('iOS database initialization failed: $e');
+
+      // 尝试强制重新初始化
+      try {
+        debugPrint('Attempting iOS database recovery...');
+        await DatabaseHelper.forceReinitialize();
+        debugPrint('iOS database recovery successful');
+      } catch (recoveryError) {
+        debugPrint('iOS database recovery failed: $recoveryError');
+        rethrow;
       }
     }
   }
