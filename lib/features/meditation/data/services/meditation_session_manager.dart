@@ -39,7 +39,8 @@ class MeditationSessionManager {
       // 立即保存会话记录（状态为未完成）
       await _saveSessionToDatabase(_currentSession!);
 
-      debugPrint('Started meditation session: ${_currentSession!.id}');
+      debugPrint('Started meditation session: ${_currentSession!.id} for ${_currentSession!.title}');
+      debugPrint('Session details: Media ID: ${mediaItem.id}, Duration: ${mediaItem.duration}s, Start time: $startTime');
       return sessionId;
     } catch (e) {
       debugPrint('Error starting meditation session: $e');
@@ -127,7 +128,7 @@ class MeditationSessionManager {
         await _updateSessionInDatabase(stoppedSession);
 
         debugPrint(
-          'Stopped meditation session: ${stoppedSession.id}, duration: ${_actualDuration}s',
+          'Stopped meditation session: ${stoppedSession.id} for ${stoppedSession.title}, duration: ${_actualDuration}s',
         );
 
         // 清理当前会话状态

@@ -432,6 +432,16 @@ class GlobalPlayerService extends ChangeNotifier {
     final isDifferentMedia = _currentMedia?.id != mediaId;
 
     if (isDifferentMedia) {
+      // 如果切换到不同的音频，需要先结束当前的session
+      if (MeditationSessionManager.hasActiveSession) {
+        try {
+          await MeditationSessionManager.stopSession();
+          debugPrint('Stopped previous meditation session when switching media');
+        } catch (e) {
+          debugPrint('Error stopping previous session: $e');
+        }
+      }
+      
       // 立即重置时间显示，给用户即时反馈
       _currentPosition = 0.0;
       _totalDuration = 0.0;

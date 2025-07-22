@@ -252,6 +252,15 @@ class DatabaseHelper {
     );
   }
 
+  static Future<List<Map<String, dynamic>>> getRecentMeditationSessions({int limit = 3}) async {
+    final db = await database;
+    return await db.query(
+      _meditationSessionsTable,
+      orderBy: 'start_time DESC',
+      limit: limit,
+    );
+  }
+
   static Future<Map<String, dynamic>?> getMeditationStats() async {
     final db = await database;
     final result = await db.rawQuery('''

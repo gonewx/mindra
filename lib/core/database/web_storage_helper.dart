@@ -207,7 +207,12 @@ class WebStorageHelper {
     if (jsonString == null) return [];
 
     final jsonList = json.decode(jsonString) as List;
-    return jsonList.map((json) => MeditationSession.fromMap(json)).toList();
+    final sessions = jsonList.map((json) => MeditationSession.fromMap(json)).toList();
+    
+    // 按开始时间倒序排列（最新的在前面）
+    sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
+    
+    return sessions;
   }
 
   static Future<List<MeditationSession>> getMeditationSessionsByDateRange(
@@ -219,6 +224,14 @@ class WebStorageHelper {
       return session.startTime.isAfter(startDate) &&
           session.startTime.isBefore(endDate);
     }).toList();
+  }
+
+  static Future<List<MeditationSession>> getRecentMeditationSessions({int limit = 3}) async {
+    final sessions = await getAllMeditationSessions();
+    if (sessions.length <= limit) {
+      return sessions;
+    }
+    return sessions.take(limit).toList();
   }
 
   static Future<void> updateMeditationSession(
