@@ -340,74 +340,11 @@ jobs:
         path: build/ios/archive/Runner.xcarchive
         retention-days: 90
 
-  deploy_android:
-    name: Deploy Android
-    runs-on: ubuntu-latest
-    needs: [prepare, build_android]
-    if: needs.prepare.outputs.platform == 'android' || needs.prepare.outputs.platform == 'all'
-    environment: release
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Download AAB artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: android-aab-release
-        path: ./
-        
-    - name: Setup Google Play API
-      run: |
-        echo "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}" > service-account.json
-        
-    - name: Deploy to Google Play
-      uses: r0adkll/upload-google-play@v1
-      with:
-        serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-        packageName: com.mindra.app
-        releaseFiles: app-release.aab
-        track: ${{ needs.prepare.outputs.track }}
-        status: completed
-        inAppUpdatePriority: 2
-
-  deploy_ios:
-    name: Deploy iOS
-    runs-on: macos-latest
-    needs: [prepare, build_ios]
-    if: needs.prepare.outputs.platform == 'ios' || needs.prepare.outputs.platform == 'all'
-    environment: release
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Download IPA artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: ios-ipa-release
-        path: ./
-        
-    - name: Deploy to TestFlight
-      if: needs.prepare.outputs.track != 'production'
-      run: |
-        xcrun altool --upload-app \
-                     --type ios \
-                     --file Runner.ipa \
-                     --username "${{ secrets.APPLE_ID }}" \
-                     --password "${{ secrets.APP_SPECIFIC_PASSWORD }}"
-                     
-    - name: Deploy to App Store
-      if: needs.prepare.outputs.track == 'production'
-      run: |
-        echo "Production deployment requires manual submission in App Store Connect"
-        echo "IPA has been built and is ready for upload"
-
   create_release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [prepare, deploy_android, deploy_ios, build_linux]
-    if: always() && (needs.deploy_android.result == 'success' || needs.deploy_ios.result == 'success' || needs.build_linux.result == 'success')
+    needs: [prepare, build_android, build_ios, build_linux]
+    if: always() && (needs.build_android.result == 'success' || needs.build_ios.result == 'success' || needs.build_linux.result == 'success')
     permissions:
       contents: write
       
@@ -441,12 +378,17 @@ jobs:
         - **构建号**: $BUILD_NUMBER
         
         ### 下载
-        - Android APK: 见 Artifacts
-        - Android AAB: 见 Artifacts  
-        - iOS IPA: 见 Artifacts
-        - Linux DEB: 见 Artifacts
-        - Linux TAR.GZ: 见 Artifacts
-        - Linux AppImage: 见 Artifacts
+        - Android APK: 见 Release Assets
+        - Android AAB: 见 Release Assets  
+        - iOS IPA: 见 Release Assets
+        - Linux DEB: 见 Release Assets
+        - Linux TAR.GZ: 见 Release Assets
+        - Linux AppImage: 见 Release Assets
+        
+        ### 说明
+        - 所有构建产物仅供测试和分发使用
+        - Android 应用使用 debug 签名（如需生产发布，请手动签名）
+        - iOS 应用需要手动上传到 App Store Connect
         
         ### 更新内容
         请查看 CHANGELOG.md 获取详细更新内容。
