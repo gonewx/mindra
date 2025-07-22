@@ -31,6 +31,10 @@ on:
         - linux
         - all
 
+permissions:
+  contents: write
+  actions: read
+
 env:
   FLUTTER_VERSION: '3.32.5'
   JAVA_VERSION: '21'
@@ -404,7 +408,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [prepare, deploy_android, deploy_ios, build_linux]
     if: always() && (needs.deploy_android.result == 'success' || needs.deploy_ios.result == 'success' || needs.build_linux.result == 'success')
-    
+    permissions:
+      contents: write
+      
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -415,30 +421,100 @@ jobs:
         path: ./artifacts
         
     - name: Create Release
-      uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: v${{ needs.prepare.outputs.version }}
-        release_name: Mindra v${{ needs.prepare.outputs.version }}
-        body: |
-          ## Mindra v${{ needs.prepare.outputs.version }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        # 准备发布信息
+        VERSION="${{ needs.prepare.outputs.version }}"
+        TRACK="${{ needs.prepare.outputs.track }}"
+        PLATFORM="${{ needs.prepare.outputs.platform }}"
+        BUILD_NUMBER="${{ github.run_number }}"
+        
+        # 创建发布说明
+        cat > release_notes.md << EOF
+        ## Mindra v$VERSION
+        
+        ### 发布信息
+        - **版本**: $VERSION
+        - **发布轨道**: $TRACK
+        - **平台**: $PLATFORM
+        - **构建号**: $BUILD_NUMBER
+        
+        ### 下载
+        - Android APK: 见 Artifacts
+        - Android AAB: 见 Artifacts  
+        - iOS IPA: 见 Artifacts
+        - Linux DEB: 见 Artifacts
+        - Linux TAR.GZ: 见 Artifacts
+        - Linux AppImage: 见 Artifacts
+        
+        ### 更新内容
+        请查看 CHANGELOG.md 获取详细更新内容。
+        EOF
+        
+        # 创建 GitHub Release
+        if [ "$TRACK" != "production" ]; then
+          PRERELEASE="--prerelease"
+        else
+          PRERELEASE=""
+        fi
+        
+        gh release create "v$VERSION" \
+          --title "Mindra v$VERSION" \
+          --notes-file release_notes.md \
+          $PRERELEASE
           
-          ### 发布信息
-          - **版本**: ${{ needs.prepare.outputs.version }}
-          - **发布轨道**: ${{ needs.prepare.outputs.track }}
-          - **平台**: ${{ needs.prepare.outputs.platform }}
-          - **构建号**: ${{ github.run_number }}
+    - name: Upload release assets
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        VERSION="${{ needs.prepare.outputs.version }}"
+        
+        # 上传构建产物到 release
+        if [ -d "./artifacts" ]; then
+          echo "上传构建产物到 release..."
           
-          ### 下载
-          - Android APK: 见 Artifacts
-          - Android AAB: 见 Artifacts  
-          - iOS IPA: 见 Artifacts
-          - Linux DEB: 见 Artifacts
-          - Linux TAR.GZ: 见 Artifacts
-          - Linux AppImage: 见 Artifacts
+          # 上传 Android APK
+          if [ -f "./artifacts/android-apk-release/app-release.apk" ]; then
+            gh release upload "v$VERSION" "./artifacts/android-apk-release/app-release.apk" --clobber
+          fi
           
-          ### 更新内容
-          请查看 CHANGELOG.md 获取详细更新内容。
-        draft: false
-        prerelease: ${{ needs.prepare.outputs.track != 'production' }}
+          # 上传 Android AAB
+          if [ -f "./artifacts/android-aab-release/app-release.aab" ]; then
+            gh release upload "v$VERSION" "./artifacts/android-aab-release/app-release.aab" --clobber
+          fi
+          
+          # 上传 iOS IPA
+          if [ -f "./artifacts/ios-ipa-release/Runner.ipa" ]; then
+            gh release upload "v$VERSION" "./artifacts/ios-ipa-release/Runner.ipa" --clobber
+          fi
+          
+          # 上传 Linux 构建产物
+          if [ -d "./artifacts/linux-deb-release" ]; then
+            for deb in ./artifacts/linux-deb-release/*.deb; do
+              if [ -f "$deb" ]; then
+                gh release upload "v$VERSION" "$deb" --clobber
+              fi
+            done
+          fi
+          
+          if [ -d "./artifacts/linux-tarball-release" ]; then
+            for tar in ./artifacts/linux-tarball-release/*.tar.gz; do
+              if [ -f "$tar" ]; then
+                gh release upload "v$VERSION" "$tar" --clobber
+              fi
+            done
+          fi
+          
+          if [ -d "./artifacts/linux-appimage-release" ]; then
+            for appimage in ./artifacts/linux-appimage-release/*.AppImage; do
+              if [ -f "$appimage" ]; then
+                gh release upload "v$VERSION" "$appimage" --clobber
+              fi
+            done
+          fi
+          
+          echo "✅ 构建产物上传完成"
+        else
+          echo "⚠️ 没有找到构建产物目录"
+        fi
