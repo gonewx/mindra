@@ -299,6 +299,8 @@ class GlobalPlayerService extends ChangeNotifier {
         final media = _mediaItems[_currentIndex];
         _currentMedia = media;
         _isFavorited = media.isFavorite;
+
+        // 通知UI更新媒体信息（标题、封面等）
         notifyListeners();
 
         await _loadAudioFile(media.filePath);
@@ -394,11 +396,34 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   Future<void> loadMedia(String mediaId, {bool autoPlay = true}) async {
+    // 检查是否是不同的音频，只有在切换音频时才重置时间显示
+    final isDifferentMedia = _currentMedia?.id != mediaId;
+
+    if (isDifferentMedia) {
+      // 立即重置时间显示，给用户即时反馈
+      _currentPosition = 0.0;
+      _totalDuration = 0.0;
+      // 不手动设置 _isPlaying，让音频播放器的 playingStream 来管理
+      debugPrint('切换到不同音频，立即重置时间显示: ${_currentPosition}s / ${_totalDuration}s');
+      notifyListeners();
+    } else {
+      debugPrint('播放相同音频，不重置时间显示');
+    }
+
     await _loadMediaById(mediaId, autoPlay: autoPlay);
   }
 
   Future<void> _loadAudioFile(String filePath) async {
     try {
+      // 先停止当前音频播放，确保播放状态正确重置
+      try {
+        await _audioPlayer.stop();
+        debugPrint('Stopped current audio before loading new file');
+      } catch (e) {
+        debugPrint('Could not stop current audio: $e');
+        // 继续执行，不阻塞新音频的加载
+      }
+
       if (kIsWeb && filePath.startsWith('web://')) {
         if (_currentMedia != null) {
           final mimeType = _getMimeType(_currentMedia!.filePath);
@@ -410,19 +435,42 @@ class GlobalPlayerService extends ChangeNotifier {
           if (blobUrl != null) {
             await _audioPlayer.setUrl(blobUrl);
             debugPrint('Web audio loaded from blob URL successfully');
-            return;
           } else {
             throw Exception('Failed to create blob URL for media');
           }
         }
-      }
-
-      if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      } else if (filePath.startsWith('http://') ||
+          filePath.startsWith('https://')) {
         await _audioPlayer.setUrl(filePath);
         debugPrint('Network audio loaded: $filePath');
       } else {
         await _audioPlayer.setFilePath(filePath);
         debugPrint('Local audio file loaded: $filePath');
+      }
+
+      // 主动获取音频时长
+      try {
+        // 等待一小段时间让音频文件完全加载
+        await Future.delayed(const Duration(milliseconds: 100));
+        final duration = await _audioPlayer.getDuration();
+        if (duration != null) {
+          _totalDuration = duration.inSeconds.toDouble();
+          debugPrint('Updated duration: ${_totalDuration}s');
+          notifyListeners();
+          debugPrint('Audio duration loaded: ${_totalDuration}s');
+        }
+
+        // 确保播放位置重置为0
+        await _audioPlayer.seek(Duration.zero);
+        _currentPosition = 0.0;
+        debugPrint(
+          'Updated position and duration: ${_currentPosition}s / ${_totalDuration}s',
+        );
+        notifyListeners();
+        debugPrint('Audio position reset to 0');
+      } catch (e) {
+        debugPrint('Could not get audio duration immediately: $e');
+        // 不抛出异常，让durationStream处理
       }
     } catch (e) {
       debugPrint('Error loading audio file: $e');
@@ -511,18 +559,38 @@ class GlobalPlayerService extends ChangeNotifier {
     final playlist = _currentPlaylist;
     if (playlist.isEmpty) return;
 
+    // 保存之前的播放状态
+    final wasPlaying = _isPlaying;
+
+    // 立即重置时间显示，给用户即时反馈
+    _currentPosition = 0.0;
+    _totalDuration = 0.0;
+    // 不手动设置 _isPlaying，让音频播放器的 playingStream 来管理
+    debugPrint('切换到下一首，立即重置时间显示: ${_currentPosition}s / ${_totalDuration}s');
+    notifyListeners();
+
     if (_currentIndex < playlist.length - 1) {
       _currentIndex++;
     } else {
       _currentIndex = 0;
     }
 
-    await _loadMediaAtIndex(_currentIndex);
+    await _loadMediaAtIndex(_currentIndex, shouldAutoPlay: wasPlaying);
   }
 
   Future<void> playPrevious() async {
     final playlist = _currentPlaylist;
     if (playlist.isEmpty) return;
+
+    // 保存之前的播放状态
+    final wasPlaying = _isPlaying;
+
+    // 立即重置时间显示，给用户即时反馈
+    _currentPosition = 0.0;
+    _totalDuration = 0.0;
+    // 不手动设置 _isPlaying，让音频播放器的 playingStream 来管理
+    debugPrint('切换到上一首，立即重置时间显示: ${_currentPosition}s / ${_totalDuration}s');
+    notifyListeners();
 
     if (_currentIndex > 0) {
       _currentIndex--;
@@ -530,23 +598,28 @@ class GlobalPlayerService extends ChangeNotifier {
       _currentIndex = playlist.length - 1;
     }
 
-    await _loadMediaAtIndex(_currentIndex);
+    await _loadMediaAtIndex(_currentIndex, shouldAutoPlay: wasPlaying);
   }
 
-  Future<void> _loadMediaAtIndex(int index) async {
+  Future<void> _loadMediaAtIndex(
+    int index, {
+    bool shouldAutoPlay = false,
+  }) async {
     final playlist = _currentPlaylist;
     if (index < 0 || index >= playlist.length) return;
 
     final media = playlist[index];
     _currentMedia = media;
     _isFavorited = media.isFavorite;
+
+    // 通知UI更新媒体信息（标题、封面等）
     notifyListeners();
 
     try {
       await _loadAudioFile(media.filePath);
       await _saveLastPlayedMedia();
 
-      if (_isPlaying) {
+      if (shouldAutoPlay) {
         await _audioPlayer.play();
       }
     } catch (e) {
