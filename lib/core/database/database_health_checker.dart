@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
 import 'dart:io';
 import 'database_helper.dart';
 
@@ -341,7 +340,6 @@ class DatabaseHealthChecker {
     try {
       // 获取数据库文件路径
       final dbPath = await DatabaseHelper.database.then((db) => db.path);
-      if (dbPath == null) return;
 
       final dbFile = File(dbPath);
       if (!await dbFile.exists()) return;
@@ -350,7 +348,7 @@ class DatabaseHealthChecker {
 
       // 检查可用空间（简化版本，实际实现可能需要平台特定代码）
       try {
-        final stat = await dbDirectory.stat();
+        await dbDirectory.stat();
         // 这里可以添加更详细的磁盘空间检查逻辑
       } catch (e) {
         debugPrint('Storage space check failed: $e');
@@ -467,8 +465,9 @@ class DatabaseHealthReport {
     if (issues.isEmpty) return null;
 
     final severities = issues.map((i) => i.severity).toSet();
-    if (severities.contains(IssueSeverity.critical))
+    if (severities.contains(IssueSeverity.critical)) {
       return IssueSeverity.critical;
+    }
     if (severities.contains(IssueSeverity.high)) return IssueSeverity.high;
     if (severities.contains(IssueSeverity.medium)) return IssueSeverity.medium;
     return IssueSeverity.low;

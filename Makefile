@@ -52,7 +52,7 @@ test: ## 运行测试
 
 # 自动修复
 fix: ## 自动修复可修复的问题
-	@./scripts/dev_check.sh --fix
+	@./scripts/dev_check.sh --strict --fix
 
 # 提交前检查
 pre-commit: ## 运行提交前检查
