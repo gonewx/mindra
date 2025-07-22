@@ -43,18 +43,21 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.9,
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 标题
-              Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
@@ -73,26 +76,50 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+            ),
 
-              // 每日目标
-              _buildSectionTitle(l10n.goalsDailyGoal, Icons.today_outlined, theme),
-              const SizedBox(height: 12),
-              _buildDailyGoalSelector(theme, l10n),
-              const SizedBox(height: 24),
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 每日目标
+                    _buildSectionTitle(
+                      l10n.goalsDailyGoal,
+                      Icons.today_outlined,
+                      theme,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDailyGoalSelector(theme, l10n),
+                    const SizedBox(height: 24),
 
-              // 每周目标
-              _buildSectionTitle(
-                l10n.goalsWeeklyGoal,
-                Icons.calendar_view_week_outlined,
-                theme,
+                    // 每周目标
+                    _buildSectionTitle(
+                      l10n.goalsWeeklyGoal,
+                      Icons.calendar_view_week_outlined,
+                      theme,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildWeeklyGoalSelector(theme, l10n),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              _buildWeeklyGoalSelector(theme, l10n),
-              const SizedBox(height: 32),
+            ),
 
-              // 操作按钮
-              Row(
+            // Fixed action buttons at bottom
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
@@ -135,8 +162,8 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -178,7 +205,7 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -243,7 +270,7 @@ class _GoalSettingsDialogState extends State<GoalSettingsDialog> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           Wrap(
             spacing: 8,
             runSpacing: 8,

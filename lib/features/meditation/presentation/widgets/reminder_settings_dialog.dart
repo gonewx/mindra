@@ -53,18 +53,17 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
           maxWidth: MediaQuery.of(context).size.width * 0.9,
           maxHeight: MediaQuery.of(context).size.height * 0.8,
         ),
-        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 标题
-              Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
@@ -86,46 +85,69 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+            ),
 
-              // 开启提醒
-              _buildReminderToggle(theme, l10n),
-              const SizedBox(height: 24),
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 开启提醒
+                    _buildReminderToggle(theme, l10n),
+                    const SizedBox(height: 24),
 
-              // 提醒时间
-              if (_isReminderEnabled) ...[
-                _buildSectionTitle(
-                  l10n.remindersTime,
-                  Icons.access_time_outlined,
-                  theme,
+                                         // 提醒时间
+                     if (_isReminderEnabled) ...[
+                       _buildSectionTitle(
+                         l10n.remindersTime,
+                         Icons.access_time_outlined,
+                         theme,
+                       ),
+                       const SizedBox(height: 12),
+                       _buildTimeSelector(theme, l10n),
+                       const SizedBox(height: 24),
+
+                       // 提醒日期
+                       _buildSectionTitle(
+                         l10n.remindersDate,
+                         Icons.calendar_today_outlined,
+                         theme,
+                       ),
+                       const SizedBox(height: 12),
+                       _buildDaySelector(theme, l10n),
+                       const SizedBox(height: 24),
+
+                       // 提醒方式
+                       _buildSectionTitle(
+                         l10n.remindersMethod,
+                         Icons.notifications_outlined,
+                         theme,
+                       ),
+                       const SizedBox(height: 12),
+                     ],
+                    const SizedBox(height: 24),
+
+                    // 通知选项
+                    _buildNotificationOptions(theme, l10n),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                _buildTimeSelector(theme, l10n),
-                const SizedBox(height: 24),
+              ),
+            ),
 
-                // 提醒日期
-                _buildSectionTitle(
-                  l10n.remindersDate,
-                  Icons.calendar_today_outlined,
-                  theme,
+            // Fixed action buttons at bottom
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                _buildDaySelector(theme, l10n),
-                const SizedBox(height: 24),
-
-                // 提醒方式
-                _buildSectionTitle(
-                  l10n.remindersMethod,
-                  Icons.notifications_outlined,
-                  theme,
-                ),
-                const SizedBox(height: 12),
-                _buildNotificationOptions(theme, l10n),
-                const SizedBox(height: 32),
-              ],
-
-              // 操作按钮
-              Row(
+              ),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
@@ -168,8 +190,8 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
