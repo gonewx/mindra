@@ -1,0 +1,627 @@
+#!/bin/bash
+
+# Mindra Linux 构建脚本
+# 用于构建生产环境的 Linux 应用
+
+set -e  # 遇到错误时退出
+
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# 日志函数
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# 显示帮助信息
+show_help() {
+    echo "Mindra Linux 构建脚本"
+    echo ""
+    echo "用法: $0 [选项]"
+    echo ""
+    echo "选项:"
+    echo "  -h, --help              显示此帮助信息"
+    echo "  -c, --clean             构建前清理"
+    echo "  -r, --release           构建 Release 版本 (默认)"
+    echo "  -d, --debug             构建 Debug 版本"
+    echo "  -p, --package           创建安装包 (.deb/.rpm/.tar.gz)"
+    echo "  -v, --version VERSION   指定版本号 (格式: 1.0.0+1)"
+    echo "  -s, --skip-tests        跳过测试"
+    echo "  --appimage              创建 AppImage 格式"
+    echo "  --flatpak               创建 Flatpak 格式"
+    echo "  --snap                  创建 Snap 格式"
+    echo ""
+    echo "示例:"
+    echo "  $0                      构建 Release 版本"
+    echo "  $0 -c -p               清理后构建并创建安装包"
+    echo "  $0 --appimage          构建 AppImage 格式"
+    echo "  $0 -v 1.0.1+2          指定版本号构建"
+}
+
+# 默认参数
+CLEAN_BUILD=false
+BUILD_TYPE="release"
+CREATE_PACKAGE=false
+CREATE_APPIMAGE=false
+CREATE_FLATPAK=false
+CREATE_SNAP=false
+SKIP_TESTS=false
+VERSION=""
+
+# 解析命令行参数
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -c|--clean)
+            CLEAN_BUILD=true
+            shift
+            ;;
+        -r|--release)
+            BUILD_TYPE="release"
+            shift
+            ;;
+        -d|--debug)
+            BUILD_TYPE="debug"
+            shift
+            ;;
+        -p|--package)
+            CREATE_PACKAGE=true
+            shift
+            ;;
+        -v|--version)
+            VERSION="$2"
+            shift 2
+            ;;
+        -s|--skip-tests)
+            SKIP_TESTS=true
+            shift
+            ;;
+        --appimage)
+            CREATE_APPIMAGE=true
+            shift
+            ;;
+        --flatpak)
+            CREATE_FLATPAK=true
+            shift
+            ;;
+        --snap)
+            CREATE_SNAP=true
+            shift
+            ;;
+        *)
+            log_error "未知参数: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
+# 检查环境
+check_environment() {
+    log_info "检查构建环境..."
+    
+    # 检查操作系统
+    if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+        log_error "Linux 构建需要在 Linux 系统上进行"
+        exit 1
+    fi
+    
+    # 检查 Flutter
+    if ! command -v flutter &> /dev/null; then
+        log_error "Flutter 未安装或不在 PATH 中"
+        exit 1
+    fi
+    
+    # 检查 Linux 构建依赖
+    local missing_deps=()
+    
+    if ! pkg-config --exists gtk+-3.0; then
+        missing_deps+=("libgtk-3-dev")
+    fi
+    
+    if ! command -v ninja &> /dev/null; then
+        missing_deps+=("ninja-build")
+    fi
+    
+    if ! command -v cmake &> /dev/null; then
+        missing_deps+=("cmake")
+    fi
+    
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        log_error "缺少以下依赖："
+        for dep in "${missing_deps[@]}"; do
+            echo "  - $dep"
+        done
+        log_info "请运行: sudo apt install ${missing_deps[*]}"
+        exit 1
+    fi
+    
+    # 检查 Flutter Linux 支持
+    if ! flutter config --list | grep -q "linux.*true"; then
+        log_warning "Flutter Linux 支持可能未启用"
+        log_info "运行: flutter config --enable-linux-desktop"
+    fi
+    
+    log_success "环境检查通过"
+}
+
+# 更新版本号
+update_version() {
+    if [ -n "$VERSION" ]; then
+        log_info "更新版本号到: $VERSION"
+        
+        # 备份原始文件
+        cp pubspec.yaml pubspec.yaml.backup
+        
+        # 更新 pubspec.yaml
+        sed -i.tmp "s/^version:.*/version: $VERSION/" pubspec.yaml
+        rm pubspec.yaml.tmp
+        
+        log_success "版本号已更新"
+    fi
+}
+
+# 清理构建
+clean_build() {
+    if [ "$CLEAN_BUILD" = true ]; then
+        log_info "清理构建缓存..."
+        flutter clean
+        flutter pub get
+        log_success "清理完成"
+    fi
+}
+
+# 运行测试
+run_tests() {
+    if [ "$SKIP_TESTS" = false ]; then
+        log_info "运行测试..."
+        if flutter test; then
+            log_success "所有测试通过"
+        else
+            log_error "测试失败"
+            exit 1
+        fi
+    else
+        log_warning "跳过测试"
+    fi
+}
+
+# 构建 Linux 应用
+build_linux() {
+    log_info "构建 Linux 应用..."
+    
+    local build_cmd="flutter build linux"
+    
+    if [ "$BUILD_TYPE" = "release" ]; then
+        build_cmd="$build_cmd --release"
+        log_info "构建目标: Linux Release"
+    else
+        build_cmd="$build_cmd --debug"
+        log_info "构建目标: Linux Debug"
+    fi
+    
+    if $build_cmd; then
+        log_success "Linux 构建成功"
+        
+        # 显示构建产物信息
+        local build_dir="build/linux/x64/$BUILD_TYPE/bundle"
+        if [ -d "$build_dir" ]; then
+            local size=$(du -sh "$build_dir" | cut -f1)
+            log_info "应用包: $build_dir ($size)"
+            
+            # 列出主要文件
+            log_info "主要文件:"
+            if [ -f "$build_dir/mindra" ]; then
+                local exe_size=$(du -h "$build_dir/mindra" | cut -f1)
+                log_info "  - mindra (可执行文件): $exe_size"
+            fi
+            
+            if [ -d "$build_dir/lib" ]; then
+                local lib_count=$(find "$build_dir/lib" -name "*.so" | wc -l)
+                log_info "  - lib/ (共享库): $lib_count 个文件"
+            fi
+            
+            if [ -d "$build_dir/data" ]; then
+                local data_size=$(du -sh "$build_dir/data" | cut -f1)
+                log_info "  - data/ (数据文件): $data_size"
+            fi
+        fi
+    else
+        log_error "Linux 构建失败"
+        exit 1
+    fi
+}
+
+# 创建 .desktop 文件
+create_desktop_file() {
+    log_info "创建 .desktop 文件..."
+    
+    local desktop_file="build/linux/mindra.desktop"
+    local app_dir="build/linux/x64/$BUILD_TYPE/bundle"
+    
+    cat > "$desktop_file" << EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Mindra
+Comment=专业的冥想与正念应用
+Comment[en]=Professional meditation and mindfulness app
+Exec=$PWD/$app_dir/mindra
+Icon=$PWD/$app_dir/data/flutter_assets/assets/images/app_icon.png
+Categories=Health;Lifestyle;
+Keywords=meditation;mindfulness;relaxation;wellness;
+StartupNotify=true
+StartupWMClass=mindra
+MimeType=audio/mpeg;audio/wav;audio/flac;video/mp4;
+EOF
+    
+    log_success ".desktop 文件创建完成: $desktop_file"
+}
+
+# 创建传统安装包
+create_package() {
+    if [ "$CREATE_PACKAGE" = true ]; then
+        log_info "创建安装包..."
+        
+        local build_dir="build/linux/x64/$BUILD_TYPE/bundle"
+        local package_dir="build/linux/package"
+        local app_name="mindra"
+        local app_version=$(grep "^version:" pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1)
+        
+        # 创建包目录结构
+        mkdir -p "$package_dir"/{DEBIAN,usr/bin,usr/share/applications,usr/share/pixmaps}
+        mkdir -p "$package_dir/usr/lib/$app_name"
+        
+        # 复制应用文件
+        cp -r "$build_dir"/* "$package_dir/usr/lib/$app_name/"
+        
+        # 创建启动脚本
+        cat > "$package_dir/usr/bin/$app_name" << EOF
+#!/bin/bash
+cd /usr/lib/$app_name
+exec ./mindra "\$@"
+EOF
+        chmod +x "$package_dir/usr/bin/$app_name"
+        
+        # 复制 .desktop 文件
+        cp "build/linux/mindra.desktop" "$package_dir/usr/share/applications/"
+        sed -i "s|$PWD/$build_dir|/usr/lib/$app_name|g" "$package_dir/usr/share/applications/mindra.desktop"
+        
+        # 复制图标
+        if [ -f "$build_dir/data/flutter_assets/assets/images/app_icon.png" ]; then
+            cp "$build_dir/data/flutter_assets/assets/images/app_icon.png" "$package_dir/usr/share/pixmaps/mindra.png"
+        fi
+        
+        # 创建 DEBIAN/control 文件
+        cat > "$package_dir/DEBIAN/control" << EOF
+Package: $app_name
+Version: $app_version
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libgtk-3-0, libglib2.0-0
+Maintainer: Mindra Team <support@mindra.app>
+Description: 专业的冥想与正念应用
+ Mindra 是一款专业的冥想与正念应用，致力于帮助用户在快节奏的生活中
+ 找到内心的平静与专注。支持本地和网络音视频素材导入，提供完整的
+ 冥想会话管理和进度追踪功能。
+Homepage: https://mindra.app
+EOF
+        
+        # 构建 .deb 包
+        if command -v dpkg-deb &> /dev/null; then
+            local deb_file="build/linux/${app_name}_${app_version}_amd64.deb"
+            dpkg-deb --build "$package_dir" "$deb_file"
+            log_success "DEB 包创建完成: $deb_file"
+        fi
+        
+        # 创建 .tar.gz 包
+        local tar_file="build/linux/${app_name}-${app_version}-linux-x64.tar.gz"
+        tar -czf "$tar_file" -C "build/linux/x64/$BUILD_TYPE" bundle
+        log_success "TAR.GZ 包创建完成: $tar_file"
+    fi
+}
+
+# 创建 AppImage
+create_appimage() {
+    if [ "$CREATE_APPIMAGE" = true ]; then
+        log_info "创建 AppImage..."
+        
+        # 检查 appimagetool
+        if ! command -v appimagetool &> /dev/null; then
+            log_warning "appimagetool 未安装，跳过 AppImage 创建"
+            log_info "安装方法: wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+            return
+        fi
+        
+        local build_dir="build/linux/x64/$BUILD_TYPE/bundle"
+        local appdir="build/linux/Mindra.AppDir"
+        local app_version=$(grep "^version:" pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1)
+        
+        # 创建 AppDir 结构
+        mkdir -p "$appdir"/{usr/bin,usr/lib,usr/share/applications,usr/share/pixmaps}
+        
+        # 复制应用文件
+        cp -r "$build_dir"/* "$appdir/usr/lib/"
+        
+        # 创建启动脚本
+        cat > "$appdir/AppRun" << 'EOF'
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "${0}")")"
+export LD_LIBRARY_PATH="$HERE/usr/lib:$LD_LIBRARY_PATH"
+cd "$HERE/usr/lib"
+exec ./mindra "$@"
+EOF
+        chmod +x "$appdir/AppRun"
+        
+        # 复制 .desktop 文件和图标
+        cp "build/linux/mindra.desktop" "$appdir/mindra.desktop"
+        cp "build/linux/mindra.desktop" "$appdir/usr/share/applications/"
+        
+        if [ -f "$build_dir/data/flutter_assets/assets/images/app_icon.png" ]; then
+            cp "$build_dir/data/flutter_assets/assets/images/app_icon.png" "$appdir/mindra.png"
+            cp "$build_dir/data/flutter_assets/assets/images/app_icon.png" "$appdir/usr/share/pixmaps/"
+        fi
+        
+        # 构建 AppImage
+        local appimage_file="build/linux/Mindra-${app_version}-x86_64.AppImage"
+        appimagetool "$appdir" "$appimage_file"
+        
+        if [ -f "$appimage_file" ]; then
+            chmod +x "$appimage_file"
+            log_success "AppImage 创建完成: $appimage_file"
+        else
+            log_error "AppImage 创建失败"
+        fi
+    fi
+}
+
+# 验证构建产物
+verify_build() {
+    log_info "验证构建产物..."
+    
+    local build_dir="build/linux/x64/$BUILD_TYPE/bundle"
+    local verified=0
+    
+    # 检查可执行文件
+    if [ -f "$build_dir/mindra" ] && [ -x "$build_dir/mindra" ]; then
+        log_success "可执行文件验证通过"
+        ((verified++))
+    else
+        log_error "可执行文件不存在或无执行权限"
+    fi
+    
+    # 检查共享库
+    if [ -d "$build_dir/lib" ] && [ "$(find "$build_dir/lib" -name "*.so" | wc -l)" -gt 0 ]; then
+        log_success "共享库验证通过"
+        ((verified++))
+    else
+        log_error "共享库目录不存在或为空"
+    fi
+    
+    # 检查数据文件
+    if [ -d "$build_dir/data" ] && [ -f "$build_dir/data/icudtl.dat" ]; then
+        log_success "数据文件验证通过"
+        ((verified++))
+    else
+        log_error "数据文件不完整"
+    fi
+    
+    # 检查 Flutter 资源
+    if [ -d "$build_dir/data/flutter_assets" ]; then
+        log_success "Flutter 资源验证通过"
+        ((verified++))
+    else
+        log_error "Flutter 资源不存在"
+    fi
+    
+    if [ $verified -lt 3 ]; then
+        log_error "构建产物验证失败"
+        exit 1
+    fi
+    
+    log_success "构建产物验证完成"
+}
+
+# 生成构建报告
+generate_report() {
+    log_info "生成构建报告..."
+    
+    local report_file="build_report_linux_$(date +%Y%m%d_%H%M%S).txt"
+    local build_dir="build/linux/x64/$BUILD_TYPE/bundle"
+    
+    {
+        echo "=========================================="
+        echo "           Mindra Linux 构建报告"
+        echo "=========================================="
+        echo "构建时间: $(date)"
+        echo "构建类型: $BUILD_TYPE"
+        echo "构建目录: $build_dir"
+        echo ""
+        
+        # 应用信息
+        echo "应用信息:"
+        if [ -f "pubspec.yaml" ]; then
+            local version_line=$(grep "^version:" pubspec.yaml)
+            local version_name=$(echo "$version_line" | sed 's/version: \([^+]*\).*/\1/')
+            local version_code=$(echo "$version_line" | sed 's/.*+\([0-9]*\).*/\1/')
+            echo "  应用名称: Mindra"
+            echo "  版本名称: $version_name"
+            echo "  版本代码: $version_code"
+            echo "  应用 ID: com.mindra.app"
+        fi
+        
+        echo ""
+        echo "构建产物:"
+        if [ -d "$build_dir" ]; then
+            local total_size=$(du -sh "$build_dir" | cut -f1)
+            echo "  总大小: $total_size"
+            echo "  位置: $build_dir"
+            
+            if [ -f "$build_dir/mindra" ]; then
+                local exe_size=$(du -h "$build_dir/mindra" | cut -f1)
+                echo "  可执行文件: $exe_size"
+            fi
+            
+            if [ -d "$build_dir/lib" ]; then
+                local lib_count=$(find "$build_dir/lib" -name "*.so" | wc -l)
+                local lib_size=$(du -sh "$build_dir/lib" | cut -f1)
+                echo "  共享库: $lib_count 个文件 ($lib_size)"
+            fi
+            
+            if [ -d "$build_dir/data" ]; then
+                local data_size=$(du -sh "$build_dir/data" | cut -f1)
+                echo "  数据文件: $data_size"
+            fi
+        fi
+        
+        echo ""
+        echo "安装包:"
+        
+        # 检查各种安装包
+        if [ -f "build/linux/mindra_"*"_amd64.deb" ]; then
+            local deb_file=$(ls build/linux/mindra_*_amd64.deb 2>/dev/null | head -1)
+            local deb_size=$(du -h "$deb_file" | cut -f1)
+            echo "  DEB 包: $(basename "$deb_file") ($deb_size)"
+        fi
+        
+        if [ -f "build/linux/mindra-"*"-linux-x64.tar.gz" ]; then
+            local tar_file=$(ls build/linux/mindra-*-linux-x64.tar.gz 2>/dev/null | head -1)
+            local tar_size=$(du -h "$tar_file" | cut -f1)
+            echo "  TAR.GZ 包: $(basename "$tar_file") ($tar_size)"
+        fi
+        
+        if [ -f "build/linux/Mindra-"*"-x86_64.AppImage" ]; then
+            local appimage_file=$(ls build/linux/Mindra-*-x86_64.AppImage 2>/dev/null | head -1)
+            local appimage_size=$(du -h "$appimage_file" | cut -f1)
+            echo "  AppImage: $(basename "$appimage_file") ($appimage_size)"
+        fi
+        
+        echo ""
+        echo "系统要求:"
+        echo "  - Linux x86_64"
+        echo "  - GTK+ 3.0"
+        echo "  - GLib 2.0"
+        echo "  - 至少 100MB 磁盘空间"
+        echo "  - 至少 512MB 内存"
+        
+        echo ""
+        echo "安装方法:"
+        echo "1. DEB 包: sudo dpkg -i mindra_*.deb"
+        echo "2. TAR.GZ: 解压后运行 ./bundle/mindra"
+        echo "3. AppImage: chmod +x Mindra-*.AppImage && ./Mindra-*.AppImage"
+        
+        echo ""
+        echo "下一步操作:"
+        echo "1. 在不同 Linux 发行版上测试"
+        echo "2. 上传到软件仓库或应用商店"
+        echo "3. 创建安装说明文档"
+        echo "4. 准备发布公告"
+        
+        echo ""
+        echo "=========================================="
+    } > "$report_file"
+    
+    log_success "构建报告已生成: $report_file"
+}
+
+# 清理函数
+cleanup() {
+    if [ -f "pubspec.yaml.backup" ]; then
+        log_info "恢复版本号..."
+        mv pubspec.yaml.backup pubspec.yaml
+    fi
+}
+
+# 设置清理陷阱
+trap cleanup EXIT
+
+# 主函数
+main() {
+    echo "=========================================="
+    echo "           Mindra Linux 构建"
+    echo "=========================================="
+    echo ""
+    
+    check_environment
+    update_version
+    clean_build
+    run_tests
+    build_linux
+    create_desktop_file
+    verify_build
+    create_package
+    create_appimage
+    generate_report
+    
+    echo ""
+    echo "=========================================="
+    log_success "Linux 构建完成！"
+    echo "=========================================="
+    
+    # 显示构建产物
+    echo ""
+    log_info "构建产物:"
+    local build_dir="build/linux/x64/$BUILD_TYPE/bundle"
+    if [ -d "$build_dir" ]; then
+        local size=$(du -sh "$build_dir" | cut -f1)
+        echo "  📁 应用包: $build_dir ($size)"
+    fi
+    
+    # 显示安装包
+    if ls build/linux/*.deb &>/dev/null; then
+        for deb in build/linux/*.deb; do
+            local size=$(du -h "$deb" | cut -f1)
+            echo "  📦 DEB 包: $(basename "$deb") ($size)"
+        done
+    fi
+    
+    if ls build/linux/*.tar.gz &>/dev/null; then
+        for tar in build/linux/*.tar.gz; do
+            local size=$(du -h "$tar" | cut -f1)
+            echo "  📦 TAR.GZ: $(basename "$tar") ($size)"
+        done
+    fi
+    
+    if ls build/linux/*.AppImage &>/dev/null; then
+        for appimage in build/linux/*.AppImage; do
+            local size=$(du -h "$appimage" | cut -f1)
+            echo "  📦 AppImage: $(basename "$appimage") ($size)"
+        done
+    fi
+    
+    echo ""
+    log_info "测试命令:"
+    echo "  ./build/linux/x64/$BUILD_TYPE/bundle/mindra"
+    
+    echo ""
+    log_info "安装命令:"
+    if ls build/linux/*.deb &>/dev/null; then
+        echo "  sudo dpkg -i build/linux/*.deb"
+    fi
+    if ls build/linux/*.AppImage &>/dev/null; then
+        echo "  chmod +x build/linux/*.AppImage && ./build/linux/*.AppImage"
+    fi
+}
+
+# 运行主函数
+main "$@" 

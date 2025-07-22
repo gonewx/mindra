@@ -39,16 +39,18 @@ show_help() {
     echo "  -h, --help              显示此帮助信息"
     echo "  -a, --android-only      仅构建 Android"
     echo "  -i, --ios-only          仅构建 iOS"
+    echo "  -l, --linux-only        仅构建 Linux"
     echo "  -c, --clean             构建前清理"
     echo "  -v, --version VERSION   指定版本号 (格式: 1.0.0+1)"
     echo "  --bump-version TYPE     自动递增版本号 (major/minor/patch)"
     echo "  --skip-tests            跳过测试"
-    echo "  --archive               创建发布包 (Android AAB + iOS Archive)"
+    echo "  --archive               创建发布包 (Android AAB + iOS Archive + Linux Package)"
     echo "  --parallel              并行构建 (实验性)"
     echo ""
     echo "示例:"
     echo "  $0                      构建所有平台"
     echo "  $0 -a                   仅构建 Android"
+    echo "  $0 -l                   仅构建 Linux"
     echo "  $0 -c --archive         清理后创建发布包"
     echo "  $0 --bump-version patch 递增补丁版本号并构建"
 }
@@ -56,6 +58,7 @@ show_help() {
 # 默认参数
 BUILD_ANDROID=true
 BUILD_IOS=true
+BUILD_LINUX=true
 CLEAN_BUILD=false
 VERSION=""
 BUMP_VERSION=""
@@ -73,11 +76,19 @@ while [[ $# -gt 0 ]]; do
         -a|--android-only)
             BUILD_ANDROID=true
             BUILD_IOS=false
+            BUILD_LINUX=false
             shift
             ;;
         -i|--ios-only)
             BUILD_ANDROID=false
             BUILD_IOS=true
+            BUILD_LINUX=false
+            shift
+            ;;
+        -l|--linux-only)
+            BUILD_ANDROID=false
+            BUILD_IOS=false
+            BUILD_LINUX=true
             shift
             ;;
         -c|--clean)
@@ -143,6 +154,40 @@ check_environment() {
             exit 1
         fi
         log_success "iOS 环境检查通过"
+    fi
+    
+    # 检查 Linux 环境
+    if [ "$BUILD_LINUX" = true ]; then
+        if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+            log_error "Linux 构建需要在 Linux 系统上进行"
+            exit 1
+        fi
+        
+        # 检查 Linux 构建依赖
+        local missing_deps=()
+        
+        if ! pkg-config --exists gtk+-3.0; then
+            missing_deps+=("libgtk-3-dev")
+        fi
+        
+        if ! command -v ninja &> /dev/null; then
+            missing_deps+=("ninja-build")
+        fi
+        
+        if ! command -v cmake &> /dev/null; then
+            missing_deps+=("cmake")
+        fi
+        
+        if [ ${#missing_deps[@]} -gt 0 ]; then
+            log_error "缺少以下 Linux 构建依赖："
+            for dep in "${missing_deps[@]}"; do
+                echo "  - $dep"
+            done
+            log_info "请运行: sudo apt install ${missing_deps[*]}"
+            exit 1
+        fi
+        
+        log_success "Linux 环境检查通过"
     fi
     
     log_success "环境检查完成"
@@ -280,6 +325,34 @@ build_ios() {
     fi
 }
 
+# 构建 Linux
+build_linux() {
+    if [ "$BUILD_LINUX" = true ]; then
+        log_info "开始构建 Linux..."
+        
+        local linux_args=""
+        if [ "$CLEAN_BUILD" = true ]; then
+            linux_args="$linux_args -c"
+        fi
+        if [ "$CREATE_ARCHIVE" = true ]; then
+            linux_args="$linux_args -p"  # 创建安装包
+        fi
+        if [ "$SKIP_TESTS" = true ]; then
+            linux_args="$linux_args -s"
+        fi
+        if [ -n "$VERSION" ]; then
+            linux_args="$linux_args -v $VERSION"
+        fi
+        
+        if ./scripts/build_linux.sh $linux_args; then
+            log_success "Linux 构建完成"
+        else
+            log_error "Linux 构建失败"
+            return 1
+        fi
+    fi
+}
+
 # 并行构建
 parallel_build() {
     log_info "开始并行构建..."
@@ -301,6 +374,14 @@ parallel_build() {
         build_ios &
         pids+=($!)
         results+=("iOS")
+    fi
+    
+    # 启动 Linux 构建
+    if [ "$BUILD_LINUX" = true ]; then
+        log_info "启动 Linux 构建进程..."
+        build_linux &
+        pids+=($!)
+        results+=("Linux")
     fi
     
     # 等待所有构建完成
@@ -339,6 +420,11 @@ sequential_build() {
         return 1
     fi
     
+    # 构建 Linux
+    if ! build_linux; then
+        return 1
+    fi
+    
     log_success "所有平台构建完成"
 }
 
@@ -357,6 +443,9 @@ generate_summary() {
     fi
     if [ "$BUILD_IOS" = true ]; then
         echo "  ✅ iOS"
+    fi
+    if [ "$BUILD_LINUX" = true ]; then
+        echo "  ✅ Linux"
     fi
     echo ""
     
@@ -389,6 +478,28 @@ generate_summary() {
         fi
     fi
     
+    # Linux 产物
+    if [ "$BUILD_LINUX" = true ]; then
+        if [ -d "build/linux/x64/release/bundle" ]; then
+            local bundle_size=$(du -sh "build/linux/x64/release/bundle" | cut -f1)
+            echo "  🐧 Linux Bundle: build/linux/x64/release/bundle ($bundle_size)"
+        fi
+        
+        if ls build/linux/*.deb &>/dev/null; then
+            for deb in build/linux/*.deb; do
+                local deb_size=$(du -h "$deb" | cut -f1)
+                echo "  📦 Linux DEB: $(basename "$deb") ($deb_size)"
+            done
+        fi
+        
+        if ls build/linux/*.AppImage &>/dev/null; then
+            for appimage in build/linux/*.AppImage; do
+                local appimage_size=$(du -h "$appimage" | cut -f1)
+                echo "  📦 Linux AppImage: $(basename "$appimage") ($appimage_size)"
+            done
+        fi
+    fi
+    
     echo ""
     echo "下一步操作:"
     echo "  1. 测试构建产物"
@@ -401,6 +512,9 @@ generate_summary() {
     fi
     if [ "$BUILD_IOS" = true ]; then
         echo "  iOS: ./scripts/release_ios.sh -t"
+    fi
+    if [ "$BUILD_LINUX" = true ]; then
+        echo "  Linux: 手动上传 DEB/AppImage 到软件仓库或应用商店"
     fi
     echo ""
     echo "=========================================="
