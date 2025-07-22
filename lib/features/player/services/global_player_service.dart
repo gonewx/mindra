@@ -4,6 +4,8 @@ import '../../../core/audio/audio_player.dart';
 import '../../../features/media/domain/entities/media_item.dart';
 import '../../../features/meditation/data/services/meditation_session_manager.dart';
 import '../../media/data/datasources/media_local_datasource.dart';
+import '../../media/domain/usecases/media_usecases.dart';
+import '../../../core/di/injection_container.dart';
 import '../presentation/widgets/player_controls.dart';
 import 'sound_effects_player.dart';
 import '../../../core/database/database_helper.dart';
@@ -178,6 +180,9 @@ class GlobalPlayerService extends ChangeNotifier {
       if (duration != null) {
         _totalDuration = duration.inSeconds.toDouble();
         notifyListeners();
+
+        // 检查并更新媒体项的时长数据
+        _checkAndUpdateMediaDuration(duration.inSeconds);
       }
     });
 
@@ -494,6 +499,9 @@ class GlobalPlayerService extends ChangeNotifier {
           debugPrint('Updated duration: ${_totalDuration}s');
           notifyListeners();
           debugPrint('Audio duration loaded: ${_totalDuration}s');
+
+          // 检查并更新媒体项的时长数据
+          await _checkAndUpdateMediaDuration(duration.inSeconds);
         } else if (isNetworkUrl) {
           // 对于网络音频，如果无法立即获取时长，设置为未知状态
           debugPrint(
@@ -789,5 +797,36 @@ class GlobalPlayerService extends ChangeNotifier {
 
   Future<void> shutdown() async {
     await _disposeInternal();
+  }
+
+  /// 检查并更新媒体项的时长数据
+  /// 如果当前媒体项的时长为0或无效，则更新数据库中的时长数据
+  Future<void> _checkAndUpdateMediaDuration(int actualDurationSeconds) async {
+    if (_currentMedia == null) return;
+
+    // 只有当存储的时长为0或明显错误时才更新
+    if (_currentMedia!.duration <= 0 ||
+        (_currentMedia!.duration > 0 &&
+            (actualDurationSeconds - _currentMedia!.duration).abs() > 5)) {
+      try {
+        debugPrint(
+          'Updating media duration: ${_currentMedia!.title} '
+          'from ${_currentMedia!.duration}s to ${actualDurationSeconds}s',
+        );
+
+        // 更新数据库中的时长
+        final updateDurationUseCase = getIt<UpdateMediaDurationUseCase>();
+        await updateDurationUseCase(_currentMedia!.id, actualDurationSeconds);
+
+        // 更新当前媒体项的时长
+        _currentMedia = _currentMedia!.copyWith(
+          duration: actualDurationSeconds,
+        );
+
+        debugPrint('Media duration updated successfully');
+      } catch (e) {
+        debugPrint('Failed to update media duration: $e');
+      }
+    }
   }
 }

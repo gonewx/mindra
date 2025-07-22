@@ -80,3 +80,13 @@ class DeleteMediaItemUseCase {
     await _repository.deleteMediaItem(id);
   }
 }
+
+class UpdateMediaDurationUseCase {
+  final MediaRepository _repository;
+
+  UpdateMediaDurationUseCase(this._repository);
+
+  Future<void> call(String id, int durationSeconds) async {
+    await _repository.updateMediaDuration(id, durationSeconds);
+  }
+}

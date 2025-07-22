@@ -156,6 +156,30 @@ class MediaLocalDataSource {
     }, 'updatePlayCount');
   }
 
+  /// 更新媒体项的时长
+  /// 专门用于在播放时更新检测到的实际时长
+  Future<void> updateMediaDuration(String id, int durationSeconds) async {
+    if (id.isEmpty) {
+      throw ArgumentError('Media item ID cannot be empty');
+    }
+
+    if (durationSeconds < 0) {
+      throw ArgumentError('Duration cannot be negative');
+    }
+
+    await _executeWithRetry(() async {
+      final updates = {'duration': durationSeconds};
+
+      if (kIsWeb) {
+        await WebStorageHelper.updateMediaItem(id, updates);
+      } else {
+        await DatabaseHelper.updateMediaItem(id, updates);
+      }
+
+      debugPrint('Updated media duration for ID $id to ${durationSeconds}s');
+    }, 'updateMediaDuration');
+  }
+
   // Web平台特有的方法
   Future<void> storeMediaBytes(String mediaId, Uint8List bytes) async {
     if (!kIsWeb) {

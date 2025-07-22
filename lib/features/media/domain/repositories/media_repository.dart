@@ -11,4 +11,5 @@ abstract class MediaRepository {
   Future<void> deleteMediaItem(String id);
   Future<void> toggleFavorite(String id, bool isFavorite);
   Future<void> updatePlayCount(String id);
+  Future<void> updateMediaDuration(String id, int durationSeconds);
 }

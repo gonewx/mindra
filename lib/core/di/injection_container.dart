@@ -42,6 +42,9 @@ Future<void> configureDependencies() async {
   getIt.registerLazySingleton(
     () => DeleteMediaItemUseCase(getIt<MediaRepository>()),
   );
+  getIt.registerLazySingleton(
+    () => UpdateMediaDurationUseCase(getIt<MediaRepository>()),
+  );
 
   // BLoC
   getIt.registerFactory(

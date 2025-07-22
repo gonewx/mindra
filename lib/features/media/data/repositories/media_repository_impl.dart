@@ -59,4 +59,9 @@ class MediaRepositoryImpl implements MediaRepository {
   Future<void> updatePlayCount(String id) async {
     await _localDataSource.updatePlayCount(id);
   }
+
+  @override
+  Future<void> updateMediaDuration(String id, int durationSeconds) async {
+    await _localDataSource.updateMediaDuration(id, durationSeconds);
+  }
 }
