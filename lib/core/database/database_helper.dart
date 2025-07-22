@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
+import 'dart:io';
 import '../constants/app_constants.dart';
 
 class DatabaseHelper {
@@ -17,6 +18,55 @@ class DatabaseHelper {
     return _database!;
   }
 
+  /// 获取数据库路径，特别处理AppImage环境
+  static Future<String> _getDatabasePath() async {
+    if (kIsWeb) {
+      return 'mindra_web.db';
+    }
+
+    // 检查是否在AppImage环境中运行
+    final isAppImage =
+        Platform.environment['APPIMAGE'] != null ||
+        Platform.environment['APPDIR'] != null;
+
+    if (isAppImage) {
+      // AppImage环境：使用用户数据目录
+      final homeDir = Platform.environment['HOME'];
+      if (homeDir != null) {
+        final userDataDir = join(homeDir, '.local', 'share', 'Mindra');
+        final directory = Directory(userDataDir);
+
+        // 确保目录存在
+        if (!await directory.exists()) {
+          await directory.create(recursive: true);
+        }
+
+        final dbPath = join(userDataDir, AppConstants.databaseName);
+        debugPrint('AppImage database path: $dbPath');
+        return dbPath;
+      }
+    }
+
+    // 普通环境：使用标准数据库路径
+    try {
+      final factory = databaseFactory;
+      final databasePath = await factory.getDatabasesPath();
+      return join(databasePath, AppConstants.databaseName);
+    } catch (e) {
+      // 如果获取标准路径失败，尝试使用临时目录
+      debugPrint('Failed to get standard database path: $e');
+      final tempDir = Directory.systemTemp;
+      final fallbackDir = join(tempDir.path, 'mindra_db');
+      final directory = Directory(fallbackDir);
+
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+
+      return join(fallbackDir, AppConstants.databaseName);
+    }
+  }
+
   static Future<Database> _initDatabase() async {
     int retryCount = 0;
     const maxRetries = 3;
@@ -26,13 +76,28 @@ class DatabaseHelper {
         // Get the database factory (should be set in main.dart)
         var factory = databaseFactory;
 
-        // For web platform, use in-memory database path
-        String path;
-        if (kIsWeb) {
-          path = 'mindra_web.db';
-        } else {
-          final databasePath = await factory.getDatabasesPath();
-          path = join(databasePath, AppConstants.databaseName);
+        // 获取适当的数据库路径
+        final path = await _getDatabasePath();
+
+        debugPrint('Attempting to initialize database at: $path');
+
+        // 确保数据库目录存在且可写
+        final dbDir = Directory(dirname(path));
+        if (!await dbDir.exists()) {
+          await dbDir.create(recursive: true);
+        }
+
+        // 检查目录权限
+        try {
+          final testFile = File(join(dbDir.path, '.write_test'));
+          await testFile.writeAsString('test');
+          await testFile.delete();
+          debugPrint('Database directory is writable: ${dbDir.path}');
+        } catch (e) {
+          debugPrint(
+            'Database directory is not writable: ${dbDir.path}, error: $e',
+          );
+          throw Exception('Database directory is not writable: ${dbDir.path}');
         }
 
         return await factory.openDatabase(
@@ -252,7 +317,9 @@ class DatabaseHelper {
     );
   }
 
-  static Future<List<Map<String, dynamic>>> getRecentMeditationSessions({int limit = 3}) async {
+  static Future<List<Map<String, dynamic>>> getRecentMeditationSessions({
+    int limit = 3,
+  }) async {
     final db = await database;
     return await db.query(
       _meditationSessionsTable,

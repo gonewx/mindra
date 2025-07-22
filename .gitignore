@@ -59,3 +59,5 @@ mindra/android/fastlane/report.xml
 android/vendor/
 release_report*.txt
 report/
+
+build_report*.txt
