@@ -243,6 +243,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(localizations.notificationSettingsSaved),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 );
               },
@@ -425,6 +430,11 @@ class _SettingsPageState extends State<SettingsPage> {
                       localizations.cardSpacingSet(tempSpacing.round()),
                     ),
                     duration: const Duration(seconds: 2),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 );
               },
@@ -513,6 +523,11 @@ class _SettingsPageState extends State<SettingsPage> {
                       localizations.cardPaddingSet(tempPadding.round()),
                     ),
                     duration: const Duration(seconds: 2),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 );
               },

@@ -209,6 +209,11 @@ class _SoundEffectsPanelState extends State<SoundEffectsPanel> {
               AppLocalizations.of(context)!.soundEffectsSettingsSaved,
             ),
             duration: const Duration(seconds: 2),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
         Navigator.of(context).pop();

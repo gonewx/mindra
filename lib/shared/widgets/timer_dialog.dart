@@ -83,7 +83,14 @@ class TimerDialog extends StatelessWidget {
                   Navigator.pop(context);
                   playerService.cancelSleepTimer();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(localizations.timerCancelled)),
+                    SnackBar(
+                      content: Text(localizations.timerCancelled),
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   );
                   onTimerSet?.call();
                 },
@@ -199,7 +206,12 @@ class TimerDialog extends StatelessWidget {
     playerService.setSleepTimer(minutes.toInt());
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(localizations.timerSetMessage(minutes.toInt()))),
+      SnackBar(
+        content: Text(localizations.timerSetMessage(minutes.toInt())),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
 
     onTimerSet?.call();

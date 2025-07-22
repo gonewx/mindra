@@ -143,7 +143,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   Widget _buildBatchDeleteHeader() {
     final theme = Theme.of(context);
     final localizations = AppLocalizations.of(context)!;
-    
+
     return Row(
       children: [
         IconButton(
@@ -198,7 +198,9 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
           // Header
           Padding(
             padding: const EdgeInsets.all(20),
-            child: _isBatchDeleteMode ? _buildBatchDeleteHeader() : _buildNormalHeader(),
+            child: _isBatchDeleteMode
+                ? _buildBatchDeleteHeader()
+                : _buildNormalHeader(),
           ),
 
           // Search Bar with View Toggle
@@ -528,14 +530,14 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
       if (_isBatchDeleteMode) {
         // 批量删除模式下的卡片
         final isSelected = _selectedForDelete.contains(item.id);
-        
+
         return GestureDetector(
           onTap: () => _toggleDeleteSelection(item.id),
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected 
+                color: isSelected
                     ? Theme.of(context).colorScheme.error
                     : Colors.transparent,
                 width: 2,
@@ -556,13 +558,15 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                   child: Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isSelected 
+                      color: isSelected
                           ? Theme.of(context).colorScheme.error
                           : Colors.white.withValues(alpha: 0.8),
                     ),
                     child: Icon(
-                      isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                      color: isSelected 
+                      isSelected
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: isSelected
                           ? Colors.white
                           : Theme.of(context).colorScheme.outline,
                     ),
@@ -578,8 +582,8 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
           onTap: () => _playMedia(item.id),
           onLongPress: () => _showMediaContextMenu(context, item),
           onSecondaryTapDown: (details) => _showMediaContextMenu(
-            context, 
-            item, 
+            context,
+            item,
             position: details.globalPosition,
           ),
           child: AnimatedMediaCard(
@@ -607,17 +611,22 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   }
 
   // 显示媒体上下文菜单（右键菜单或长按菜单）
-  void _showMediaContextMenu(BuildContext context, MediaItem item, {Offset? position}) {
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+  void _showMediaContextMenu(
+    BuildContext context,
+    MediaItem item, {
+    Offset? position,
+  }) {
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
     final localizations = AppLocalizations.of(context)!;
-    
+
     showMenu(
       context: context,
-      position: position != null 
+      position: position != null
           ? RelativeRect.fromLTRB(
-              position.dx, 
-              position.dy, 
-              overlay.size.width - position.dx, 
+              position.dx,
+              position.dy,
+              overlay.size.width - position.dx,
               overlay.size.height - position.dy,
             )
           : RelativeRect.fromLTRB(100, 100, 100, 100), // 长按时的默认位置
@@ -641,7 +650,10 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
         PopupMenuItem(
           value: 'delete',
           child: ListTile(
-            leading: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+            leading: Icon(
+              Icons.delete,
+              color: Theme.of(context).colorScheme.error,
+            ),
             title: Text(
               localizations.delete,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -687,6 +699,10 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
           SnackBar(
             content: Text('无法编辑媒体项: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -696,7 +712,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   // 删除单个素材
   void _deleteSingleItem(MediaItem item) async {
     final localizations = AppLocalizations.of(context)!;
-    
+
     // 确认删除
     final confirmed = await showDialog<bool>(
       context: context,
@@ -719,20 +735,24 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
         ],
       ),
     );
-    
+
     if (confirmed != true) return;
-    
+
     try {
       final dataSource = GetIt.instance<MediaLocalDataSource>();
       await dataSource.deleteMediaItem(item.id);
-      
+
       _refreshMediaList();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('已删除素材"${item.title}"'),
             backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -742,6 +762,10 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
           SnackBar(
             content: Text('删除失败: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -789,7 +813,11 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('添加媒体对话框错误：$error'),
-                  backgroundColor: Colors.red,
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               );
             }
@@ -800,7 +828,11 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('无法打开添加媒体对话框：$e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -818,7 +850,14 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
       // 处理导航错误
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('无法播放媒体：$e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('无法播放媒体：$e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
         );
       }
     }
@@ -826,9 +865,9 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
 
   void _deleteSelectedItems() async {
     if (_selectedForDelete.isEmpty) return;
-    
+
     final localizations = AppLocalizations.of(context)!;
-    
+
     // 确认删除
     final confirmed = await showDialog<bool>(
       context: context,
@@ -853,20 +892,20 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
         ],
       ),
     );
-    
+
     if (confirmed != true) return;
-    
+
     try {
       final dataSource = GetIt.instance<MediaLocalDataSource>();
-      
+
       // 删除选中的项目
       for (final itemId in _selectedForDelete) {
         await dataSource.deleteMediaItem(itemId);
       }
-      
+
       // 刷新列表
       _refreshMediaList();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -874,18 +913,25 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
               localizations.deleteSuccessMessage(_selectedForDelete.length),
             ),
             backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
-      
+
       _exitBatchDeleteMode();
-      
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('删除失败: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -894,8 +940,6 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
 
   void _refreshMediaList() {
     final enumName = _getCategoryEnumName(_selectedCategory);
-    context.read<MediaBloc>().add(
-      LoadMediaItemsByCategory(enumName),
-    );
+    context.read<MediaBloc>().add(LoadMediaItemsByCategory(enumName));
   }
 }

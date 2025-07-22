@@ -84,6 +84,11 @@ class _PlayerPageState extends State<PlayerPage> {
               content: Text(
                 localizations.timerSetMessage(widget.timerMinutes!),
               ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
         }
@@ -109,6 +114,11 @@ class _PlayerPageState extends State<PlayerPage> {
           SnackBar(
             content: Text(errorMessage),
             duration: const Duration(seconds: 5),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             action: SnackBarAction(
               label: '重试',
               onPressed: () {
@@ -470,6 +480,11 @@ class _PlayerPageState extends State<PlayerPage> {
                             ? localizations.playerShuffleEnabled
                             : localizations.playerShuffleDisabled,
                       ),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   );
                 },
@@ -485,6 +500,11 @@ class _PlayerPageState extends State<PlayerPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(localizations.playerRepeatMode(modeText)),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   );
                 },
@@ -723,6 +743,11 @@ class _PlayerPageState extends State<PlayerPage> {
             _isFavorited
                 ? localizations.favoritesAdded
                 : localizations.favoritesRemoved,
+          ),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       );
