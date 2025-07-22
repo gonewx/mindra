@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 env:
-  FLUTTER_VERSION: '3.24.0'
+  FLUTTER_VERSION: '3.32.5'
 
 jobs:
   analyze:
@@ -26,11 +26,9 @@ jobs:
         cache: true
         
     - name: Get dependencies
-      working-directory: ./mindra
       run: flutter pub get
       
     - name: Verify formatting
-      working-directory: ./mindra
       run: |
         dart format --output=none --set-exit-if-changed .
         if [ $? -ne 0 ]; then
@@ -41,7 +39,6 @@ jobs:
         echo "✅ Code formatting is correct"
         
     - name: Analyze project source
-      working-directory: ./mindra
       run: |
         dart analyze --fatal-infos
         if [ $? -ne 0 ]; then
@@ -51,13 +48,11 @@ jobs:
         echo "✅ Code analysis passed"
         
     - name: Check for unused dependencies
-      working-directory: ./mindra
       run: |
         flutter pub deps --json > deps.json
         echo "✅ Dependencies checked"
         
     - name: Check for outdated dependencies
-      working-directory: ./mindra
       run: |
         flutter pub outdated --json > outdated.json || true
         echo "✅ Outdated dependencies checked"
@@ -78,11 +73,9 @@ jobs:
         cache: true
         
     - name: Get dependencies
-      working-directory: ./mindra
       run: flutter pub get
       
     - name: Run tests with coverage
-      working-directory: ./mindra
       run: |
         flutter test --coverage
         if [ $? -ne 0 ]; then
@@ -92,7 +85,6 @@ jobs:
         echo "✅ All tests passed"
         
     - name: Generate coverage report
-      working-directory: ./mindra
       run: |
         if [ -f "coverage/lcov.info" ]; then
           # 计算覆盖率
@@ -113,7 +105,7 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
-        file: ./mindra/coverage/lcov.info
+        file: ./coverage/lcov.info
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
@@ -134,11 +126,9 @@ jobs:
         cache: true
         
     - name: Get dependencies
-      working-directory: ./mindra
       run: flutter pub get
       
     - name: Check for known vulnerabilities
-      working-directory: ./mindra
       run: |
         # 检查 pubspec.yaml 中的依赖
         echo "Checking for known vulnerabilities..."
@@ -154,7 +144,7 @@ jobs:
         echo "Checking for sensitive data in code..."
         
         # 检查是否有硬编码的密钥、密码等
-        if grep -r -i "password\|secret\|key\|token" mindra/lib/ --include="*.dart" | grep -v "// TODO\|// FIXME"; then
+        if grep -r -i "password\|secret\|key\|token" lib/ --include="*.dart" | grep -v "// TODO\|// FIXME"; then
           echo "⚠️ Potential sensitive data found in code"
           echo "Please review the above matches"
         else
@@ -166,7 +156,7 @@ jobs:
         echo "Checking file permissions..."
         
         # 检查是否有不当的文件权限
-        find mindra/ -type f -perm /o+w -exec echo "World-writable file: {}" \;
+        find . -type f -perm /o+w -exec echo "World-writable file: {}" \;
         
         echo "✅ File permissions checked"
 
@@ -186,11 +176,9 @@ jobs:
         cache: true
         
     - name: Get dependencies
-      working-directory: ./mindra
       run: flutter pub get
       
     - name: Check app size
-      working-directory: ./mindra
       run: |
         echo "Analyzing app size..."
         
@@ -214,7 +202,6 @@ jobs:
         fi
         
     - name: Check for performance anti-patterns
-      working-directory: ./mindra
       run: |
         echo "Checking for performance anti-patterns..."
         
@@ -254,7 +241,6 @@ jobs:
         fi
         
     - name: Check documentation coverage
-      working-directory: ./mindra
       run: |
         echo "Checking documentation coverage..."
         

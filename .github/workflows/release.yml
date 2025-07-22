@@ -32,8 +32,8 @@ on:
         - all
 
 env:
-  FLUTTER_VERSION: '3.24.0'
-  JAVA_VERSION: '17'
+  FLUTTER_VERSION: '3.32.5'
+  JAVA_VERSION: '21'
 
 jobs:
   prepare:
@@ -105,11 +105,9 @@ jobs:
         cache: true
         
     - name: Get dependencies
-      working-directory: ./mindra
       run: flutter pub get
       
     - name: Update version
-      working-directory: ./mindra
       run: |
         VERSION="${{ needs.prepare.outputs.version }}"
         sed -i "s/^version:.*/version: $VERSION+${{ github.run_number }}/" pubspec.yaml
@@ -117,11 +115,11 @@ jobs:
         
     - name: Decode keystore
       run: |
-        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > mindra/android/release-keystore.jks
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/release-keystore.jks
         
     - name: Create key.properties
       run: |
-        cat > mindra/android/key.properties << EOF
+        cat > android/key.properties << EOF
         storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
         keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
         keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
@@ -129,25 +127,23 @@ jobs:
         EOF
         
     - name: Build AAB
-      working-directory: ./mindra
       run: flutter build appbundle --release
       
     - name: Build APK
-      working-directory: ./mindra
       run: flutter build apk --release
       
     - name: Upload AAB artifact
       uses: actions/upload-artifact@v4
       with:
         name: android-aab-release
-        path: mindra/build/app/outputs/bundle/release/app-release.aab
+        path: build/app/outputs/bundle/release/app-release.aab
         retention-days: 90
         
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: android-apk-release
-        path: mindra/build/app/outputs/flutter-apk/app-release.apk
+        path: build/app/outputs/flutter-apk/app-release.apk
         retention-days: 90
 
   build_linux:
@@ -176,7 +172,7 @@ jobs:
     - name: Install Linux dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libglib2.0-dev libgio2.0-dev ninja-build cmake
+        sudo apt-get install -y libgtk-3-dev libglib2.0-dev ninja-build cmake
         
     - name: Install AppImage tools
       run: |
@@ -185,36 +181,32 @@ jobs:
         sudo mv /tmp/appimagetool /usr/local/bin/appimagetool
         
     - name: Enable Linux desktop
-      working-directory: ./mindra
       run: flutter config --enable-linux-desktop
       
     - name: Get dependencies
-      working-directory: ./mindra
       run: flutter pub get
       
     - name: Update version
-      working-directory: ./mindra
       run: |
         VERSION="${{ needs.prepare.outputs.version }}"
         sed -i "s/^version:.*/version: $VERSION+${{ github.run_number }}/" pubspec.yaml
         echo "Updated version to: $VERSION+${{ github.run_number }}"
         
     - name: Build Linux release
-      working-directory: ./mindra
       run: ./scripts/build_linux.sh -p --appimage --skip-tests
       
     - name: Upload Linux bundle artifact
       uses: actions/upload-artifact@v4
       with:
         name: linux-bundle-release
-        path: mindra/build/linux/x64/release/bundle
+        path: build/linux/x64/release/bundle
         retention-days: 90
         
     - name: Upload Linux DEB artifact
       uses: actions/upload-artifact@v4
       with:
         name: linux-deb-release
-        path: mindra/build/linux/*.deb
+        path: build/linux/*.deb
         retention-days: 90
         if-no-files-found: ignore
         
@@ -222,7 +214,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: linux-tarball-release
-        path: mindra/build/linux/*.tar.gz
+        path: build/linux/*.tar.gz
         retention-days: 90
         if-no-files-found: ignore
         
@@ -230,7 +222,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: linux-appimage-release
-        path: mindra/build/linux/*.AppImage
+        path: build/linux/*.AppImage
         retention-days: 90
         if-no-files-found: ignore
 
@@ -252,11 +244,9 @@ jobs:
         cache: true
         
     - name: Get dependencies
-      working-directory: ./mindra
       run: flutter pub get
       
     - name: Update version
-      working-directory: ./mindra
       run: |
         VERSION="${{ needs.prepare.outputs.version }}"
         sed -i '' "s/^version:.*/version: $VERSION+${{ github.run_number }}/" pubspec.yaml
@@ -292,11 +282,9 @@ jobs:
         cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
         
     - name: Build iOS
-      working-directory: ./mindra
       run: flutter build ios --release
       
     - name: Build Archive
-      working-directory: ./mindra
       run: |
         xcodebuild -workspace ios/Runner.xcworkspace \
                    -scheme Runner \
@@ -306,7 +294,6 @@ jobs:
                    archive
                    
     - name: Export IPA
-      working-directory: ./mindra
       run: |
         cat > build/ios/ExportOptions.plist << EOF
         <?xml version="1.0" encoding="UTF-8"?>
@@ -334,14 +321,14 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ios-ipa-release
-        path: mindra/build/ios/ipa/Runner.ipa
+        path: build/ios/ipa/Runner.ipa
         retention-days: 90
         
     - name: Upload Archive artifact
       uses: actions/upload-artifact@v4
       with:
         name: ios-archive-release
-        path: mindra/build/ios/archive/Runner.xcarchive
+        path: build/ios/archive/Runner.xcarchive
         retention-days: 90
 
   deploy_android:
