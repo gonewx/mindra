@@ -428,6 +428,7 @@ class _PlayerPageState extends State<PlayerPage> {
             child: ProgressBar(
               currentPosition: _currentPosition,
               totalDuration: _totalDuration,
+              bufferProgress: _playerService.bufferProgress,
               onSeek: (position) async {
                 await _playerService.seek(Duration(seconds: position.toInt()));
               },
@@ -438,6 +439,7 @@ class _PlayerPageState extends State<PlayerPage> {
           // Player Controls
           PlayerControls(
             isPlaying: _isPlaying,
+            playerState: _playerService.playerState,
             onPlayPause: () async {
               if (_isPlaying) {
                 await _playerService.pause();

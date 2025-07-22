@@ -19,6 +19,7 @@ class GlobalPlayerService extends ChangeNotifier {
   StreamSubscription? _positionSubscription;
   StreamSubscription? _durationSubscription;
   StreamSubscription? _playerStateSubscription;
+  StreamSubscription? _bufferProgressSubscription;
 
   // Playback state
   bool _isPlaying = false;
@@ -27,6 +28,11 @@ class GlobalPlayerService extends ChangeNotifier {
   bool _isInitialized = false;
   bool _isInitializing = false;
   Completer<void>? _initializationCompleter;
+
+  // New state properties
+  MindraPlayerState _playerState = MindraPlayerState.stopped;
+  double _bufferProgress = 0.0;
+  bool _isLoading = false;
 
   // Media state
   MediaItem? _currentMedia;
@@ -56,6 +62,12 @@ class GlobalPlayerService extends ChangeNotifier {
   bool get hasActiveTimer => _sleepTimer != null;
   int get sleepTimerMinutes => _sleepTimerMinutes;
   bool get isInitialized => _isInitialized;
+
+  // New getters for enhanced state
+  MindraPlayerState get playerState => _playerState;
+  double get bufferProgress => _bufferProgress;
+  bool get isLoading => _isLoading;
+  bool get isNetworkSource => _audioPlayer.isNetworkSource;
 
   String get title => _currentMedia?.title ?? '未选择素材';
   String get category => _currentMedia?.category.name ?? '';
@@ -171,7 +183,20 @@ class GlobalPlayerService extends ChangeNotifier {
 
     // Listen to player state changes
     _playerStateSubscription = _audioPlayer.playerStateStream.listen((state) {
+      _playerState = state;
+      _isLoading =
+          (state == MindraPlayerState.loading ||
+          state == MindraPlayerState.buffering);
+      notifyListeners();
       _handlePlayerStateChange(state);
+    });
+
+    // Listen to buffer progress changes
+    _bufferProgressSubscription = _audioPlayer.bufferProgressStream.listen((
+      progress,
+    ) {
+      _bufferProgress = progress;
+      notifyListeners();
     });
   }
 
@@ -211,7 +236,7 @@ class GlobalPlayerService extends ChangeNotifier {
   void _handleTrackCompletion() {
     switch (_repeatMode) {
       case RepeatMode.one:
-        _audioPlayer.seek(Duration.zero);
+        _audioPlayer.seek(Duration.zero); // 自动seek，不显示缓冲
         _audioPlayer.play();
         break;
       case RepeatMode.all:
@@ -333,7 +358,9 @@ class GlobalPlayerService extends ChangeNotifier {
       if (positionString != null && positionString.isNotEmpty) {
         final position = double.tryParse(positionString) ?? 0.0;
         if (position > 0) {
-          await _audioPlayer.seek(Duration(seconds: position.toInt()));
+          await _audioPlayer.seek(
+            Duration(seconds: position.toInt()),
+          ); // 恢复位置，不显示缓冲
           debugPrint('Restored playback position: ${position}s');
         }
       }
@@ -424,6 +451,9 @@ class GlobalPlayerService extends ChangeNotifier {
         // 继续执行，不阻塞新音频的加载
       }
 
+      final isNetworkUrl =
+          filePath.startsWith('http://') || filePath.startsWith('https://');
+
       if (kIsWeb && filePath.startsWith('web://')) {
         if (_currentMedia != null) {
           final mimeType = _getMimeType(_currentMedia!.filePath);
@@ -439,10 +469,14 @@ class GlobalPlayerService extends ChangeNotifier {
             throw Exception('Failed to create blob URL for media');
           }
         }
-      } else if (filePath.startsWith('http://') ||
-          filePath.startsWith('https://')) {
+      } else if (isNetworkUrl) {
+        // 对于网络音频，立即设置加载状态
+        debugPrint('Loading network audio: $filePath');
         await _audioPlayer.setUrl(filePath);
         debugPrint('Network audio loaded: $filePath');
+
+        // 网络音频可能需要更长时间来获取完整信息
+        // 让音频播放器的 durationStream 来处理时长更新
       } else {
         await _audioPlayer.setFilePath(filePath);
         debugPrint('Local audio file loaded: $filePath');
@@ -450,18 +484,25 @@ class GlobalPlayerService extends ChangeNotifier {
 
       // 主动获取音频时长
       try {
-        // 等待一小段时间让音频文件完全加载
-        await Future.delayed(const Duration(milliseconds: 100));
+        // 对于网络音频，给更多时间来加载
+        final delayMs = isNetworkUrl ? 500 : 100;
+        await Future.delayed(Duration(milliseconds: delayMs));
+
         final duration = await _audioPlayer.getDuration();
         if (duration != null) {
           _totalDuration = duration.inSeconds.toDouble();
           debugPrint('Updated duration: ${_totalDuration}s');
           notifyListeners();
           debugPrint('Audio duration loaded: ${_totalDuration}s');
+        } else if (isNetworkUrl) {
+          // 对于网络音频，如果无法立即获取时长，设置为未知状态
+          debugPrint(
+            'Network audio duration not available yet, will be updated via stream',
+          );
         }
 
         // 确保播放位置重置为0
-        await _audioPlayer.seek(Duration.zero);
+        await _audioPlayer.seek(Duration.zero); // 重置位置，不显示缓冲
         _currentPosition = 0.0;
         debugPrint(
           'Updated position and duration: ${_currentPosition}s / ${_totalDuration}s',
@@ -550,7 +591,7 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   Future<void> seek(Duration position) async {
-    await _audioPlayer.seek(position);
+    await _audioPlayer.seek(position, showBuffering: true); // 用户拖拽显示缓冲
     _currentPosition = position.inSeconds.toDouble();
     await _saveLastPlayedPosition();
   }
@@ -735,6 +776,7 @@ class GlobalPlayerService extends ChangeNotifier {
     await _positionSubscription?.cancel();
     await _durationSubscription?.cancel();
     await _playerStateSubscription?.cancel();
+    await _bufferProgressSubscription?.cancel();
 
     if (MeditationSessionManager.hasActiveSession) {
       await MeditationSessionManager.stopSession();

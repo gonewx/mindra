@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/global_player_service.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/audio/audio_player.dart'; // 导入MindraPlayerState
 
 class FloatingPlayer extends StatefulWidget {
   const FloatingPlayer({super.key});
@@ -190,13 +191,7 @@ class _FloatingPlayerState extends State<FloatingPlayer>
                   children: [
                     // 播放/暂停按钮
                     Center(
-                      child: Icon(
-                        _playerService.isPlaying
-                            ? Icons.pause
-                            : Icons.play_arrow,
-                        color: theme.colorScheme.onPrimary,
-                        size: 28,
-                      ),
+                      child: _buildFloatingButtonContent(theme),
                     ),
 
                     // 进度环
@@ -233,6 +228,32 @@ class _FloatingPlayerState extends State<FloatingPlayer>
       }
     } catch (e) {
       debugPrint('Error toggling play/pause: $e');
+    }
+  }
+
+  Widget _buildFloatingButtonContent(ThemeData theme) {
+    final isLoading = _playerService.playerState == MindraPlayerState.loading || 
+                      _playerService.playerState == MindraPlayerState.buffering;
+
+    if (isLoading) {
+      // 显示简单的加载指示器
+      return SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            theme.colorScheme.onPrimary,
+          ),
+        ),
+      );
+    } else {
+      // 显示正常的播放/暂停图标
+      return Icon(
+        _playerService.isPlaying ? Icons.pause : Icons.play_arrow,
+        color: theme.colorScheme.onPrimary,
+        size: 28,
+      );
     }
   }
 }

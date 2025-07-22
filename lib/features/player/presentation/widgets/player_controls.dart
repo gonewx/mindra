@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/audio/audio_player.dart'; // 导入MindraPlayerState
 
 enum RepeatMode { none, one, all }
 
@@ -7,6 +8,7 @@ class PlayerControls extends StatelessWidget {
   final VoidCallback? onPlayPause;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
+  final MindraPlayerState? playerState; // 新增：播放器状态
 
   const PlayerControls({
     super.key,
@@ -14,6 +16,7 @@ class PlayerControls extends StatelessWidget {
     this.onPlayPause,
     this.onPrevious,
     this.onNext,
+    this.playerState, // 新增：播放器状态
   });
 
   @override
@@ -31,7 +34,11 @@ class PlayerControls extends StatelessWidget {
         const SizedBox(width: 32),
 
         // Play/Pause - Main Button
-        _AnimatedPlayButton(isPlaying: isPlaying, onPressed: onPlayPause),
+        _AnimatedPlayButton(
+          isPlaying: isPlaying,
+          onPressed: onPlayPause,
+          playerState: playerState, // 传递播放器状态
+        ),
 
         const SizedBox(width: 32),
 
@@ -144,33 +151,80 @@ class _AnimatedControlButtonState extends State<_AnimatedControlButton>
 class _AnimatedPlayButton extends StatefulWidget {
   final bool isPlaying;
   final VoidCallback? onPressed;
+  final MindraPlayerState? playerState; // 新增：播放器状态
 
-  const _AnimatedPlayButton({required this.isPlaying, this.onPressed});
+  const _AnimatedPlayButton({
+    required this.isPlaying,
+    this.onPressed,
+    this.playerState, // 新增：播放器状态
+  });
 
   @override
   State<_AnimatedPlayButton> createState() => _AnimatedPlayButtonState();
 }
 
 class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+  AnimationController? _loadingController; // 改为可空：加载动画控制器
+  Animation<double>? _rotationAnimation; // 改为可空：旋转动画
   bool _isHovered = false;
   bool _isPressed = false;
 
   @override
   void initState() {
     super.initState();
+
+    // 初始化缩放动画控制器
     _controller = AnimationController(
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(_controller);
+
+    // 初始化加载动画控制器
+    _loadingController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _loadingController!, curve: Curves.linear),
+    );
+
+    // 根据初始状态启动加载动画
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateLoadingAnimation();
+    });
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedPlayButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _updateLoadingAnimation();
+  }
+
+  void _updateLoadingAnimation() {
+    // 根据播放器状态控制加载动画
+    final isLoading =
+        widget.playerState == MindraPlayerState.loading ||
+        widget.playerState == MindraPlayerState.buffering;
+
+    debugPrint('PlayButton: State=${widget.playerState}, isLoading=$isLoading, isPlaying=${widget.isPlaying}');
+
+    if (isLoading && !(_loadingController?.isAnimating ?? false)) {
+      debugPrint('PlayButton: Starting loading animation');
+      _loadingController?.repeat();
+    } else if (!isLoading && (_loadingController?.isAnimating ?? false)) {
+      debugPrint('PlayButton: Stopping loading animation');
+      _loadingController?.stop();
+    }
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _loadingController?.dispose(); // 清理加载动画控制器
     super.dispose();
   }
 
@@ -217,6 +271,32 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
     return theme.colorScheme.primary;
   }
 
+  Widget _buildButtonContent() {
+    final isLoading =
+        widget.playerState == MindraPlayerState.loading ||
+        widget.playerState == MindraPlayerState.buffering;
+
+    if (isLoading && _rotationAnimation != null) {
+      // 显示加载指示器
+      return AnimatedBuilder(
+        animation: _rotationAnimation!,
+        builder: (context, child) {
+          return Transform.rotate(
+            angle: (_rotationAnimation?.value ?? 0.0) * 2 * 3.14159,
+            child: const Icon(Icons.refresh, color: Colors.white, size: 36),
+          );
+        },
+      );
+    } else {
+      // 显示正常的播放/暂停图标
+      return Icon(
+        widget.isPlaying ? Icons.pause : Icons.play_arrow,
+        color: Colors.white,
+        size: 36,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -251,11 +331,7 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
                     ),
                   ],
                 ),
-                child: Icon(
-                  widget.isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: Colors.white,
-                  size: 36,
-                ),
+                child: _buildButtonContent(),
               ),
             );
           },

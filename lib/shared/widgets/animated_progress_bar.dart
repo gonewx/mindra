@@ -6,7 +6,9 @@ class AnimatedProgressBar extends StatefulWidget {
   final Function(double)? onSeek;
   final Color? activeColor;
   final Color? inactiveColor;
+  final Color? bufferColor;
   final double height;
+  final double bufferProgress; // 新增：缓冲进度
 
   const AnimatedProgressBar({
     super.key,
@@ -15,7 +17,9 @@ class AnimatedProgressBar extends StatefulWidget {
     this.onSeek,
     this.activeColor,
     this.inactiveColor,
+    this.bufferColor,
     this.height = 4.0,
+    this.bufferProgress = 0.0, // 新增：缓冲进度
   });
 
   @override
@@ -103,6 +107,8 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final activeColor = widget.activeColor ?? theme.colorScheme.primary;
+    final bufferColor =
+        widget.bufferColor ?? theme.colorScheme.primary.withValues(alpha: 0.3);
 
     // Use a more visible inactive color based on theme brightness
     final inactiveColor =
@@ -116,6 +122,8 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
         final progress = widget.totalDuration > 0
             ? (widget.currentPosition / widget.totalDuration).clamp(0.0, 1.0)
             : 0.0;
+
+        final bufferProgressClamped = widget.bufferProgress.clamp(0.0, 1.0);
 
         return MouseRegion(
           onEnter: (_) => _onHoverChange(true),
@@ -142,7 +150,23 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // Progress fill
+                    // Buffer progress fill (显示在播放进度下方)
+                    if (bufferProgressClamped > 0)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          width: constraints.maxWidth * bufferProgressClamped,
+                          height: widget.height,
+                          decoration: BoxDecoration(
+                            color: bufferColor,
+                            borderRadius: BorderRadius.circular(
+                              widget.height / 2,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Progress fill (播放进度，显示在缓冲进度上方)
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Container(
