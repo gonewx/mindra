@@ -159,7 +159,26 @@ analyze_code() {
         else
             log_error "静态分析发现问题（严格模式）:"
             cat /tmp/analyze_output.txt
-            return 1
+            echo ""
+            
+            if [ "$AUTO_FIX" = true ]; then
+                log_info "尝试自动修复一些问题..."
+                fix_common_issues
+                
+                # 重新检查
+                log_info "重新运行静态分析..."
+                if dart analyze --fatal-infos > /tmp/analyze_recheck.txt 2>&1; then
+                    log_success "自动修复后静态分析通过"
+                    rm -f /tmp/analyze_recheck.txt
+                else
+                    log_error "自动修复后仍有问题:"
+                    cat /tmp/analyze_recheck.txt
+                    rm -f /tmp/analyze_recheck.txt
+                    return 1
+                fi
+            else
+                return 1
+            fi
         fi
     else
         # 普通模式：只有错误才失败
@@ -291,7 +310,12 @@ main() {
     else
         # 完整检查
         check_dependencies
-        format_code || exit_code=1
+        if [ "$AUTO_FIX" = true ]; then
+            # 在自动修复模式下，格式化失败不阻止后续步骤
+            format_code || true
+        else
+            format_code || exit_code=1
+        fi
         analyze_code || exit_code=1
         run_tests || exit_code=1
     fi
