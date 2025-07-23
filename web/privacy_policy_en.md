@@ -52,7 +52,7 @@ You have the right to:
 
 If you have any questions about this privacy policy, please contact us:
 
-- Email: privacy@mindra.app
+- Email: privacy@mindra.gonewx.com
 - Address: Beijing, China
 
 ---

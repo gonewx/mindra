@@ -1,32 +1,36 @@
-# 隐私政策URL国际化配置指南
+# Privacy Policy URL Internationalization Configuration Guide
 
-## 配置方式概览
+**Language / 语言:** [🇺🇸 English](#english) | [🇨🇳 中文](privacy_policy_url_configuration_ZH.md)
 
-隐私政策支持多种配置方式，可以根据不同的部署环境和需求选择合适的配置方法。
+---
 
-## 1. 本地配置方式
+## Configuration Overview
 
-### 1.1 直接修改默认配置
+Privacy policy supports multiple configuration methods. You can choose the appropriate configuration method based on different deployment environments and requirements.
 
-在 `lib/core/config/app_config_service.dart` 中修改：
+## 1. Local Configuration
+
+### 1.1 Directly Modify Default Configuration
+
+Modify in `lib/core/config/app_config_service.dart`:
 
 ```dart
 static const Map<String, String> _defaultConfig = {
-  // 默认隐私政策URL（中文）
+  // Default privacy policy URL (Chinese)
   'privacy_policy_url': 'https://yoursite.com/privacy_policy.md',
-  // 中文隐私政策URL
+  // Chinese privacy policy URL
   'privacy_policy_url_zh': 'https://yoursite.com/privacy_policy_zh.md',
-  // 英文隐私政策URL
+  // English privacy policy URL
   'privacy_policy_url_en': 'https://yoursite.com/privacy_policy_en.md',
 };
 ```
 
-### 1.2 使用ConfigManager工具类
+### 1.2 Use ConfigManager Utility Class
 
 ```dart
 import 'package:mindra/core/config/config_manager.dart';
 
-// 在应用启动时配置
+// Configure at app startup
 await ConfigManager.setPrivacyPolicyUrls(
   defaultUrl: 'https://yoursite.com/privacy_policy.md',
   zhUrl: 'https://yoursite.com/privacy_policy_zh.md',
@@ -34,11 +38,11 @@ await ConfigManager.setPrivacyPolicyUrls(
 );
 ```
 
-## 2. 远程配置方式
+## 2. Remote Configuration
 
-### 2.1 创建远程配置文件
+### 2.1 Create Remote Configuration File
 
-在您的服务器上创建 `app_config.json` 文件：
+Create `app_config.json` file on your server:
 
 ```json
 {
@@ -51,18 +55,18 @@ await ConfigManager.setPrivacyPolicyUrls(
 }
 ```
 
-### 2.2 设置远程配置URL
+### 2.2 Set Remote Configuration URL
 
 ```dart
 await ConfigManager.setRemoteConfigUrl('https://yoursite.com/config/app_config.json');
 await ConfigManager.refreshRemoteConfig();
 ```
 
-## 3. 预设配置模板
+## 3. Preset Configuration Templates
 
-### 3.1 GitHub Pages配置
+### 3.1 GitHub Pages Configuration
 
-如果您使用GitHub Pages托管文档：
+If you use GitHub Pages to host documentation:
 
 ```dart
 await ConfigManager.useGitHubPagesConfig(
@@ -71,14 +75,14 @@ await ConfigManager.useGitHubPagesConfig(
 );
 ```
 
-这将自动配置为：
-- 隐私政策: `https://your-username.github.io/your-repo/privacy_policy.md`
-- 中文版: `https://your-username.github.io/your-repo/privacy_policy_zh.md`
-- 英文版: `https://your-username.github.io/your-repo/privacy_policy_en.md`
+This will automatically configure to:
+- Privacy Policy: `https://your-username.github.io/your-repo/privacy_policy.md`
+- Chinese version: `https://your-username.github.io/your-repo/privacy_policy_zh.md`
+- English version: `https://your-username.github.io/your-repo/privacy_policy_en.md`
 
-### 3.2 GitHub Raw配置
+### 3.2 GitHub Raw Configuration
 
-如果您直接使用GitHub仓库的原始文件：
+If you directly use GitHub repository raw files:
 
 ```dart
 await ConfigManager.useGitHubRawConfig(
@@ -89,9 +93,9 @@ await ConfigManager.useGitHubRawConfig(
 );
 ```
 
-### 3.3 自定义域名配置
+### 3.3 Custom Domain Configuration
 
-如果您有自己的域名：
+If you have your own domain:
 
 ```dart
 await ConfigManager.useCustomDomainConfig(
@@ -100,156 +104,156 @@ await ConfigManager.useCustomDomainConfig(
 );
 ```
 
-### 3.4 本地测试配置
+### 3.4 Local Test Configuration
 
-用于开发和测试：
+For development and testing:
 
 ```dart
 await ConfigManager.useLocalTestConfig();
 ```
 
-## 4. 语言环境匹配规则
+## 4. Locale Matching Rules
 
-系统会根据用户的语言环境自动选择对应的URL：
+The system automatically selects corresponding URLs based on user's locale:
 
-1. **中文环境** (`zh`, `zh-CN`, `zh-TW` 等)
-   - 优先使用: `privacy_policy_url_zh`
-   - 回退到: `privacy_policy_url`
+1. **Chinese Environment** (`zh`, `zh-CN`, `zh-TW`, etc.)
+   - Priority use: `privacy_policy_url_zh`
+   - Fallback to: `privacy_policy_url`
 
-2. **英文环境** (`en`, `en-US`, `en-GB` 等)
-   - 优先使用: `privacy_policy_url_en`
-   - 回退到: `privacy_policy_url`
+2. **English Environment** (`en`, `en-US`, `en-GB`, etc.)
+   - Priority use: `privacy_policy_url_en`
+   - Fallback to: `privacy_policy_url`
 
-3. **其他语言环境**
-   - 使用: `privacy_policy_url`
+3. **Other Locales**
+   - Use: `privacy_policy_url`
 
-## 5. 配置优先级
+## 5. Configuration Priority
 
-配置的加载优先级（从高到低）：
+Configuration loading priority (from high to low):
 
-1. **远程配置** - 从远程JSON文件加载的配置
-2. **本地缓存** - 之前保存的配置
-3. **默认配置** - 代码中定义的默认值
+1. **Remote Configuration** - Configuration loaded from remote JSON file
+2. **Local Cache** - Previously saved configuration
+3. **Default Configuration** - Default values defined in code
 
-## 6. 实际使用示例
+## 6. Practical Usage Examples
 
-### 示例1：企业部署
+### Example 1: Enterprise Deployment
 
 ```dart
-// 在main.dart中的初始化代码
+// Initialization code in main.dart
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 配置企业隐私政策URL
+  // Configure enterprise privacy policy URLs
   await ConfigManager.setPrivacyPolicyUrls(
     defaultUrl: 'https://company.com/legal/privacy-policy.md',
     zhUrl: 'https://company.com/legal/privacy-policy-zh.md',
     enUrl: 'https://company.com/legal/privacy-policy-en.md',
   );
   
-  // 设置远程配置
+  // Set remote configuration
   await ConfigManager.setRemoteConfigUrl('https://company.com/config/mindra-config.json');
   
   runApp(MyApp());
 }
 ```
 
-### 示例2：开源项目
+### Example 2: Open Source Project
 
 ```dart
-// 使用GitHub Pages托管文档
+// Use GitHub Pages to host documentation
 await ConfigManager.useGitHubPagesConfig(
   repoOwner: 'mindra-app',
   repoName: 'mindra-docs',
 );
 ```
 
-### 示例3：动态配置
+### Example 3: Dynamic Configuration
 
 ```dart
-// 根据环境动态配置
+// Dynamic configuration based on environment
 if (kDebugMode) {
-  // 开发环境使用本地文件
+  // Development environment uses local files
   await ConfigManager.useLocalTestConfig();
 } else {
-  // 生产环境使用远程配置
+  // Production environment uses remote configuration
   await ConfigManager.useCustomDomainConfig(
     domain: 'legal.mindra.app',
   );
 }
 ```
 
-## 7. 配置管理最佳实践
+## 7. Configuration Management Best Practices
 
-### 7.1 版本控制
+### 7.1 Version Control
 
-在隐私政策文件中包含版本信息：
+Include version information in privacy policy files:
 
 ```markdown
-# 隐私政策
+# Privacy Policy
 
-*最后更新时间：2025年1月*
-*版本：v1.0*
+*Last Updated: January 2025*
+*Version: v1.0*
 
 ...
 ```
 
-### 7.2 缓存策略
+### 7.2 Cache Strategy
 
-- 远程配置会自动缓存到本地
-- 应用启动时会尝试刷新远程配置
-- 网络失败时使用缓存的配置
+- Remote configuration is automatically cached locally
+- App startup will attempt to refresh remote configuration
+- Use cached configuration when network fails
 
-### 7.3 错误处理
+### 7.3 Error Handling
 
-- 如果指定语言的URL不存在，会回退到默认URL
-- 如果所有URL都无法访问，会显示友好的错误信息
-- 提供重试功能
+- If URL for specified language doesn't exist, fallback to default URL
+- If all URLs are inaccessible, show friendly error message
+- Provide retry functionality
 
-### 7.4 测试建议
+### 7.4 Testing Recommendations
 
-1. **本地测试**: 使用 `useLocalTestConfig()` 进行开发测试
-2. **网络测试**: 测试不同网络条件下的加载情况
-3. **语言测试**: 切换不同语言环境验证URL选择
-4. **错误测试**: 测试无效URL的错误处理
+1. **Local Testing**: Use `useLocalTestConfig()` for development testing
+2. **Network Testing**: Test loading under different network conditions
+3. **Language Testing**: Switch different locales to verify URL selection
+4. **Error Testing**: Test error handling with invalid URLs
 
-## 8. 故障排除
+## 8. Troubleshooting
 
-### 常见问题
+### Common Issues
 
-1. **隐私政策页面显示加载失败**
-   - 检查URL是否正确
-   - 确认网络连接
-   - 验证文件是否存在
+1. **Privacy policy page shows loading failed**
+   - Check if URL is correct
+   - Confirm network connection
+   - Verify file exists
 
-2. **语言切换后仍显示错误语言的内容**
-   - 检查对应语言的URL配置
-   - 确认文件命名是否正确
+2. **Still shows wrong language content after language switch**
+   - Check corresponding language URL configuration
+   - Confirm file naming is correct
 
-3. **远程配置不生效**
-   - 检查远程配置文件格式
-   - 确认远程配置URL可访问
-   - 手动调用 `refreshRemoteConfig()`
+3. **Remote configuration not taking effect**
+   - Check remote configuration file format
+   - Confirm remote configuration URL is accessible
+   - Manually call `refreshRemoteConfig()`
 
-### 调试方法
+### Debugging Methods
 
-启用调试日志查看配置加载过程：
+Enable debug logs to view configuration loading process:
 
 ```dart
-// 查看当前所有配置
+// View all current configurations
 debugPrint('Current configs: ${ConfigManager.getAllConfigs()}');
 
-// 手动刷新远程配置
+// Manually refresh remote configuration
 await ConfigManager.refreshRemoteConfig();
 ```
 
-## 9. 扩展功能
+## 9. Extended Features
 
-可以基于现有架构扩展更多功能：
+More features can be extended based on existing architecture:
 
-- 服务条款页面
-- 帮助文档
-- 用户协议
-- 版本更新说明
+- Terms of Service page
+- Help documentation
+- User agreements
+- Version update notes
 
-所有这些都可以使用相同的配置模式和国际化支持。
+All of these can use the same configuration pattern and internationalization support.

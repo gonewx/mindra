@@ -52,7 +52,7 @@
 
 如果您对本隐私政策有任何疑问，请通过以下方式联系我们：
 
-- 邮箱：privacy@mindra.app
+- 邮箱：privacy@mindra.gonewx.com
 - 地址：中国北京市朝阳区
 
 ---

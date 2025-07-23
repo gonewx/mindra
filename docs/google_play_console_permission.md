@@ -1,16 +1,20 @@
-# 发布权限配置
+# Release Permission Configuration
 
-## API 访问设置流程如下
+**Language / 语言:** [🇺🇸 English](#english) | [🇨🇳 中文](google_play_console_permission_ZH.md)
 
-在 Google Cloud Console 中启用 API
-您现在需要直接登录到 Google Cloud Console，选择或创建一个项目，然后在库中搜索并启用 Google Play Developer API。API 的管理已经统一到 Cloud 平台。
+---
 
-在 Google Cloud Console 中创建服务账户
-在启用了 API 的同一个 Google Cloud 项目中，您可以进入 “凭据” (Credentials) 页面创建一个服务账户 (Service Account)，并生成用于身份验证的 JSON 密钥文件。
+## API Access Setup Process
 
-在 Play Console 中为服务账户授权
-这是最关键的改变。您需要复制新创建的服务账户的电子邮件地址，然后回到 Google Play Console，进入 “用户和权限” 页面：
+### Enable API in Google Cloud Console
+You now need to log directly into Google Cloud Console, select or create a project, then search for and enable the Google Play Developer API in the library. API management has been unified to the Cloud platform.
 
-像邀请新用户一样，邀请这个服务账户。
+### Create Service Account in Google Cloud Console
+In the same Google Cloud project where you enabled the API, you can go to the "Credentials" page to create a Service Account and generate a JSON key file for authentication.
 
-在权限设置中，为该服务账户授予必要的权限，例如管理员(全部权限)，以确保它有足够的权限来上传和管理应用。
+### Authorize Service Account in Play Console
+This is the most critical change. You need to copy the email address of the newly created service account, then return to Google Play Console and go to the "Users and permissions" page:
+
+Like inviting a new user, invite this service account.
+
+In the permission settings, grant the service account necessary permissions, such as Administrator (all permissions), to ensure it has sufficient permissions to upload and manage applications.

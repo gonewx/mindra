@@ -1,196 +1,200 @@
-# Mindra 构建和发布系统总结
+# Mindra Build and Release System Summary
 
-本文档总结了为 Mindra 应用创建的完整构建和发布系统。
+**Language / 语言:** [🇺🇸 English](#english) | [🇨🇳 中文](build_and_release_summary_ZH.md)
 
-## 📁 文件结构
+---
+
+This document summarizes the complete build and release system created for the Mindra application.
+
+## 📁 File Structure
 
 ```
 mindra/
-├── scripts/                    # 构建和发布脚本
-│   ├── build_android.sh       # Android 构建脚本
-│   ├── build_ios.sh           # iOS 构建脚本
-│   ├── build_all.sh           # 跨平台构建脚本
-│   ├── release_android.sh     # Android 发布脚本
-│   ├── release_ios.sh         # iOS 发布脚本
-│   ├── version_manager.sh     # 版本管理脚本
-│   ├── quick_deploy.sh        # 快速部署脚本
-│   └── build_summary.sh       # 构建摘要脚本（已存在）
-├── android/fastlane/          # Android Fastlane 配置
-│   ├── Fastfile              # Fastlane 主配置
-│   └── Appfile               # 应用配置
-├── ios/fastlane/              # iOS Fastlane 配置
-│   ├── Fastfile              # Fastlane 主配置
-│   └── Appfile               # 应用配置
+├── scripts/                    # Build and release scripts
+│   ├── build_android.sh       # Android build script
+│   ├── build_ios.sh           # iOS build script
+│   ├── build_all.sh           # Cross-platform build script
+│   ├── release_android.sh     # Android release script
+│   ├── release_ios.sh         # iOS release script
+│   ├── version_manager.sh     # Version management script
+│   ├── quick_deploy.sh        # Quick deployment script
+│   └── build_summary.sh       # Build summary script (existing)
+├── android/fastlane/          # Android Fastlane configuration
+│   ├── Fastfile              # Fastlane main config
+│   └── Appfile               # App configuration
+├── ios/fastlane/              # iOS Fastlane configuration
+│   ├── Fastfile              # Fastlane main config
+│   └── Appfile               # App configuration
 ├── .github/workflows/         # GitHub Actions CI/CD
-│   ├── build_and_test.yml    # 构建和测试工作流
-│   ├── release.yml           # 发布工作流
-│   └── code_quality.yml      # 代码质量检查
-└── docs/                      # 文档
-    ├── app_store_release_guide.md  # 应用商店发布指南
-    └── build_and_release_summary.md # 本文档
+│   ├── build_and_test.yml    # Build and test workflow
+│   ├── release.yml           # Release workflow
+│   └── code_quality.yml      # Code quality check
+└── docs/                      # Documentation
+    ├── app_store_release_guide.md  # App store release guide
+    └── build_and_release_summary.md # This document
 ```
 
-## 🛠️ 构建脚本
+## 🛠️ Build Scripts
 
-### 1. Android 构建 (`build_android.sh`)
-- 支持 APK 和 AAB 构建
-- 自动签名配置
-- 版本号管理
-- 构建验证
+### 1. Android Build (`build_android.sh`)
+- Supports APK and AAB builds
+- Auto signing configuration
+- Version number management
+- Build verification
 
-**使用示例：**
+**Usage Examples:**
 ```bash
-# 基本构建
+# Basic build
 ./scripts/build_android.sh
 
-# 清理后构建 AAB
+# Clean build AAB
 ./scripts/build_android.sh -c -b
 
-# 指定版本号构建
+# Build with specific version
 ./scripts/build_android.sh -v 1.0.1+2
 ```
 
-### 2. iOS 构建 (`build_ios.sh`)
-- 支持模拟器和真机构建
-- Archive 创建
-- 证书验证
-- 版本号同步
+### 2. iOS Build (`build_ios.sh`)
+- Supports simulator and device builds
+- Archive creation
+- Certificate verification
+- Version synchronization
 
-**使用示例：**
+**Usage Examples:**
 ```bash
-# 基本构建
+# Basic build
 ./scripts/build_ios.sh
 
-# 创建 Archive
+# Create Archive
 ./scripts/build_ios.sh -a
 
-# 清理后构建
+# Clean build
 ./scripts/build_ios.sh -c -a
 ```
 
-### 3. 跨平台构建 (`build_all.sh`)
-- 同时构建 Android 和 iOS
-- 统一版本管理
-- 并行构建支持
-- 自动版本递增
+### 3. Cross-platform Build (`build_all.sh`)
+- Build Android and iOS simultaneously
+- Unified version management
+- Parallel build support
+- Auto version increment
 
-**使用示例：**
+**Usage Examples:**
 ```bash
-# 构建所有平台
+# Build all platforms
 ./scripts/build_all.sh
 
-# 自动递增版本并构建
+# Auto increment version and build
 ./scripts/build_all.sh --bump-version patch
 
-# 仅构建 Android
+# Build Android only
 ./scripts/build_all.sh -a
 ```
 
-## 🚀 发布脚本
+## 🚀 Release Scripts
 
-### 1. Android 发布 (`release_android.sh`)
-- 支持多个发布轨道
-- Google Play Console 集成
-- Fastlane 自动化
-- 手动上传指导
+### 1. Android Release (`release_android.sh`)
+- Supports multiple release tracks
+- Google Play Console integration
+- Fastlane automation
+- Manual upload guidance
 
-**使用示例：**
+**Usage Examples:**
 ```bash
-# 发布到内部测试
+# Release to internal testing
 ./scripts/release_android.sh -t internal
 
-# 模拟发布到测试版
+# Dry run release to beta
 ./scripts/release_android.sh -t beta --dry-run
 ```
 
-### 2. iOS 发布 (`release_ios.sh`)
-- TestFlight 和 App Store 支持
-- 自动 IPA 导出
-- API 密钥认证
-- 手动上传指导
+### 2. iOS Release (`release_ios.sh`)
+- TestFlight and App Store support
+- Auto IPA export
+- API key authentication
+- Manual upload guidance
 
-**使用示例：**
+**Usage Examples:**
 ```bash
-# 发布到 TestFlight
+# Release to TestFlight
 ./scripts/release_ios.sh -t
 
-# 发布到 App Store
+# Release to App Store
 ./scripts/release_ios.sh -s
 ```
 
-## 📋 版本管理 (`version_manager.sh`)
+## 📋 Version Management (`version_manager.sh`)
 
-统一的版本号管理工具：
+Unified version number management tool:
 
 ```bash
-# 显示当前版本
+# Show current version
 ./scripts/version_manager.sh show
 
-# 设置版本号
+# Set version number
 ./scripts/version_manager.sh set 1.2.0+5
 
-# 递增版本号
+# Increment version number
 ./scripts/version_manager.sh bump patch
 
-# 创建 Git 标签
+# Create Git tag
 ./scripts/version_manager.sh tag
 ```
 
-## ⚡ 快速部署 (`quick_deploy.sh`)
+## ⚡ Quick Deployment (`quick_deploy.sh`)
 
-一键部署解决方案：
+One-click deployment solution:
 
 ```bash
-# 部署到开发环境
+# Deploy to development environment
 ./scripts/quick_deploy.sh -e dev
 
-# 部署到生产环境并递增版本
+# Deploy to production and increment version
 ./scripts/quick_deploy.sh -e prod --bump-version patch
 
-# 仅部署 Android 到测试环境
+# Deploy Android only to staging
 ./scripts/quick_deploy.sh -e staging -p android
 ```
 
-## 🤖 自动化 CI/CD
+## 🤖 Automated CI/CD
 
-### GitHub Actions 工作流
+### GitHub Actions Workflows
 
-1. **构建和测试** (`build_and_test.yml`)
-   - 代码格式检查
-   - 静态分析
-   - 单元测试
-   - 跨平台构建
+1. **Build and Test** (`build_and_test.yml`)
+   - Code format check
+   - Static analysis
+   - Unit tests
+   - Cross-platform builds
 
-2. **发布** (`release.yml`)
-   - 自动版本管理
-   - 签名构建
-   - 应用商店部署
-   - GitHub Release 创建
+2. **Release** (`release.yml`)
+   - Auto version management
+   - Signed builds
+   - App store deployment
+   - GitHub Release creation
 
-3. **代码质量** (`code_quality.yml`)
-   - 代码分析
-   - 测试覆盖率
-   - 安全检查
-   - 性能检查
+3. **Code Quality** (`code_quality.yml`)
+   - Code analysis
+   - Test coverage
+   - Security checks
+   - Performance checks
 
-### Fastlane 集成
+### Fastlane Integration
 
-- **Android**: 自动化 Google Play Store 发布
-- **iOS**: 自动化 TestFlight 和 App Store 发布
+- **Android**: Automate Google Play Store release
+- **iOS**: Automate TestFlight and App Store release
 
-## 📖 使用指南
+## 📖 Usage Guide
 
-### 首次设置
+### Initial Setup
 
-1. **配置签名**：
+1. **Configure Signing**:
    ```bash
    # Android
    ./scripts/create_release_keystore.sh
    
-   # iOS - 在 Xcode 中配置证书
+   # iOS - Configure certificates in Xcode
    ```
 
-2. **设置环境变量**：
+2. **Set Environment Variables**:
    ```bash
    # Android
    export ANDROID_HOME=/path/to/android/sdk
@@ -200,7 +204,7 @@ mindra/
    export APP_SPECIFIC_PASSWORD=your-app-password
    ```
 
-3. **安装依赖**：
+3. **Install Dependencies**:
    ```bash
    # Fastlane
    gem install fastlane
@@ -209,130 +213,130 @@ mindra/
    flutter doctor
    ```
 
-### 日常开发流程
+### Daily Development Workflow
 
-1. **开发阶段**：
+1. **Development Phase**:
    ```bash
-   # 构建和测试
+   # Build and test
    ./scripts/build_all.sh --skip-tests
    
-   # 部署到内部测试
+   # Deploy to internal testing
    ./scripts/quick_deploy.sh -e dev
    ```
 
-2. **测试阶段**：
+2. **Testing Phase**:
    ```bash
-   # 递增版本并部署到测试环境
+   # Increment version and deploy to staging
    ./scripts/quick_deploy.sh -e staging --bump-version patch
    ```
 
-3. **生产发布**：
+3. **Production Release**:
    ```bash
-   # 发布到生产环境
+   # Release to production
    ./scripts/quick_deploy.sh -e prod --bump-version minor
    ```
 
-### 发布轨道说明
+### Release Track Description
 
-| 轨道 | Android | iOS | 用途 |
-|------|---------|-----|------|
-| internal | 内部测试 | TestFlight 内部 | 开发团队测试 |
-| alpha | 封闭测试 | TestFlight 外部 | 小范围用户测试 |
-| beta | 开放测试 | TestFlight 公开 | 大范围用户测试 |
-| production | 正式发布 | App Store | 所有用户 |
+| Track | Android | iOS | Purpose |
+|-------|---------|-----|---------|
+| internal | Internal Testing | TestFlight Internal | Development team testing |
+| alpha | Closed Testing | TestFlight External | Small user testing |
+| beta | Open Testing | TestFlight Public | Large user testing |
+| production | Production Release | App Store | All users |
 
-## 🔧 故障排除
+## 🔧 Troubleshooting
 
-### 常见问题
+### Common Issues
 
-1. **Android 签名失败**：
-   - 检查 `android/key.properties` 配置
-   - 验证密钥库文件路径
+1. **Android Signing Failure**:
+   - Check `android/key.properties` configuration
+   - Verify keystore file path
 
-2. **iOS 证书问题**：
-   - 在 Xcode 中重新配置证书
-   - 检查配置文件有效期
+2. **iOS Certificate Issues**:
+   - Reconfigure certificates in Xcode
+   - Check provisioning profile validity
 
-3. **版本号冲突**：
-   - 使用 `version_manager.sh` 统一管理
-   - 检查应用商店现有版本
+3. **Version Number Conflicts**:
+   - Use `version_manager.sh` for unified management
+   - Check existing versions in app stores
 
-4. **构建失败**：
-   - 运行 `flutter doctor` 检查环境
-   - 清理构建缓存：`flutter clean`
+4. **Build Failures**:
+   - Run `flutter doctor` to check environment
+   - Clean build cache: `flutter clean`
 
-### 调试技巧
+### Debugging Tips
 
-1. **使用 `--dry-run` 模拟运行**
-2. **检查构建日志和报告文件**
-3. **使用 `build_summary.sh` 查看构建状态**
+1. **Use `--dry-run` for simulation**
+2. **Check build logs and report files**
+3. **Use `build_summary.sh` to view build status**
 
-## 📚 相关文档
+## 📚 Related Documentation
 
-- [应用商店发布指南](app_store_release_guide.md)
-- [iOS 构建指南](../scripts/ios_build_guide.md)
-- [项目需求文档](prd.md)
+- [App Store Release Guide](app_store_release_guide_en.md)
+- [iOS Build Guide](../scripts/ios_build_guide.md)
+- [Project Requirements Document](prd.md)
 
-## 🔄 维护和更新
+## 🔄 Maintenance and Updates
 
-### 定期维护任务
+### Regular Maintenance Tasks
 
-1. **更新依赖**：
+1. **Update Dependencies**:
    ```bash
    flutter pub upgrade
    ```
 
-2. **更新 CI/CD 配置**：
-   - 检查 Flutter 版本
-   - 更新 GitHub Actions
+2. **Update CI/CD Configuration**:
+   - Check Flutter version
+   - Update GitHub Actions
 
-3. **检查证书有效期**：
-   - iOS 证书和配置文件
-   - Android 密钥库
+3. **Check Certificate Validity**:
+   - iOS certificates and provisioning profiles
+   - Android keystore
 
-4. **监控构建性能**：
-   - 构建时间
-   - 应用大小
-   - 测试覆盖率
+4. **Monitor Build Performance**:
+   - Build time
+   - App size
+   - Test coverage
 
-### 版本发布检查清单
+### Version Release Checklist
 
-- [ ] 代码审查完成
-- [ ] 所有测试通过
-- [ ] 版本号正确递增
-- [ ] 更新日志已准备
-- [ ] 应用商店元数据更新
-- [ ] 证书和签名有效
-- [ ] 构建产物验证通过
+- [ ] Code review completed
+- [ ] All tests pass
+- [ ] Version number correctly incremented
+- [ ] Changelog prepared
+- [ ] App store metadata updated
+- [ ] Certificates and signing valid
+- [ ] Build artifacts verified
 
-## 🎯 最佳实践
+## 🎯 Best Practices
 
-1. **版本管理**：
-   - 使用语义化版本号
-   - 每次发布递增构建号
-   - 为重要版本创建 Git 标签
+1. **Version Management**:
+   - Use semantic versioning
+   - Increment build number for each release
+   - Create Git tags for important versions
 
-2. **测试策略**：
-   - 内部测试 → 封闭测试 → 开放测试 → 生产发布
-   - 每个阶段充分测试后再进入下一阶段
+2. **Testing Strategy**:
+   - Internal testing → Closed testing → Open testing → Production release
+   - Thoroughly test each phase before moving to next
 
-3. **自动化**：
-   - 使用 CI/CD 减少手动操作
-   - 自动化测试和代码质量检查
-   - 自动生成发布报告
+3. **Automation**:
+   - Use CI/CD to reduce manual operations
+   - Automate testing and code quality checks
+   - Auto-generate release reports
 
-4. **安全性**：
-   - 妥善保管签名密钥
-   - 使用环境变量存储敏感信息
-   - 定期更新依赖和工具
+4. **Security**:
+   - Properly secure signing keys
+   - Use environment variables for sensitive information
+   - Regularly update dependencies and tools
 
-## 📞 支持
+## 📞 Support
 
-如有问题，请参考：
-- 脚本内置的 `--help` 选项
-- [应用商店发布指南](app_store_release_guide.md)
-- 项目 Issues 页面
+For issues, please refer to:
+- Built-in `--help` options in scripts
+- [App Store Release Guide](app_store_release_guide_en.md)
+- Project Issues page
 
 ---
 
-**注意**：首次使用前请仔细阅读各脚本的帮助信息，并根据实际环境调整配置。
+**Note**: Please carefully read the help information for each script before first use and adjust configurations according to your actual environment.

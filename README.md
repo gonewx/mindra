@@ -1,9 +1,9 @@
-# Mindra - 专业冥想与正念应用
+# Mindra - Professional Meditation & Mindfulness App
 
 <div align="center">
   <img src="assets/images/app_icon_1024.png" alt="Mindra Logo" width="120" height="120">
   
-  <h3>🧘‍♀️ 开启你的冥想之旅，让心灵找到平静与专注</h3>
+  <h3>🧘‍♀️ Begin your meditation journey, let your mind find peace and focus</h3>
   
   [![Flutter](https://img.shields.io/badge/Flutter-3.32.5+-02569B.svg?style=flat&logo=flutter)](https://flutter.dev)
   [![Dart](https://img.shields.io/badge/Dart-3.8.1+-0175C2.svg?style=flat&logo=dart)](https://dart.dev)
@@ -11,126 +11,134 @@
   [![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20Web%20%7C%20Desktop-lightgrey.svg)](https://flutter.dev/multi-platform)
 </div>
 
-## ✨ 项目简介
+## Language / 语言
 
-**Mindra** 是一款专业的冥想与正念应用，基于 Flutter 开发，支持多平台部署。应用名称结合了"Mind"（心灵/思维）与"Mantra"（咒语），并融入"Sandra"式女性词尾，营造亲切且神秘的氛围，暗示冥想与内在对话。
+[🇺🇸 English](#english) | [🇨🇳 中文](README_ZH.md)
 
-### 🎯 核心价值
-- 🎵 **个性化体验** - 支持本地和网络音视频素材导入
-- 🧘 **专业功能** - 完整的冥想会话管理和进度追踪
-- 🎨 **精美界面** - 现代化 Material Design 3 设计语言
-- 🌍 **多语言支持** - 中英文双语界面
-- 📱 **跨平台** - iOS、Android、Web、Desktop 全平台支持（Linux 仅 AppImage）
+---
 
-## 🚀 主要功能
+# English
 
-### 📚 素材管理
-- **本地导入** - 支持从设备存储导入音频/视频文件
-- **网络导入** - 支持通过 URL 添加网络音视频资源
-- **智能分类** - 冥想、睡眠、专注、放松等多种分类
-- **元数据管理** - 自动获取或手动编辑素材信息
+## ✨ Project Overview
 
-### 🎵 冥想播放器
-- **多媒体支持** - 音频（MP3、AAC、WAV、FLAC 等）和视频（MP4、MOV 等）
-- **高级播放控制** - 播放、暂停、快进、快退、循环播放
-- **后台播放** - 支持音频后台播放和息屏播放
-- **播放记忆** - 自动记录播放进度，断点续播
-- **自然音效** - 可叠加雨声、海浪、鸟鸣等环境音效
+**Mindra** is a professional meditation and mindfulness application built with Flutter, supporting multi-platform deployment. The app name combines "Mind" (mind/thoughts) with "Mantra" (sacred utterance), incorporating a "Sandra"-style feminine ending to create an intimate yet mystical atmosphere, suggesting meditation and inner dialogue.
 
-### 📊 会话追踪
-- **智能记录** - 自动记录冥想会话时长和类型
-- **进度统计** - 可视化展示冥想习惯和成长轨迹
-- **目标设定** - 设置每日/每周冥想目标
-- **成就系统** - 徽章和成就激励持续练习
+### 🎯 Core Values
+- 🎵 **Personalized Experience** - Support for local and network audio/video content import
+- 🧘 **Professional Features** - Complete meditation session management and progress tracking
+- 🎨 **Beautiful Interface** - Modern Material Design 3 design language
+- 🌍 **Multi-language Support** - Chinese and English bilingual interface
+- 📱 **Cross-platform** - Full platform support for iOS, Android, Web, Desktop (Linux AppImage only)
 
-### ⏰ 智能提醒
-- **定时提醒** - 自定义冥想提醒时间和频率
-- **睡眠定时器** - 设置播放时长，自动停止
-- **通知推送** - 本地通知提醒冥想时间
+## 🚀 Main Features
 
-### 🎨 个性化定制
-- **多主题切换** - 深色、浅色、自然等多种主题
-- **界面定制** - 卡片间距、内边距等界面元素调整
-- **语言切换** - 中英文界面语言切换
+### 📚 Content Management
+- **Local Import** - Import audio/video files from device storage
+- **Network Import** - Add network audio/video resources via URL
+- **Smart Categorization** - Multiple categories including meditation, sleep, focus, relaxation
+- **Metadata Management** - Auto-fetch or manually edit content information
 
-## 🛠️ 技术栈
+### 🎵 Meditation Player
+- **Multi-media Support** - Audio (MP3, AAC, WAV, FLAC, etc.) and video (MP4, MOV, etc.)
+- **Advanced Playback Controls** - Play, pause, fast forward, rewind, loop playback
+- **Background Playback** - Support for audio background playback and screen-off playback
+- **Playback Memory** - Auto-record playback progress, resume from breakpoint
+- **Natural Sound Effects** - Overlay rain, ocean waves, bird songs and other ambient sounds
 
-### 核心框架
-- **Flutter 3.8.1+** - 跨平台 UI 框架
-- **Dart 3.8.1+** - 编程语言
+### 📊 Session Tracking
+- **Smart Recording** - Auto-record meditation session duration and type
+- **Progress Statistics** - Visual display of meditation habits and growth trajectory
+- **Goal Setting** - Set daily/weekly meditation goals
+- **Achievement System** - Badges and achievements to motivate continuous practice
 
-### 状态管理
-- **BLoC Pattern** - 业务逻辑组件模式
-- **Provider** - 轻量级状态管理
-- **HydratedBLoC** - 状态持久化
+### ⏰ Smart Reminders
+- **Timed Reminders** - Customize meditation reminder time and frequency
+- **Sleep Timer** - Set playback duration with auto-stop
+- **Push Notifications** - Local notification reminders for meditation time
 
-### 数据存储
-- **SQLite** - 本地数据库（移动端）
-- **Web Storage** - 浏览器存储（Web端）
-- **SharedPreferences** - 用户偏好设置
+### 🎨 Personalization
+- **Multiple Theme Switching** - Dark, light, natural and other themes
+- **Interface Customization** - Adjust card spacing, padding and other UI elements
+- **Language Switching** - Chinese and English interface language switching
 
-### 音视频处理
-- **AudioPlayers** - 音频播放引擎
-- **VideoPlayer** - 视频播放支持
-- **AudioService** - 后台音频服务
+## 🛠️ Tech Stack
 
-### 网络与文件
-- **Dio** - HTTP 网络请求
-- **FilePicker** - 文件选择器
-- **YouTubeExplode** - 网络视频解析
+### Core Framework
+- **Flutter 3.8.1+** - Cross-platform UI framework
+- **Dart 3.8.1+** - Programming language
 
-### UI 组件
-- **Material Design 3** - 现代化设计语言
-- **FlutterSVG** - SVG 图像支持
-- **CachedNetworkImage** - 网络图片缓存
-- **Shimmer** - 加载动画效果
+### State Management
+- **BLoC Pattern** - Business Logic Component pattern
+- **Provider** - Lightweight state management
+- **HydratedBLoC** - State persistence
 
-## 📱 支持平台
+### Data Storage
+- **SQLite** - Local database (mobile)
+- **Web Storage** - Browser storage (web)
+- **SharedPreferences** - User preference settings
 
-| 平台 | 状态 | 备注 |
-|------|------|------|
-| 🤖 Android | ✅ 已测试 | Android 5.0+ (API 21+) - 测试通过 ✓ |
-| 🐧 Linux | ✅ 已测试 | Ubuntu 22.04+ - 测试通过 ✓ |
-| 📱 iOS | ✅ 支持 | iOS 12.0+ |
-| 🌐 Web | ✅ 支持 | 现代浏览器 |
-| 🖥️ Windows | ✅ 支持 | Windows 10+ |
-| 🍎 macOS | ✅ 支持 | macOS 10.14+ |
+### Audio/Video Processing
+- **AudioPlayers** - Audio playback engine
+- **VideoPlayer** - Video playback support
+- **AudioService** - Background audio service
 
-## 🚀 快速开始
+### Network & Files
+- **Dio** - HTTP network requests
+- **FilePicker** - File picker
+- **YouTubeExplode** - Network video parsing
 
-### 环境要求
+### UI Components
+- **Material Design 3** - Modern design language
+- **FlutterSVG** - SVG image support
+- **CachedNetworkImage** - Network image caching
+- **Shimmer** - Loading animation effects
 
-- Flutter SDK 3.32.5 或更高版本
-- Dart SDK 3.8.1 或更高版本
-- 对应平台的开发环境（Android Studio、Xcode 等）
+## 📱 Supported Platforms
 
-### 安装步骤
+| Platform | Status | Notes |
+|----------|--------|-------|
+| 🤖 Android | ✅ Tested | Android 5.0+ (API 21+) - Tested ✓ |
+| 🐧 Linux | ✅ Tested | Ubuntu 22.04+ - Tested ✓ |
+| 📱 iOS | ✅ Supported | iOS 12.0+ |
+| 🌐 Web | ✅ Supported | Modern browsers |
+| 🖥️ Windows | ✅ Supported | Windows 10+ |
+| 🍎 macOS | ✅ Supported | macOS 10.14+ |
 
-1. **克隆仓库**
+## 🚀 Quick Start
+
+### Requirements
+
+- Flutter SDK 3.32.5 or higher
+- Dart SDK 3.8.1 or higher
+- Corresponding platform development environment (Android Studio, Xcode, etc.)
+
+### Installation
+
+1. **Clone Repository**
    ```bash
    git clone https://github.com/gonewx/mindra.git
    cd mindra
    ```
 
-2. **安装依赖**
+2. **Install Dependencies**
    ```bash
    flutter pub get
    ```
 
-3. **运行应用**
+3. **Run Application**
    ```bash
-   # 开发模式运行
+   # Run in development mode
    flutter run
    
-   # 指定平台运行（已测试平台）
-   flutter run                  # Android - 已测试 ✓
-   flutter run -d linux         # Linux - 已测试 ✓
+   # Run on specific platform (tested platforms)
+   flutter run                  # Android - Tested ✓
+   flutter run -d linux         # Linux - Tested ✓
    flutter run -d chrome        # Web
    flutter run -d macos         # macOS
    flutter run -d windows       # Windows
    ```
 
-4. **构建发布版本**
+4. **Build Release Version**
    ```bash
    # Android APK
    flutter build apk
@@ -142,197 +150,197 @@
    flutter build web
    ```
 
-### 开发命令
+### Development Commands
 
 ```bash
-# 代码分析
+# Code analysis
 flutter analyze
 
-# 运行测试
+# Run tests
 flutter test
 
-# 代码格式化
+# Code formatting
 dart format .
 
-# 清理构建缓存
+# Clean build cache
 flutter clean
 ```
 
-## 📂 项目结构
+## 📂 Project Structure
 
 ```
 mindra/
 ├── lib/
-│   ├── main.dart                    # 应用入口
-│   ├── core/                        # 核心功能
-│   │   ├── audio/                   # 音频播放器
-│   │   ├── config/                  # 应用配置
-│   │   ├── constants/               # 常量定义
-│   │   ├── database/                # 数据库管理
-│   │   ├── di/                      # 依赖注入
-│   │   ├── localization/            # 国际化
-│   │   ├── router/                  # 路由管理
-│   │   ├── services/                # 核心服务
-│   │   ├── theme/                   # 主题管理
-│   │   └── utils/                   # 工具类
-│   ├── features/                    # 功能模块
-│   │   ├── home/                    # 首页
-│   │   ├── media/                   # 媒体管理
-│   │   ├── meditation/              # 冥想会话
-│   │   ├── onboarding/              # 引导页面
-│   │   ├── player/                  # 播放器
-│   │   ├── settings/                # 设置
-│   │   ├── splash/                  # 启动页
-│   │   └── theme/                   # 主题设置
-│   └── shared/                      # 共享组件
-│       ├── utils/                   # 共享工具
-│       └── widgets/                 # 共享组件
-├── assets/                          # 资源文件
-│   ├── audio/effects/               # 音效文件
-│   ├── images/                      # 图片资源
-│   └── translations/                # 翻译文件
-├── test/                           # 测试文件
-└── docs/                           # 文档
+│   ├── main.dart                    # App entry point
+│   ├── core/                        # Core functionality
+│   │   ├── audio/                   # Audio player
+│   │   ├── config/                  # App configuration
+│   │   ├── constants/               # Constants definition
+│   │   ├── database/                # Database management
+│   │   ├── di/                      # Dependency injection
+│   │   ├── localization/            # Internationalization
+│   │   ├── router/                  # Route management
+│   │   ├── services/                # Core services
+│   │   ├── theme/                   # Theme management
+│   │   └── utils/                   # Utility classes
+│   ├── features/                    # Feature modules
+│   │   ├── home/                    # Home page
+│   │   ├── media/                   # Media management
+│   │   ├── meditation/              # Meditation sessions
+│   │   ├── onboarding/              # Onboarding pages
+│   │   ├── player/                  # Player
+│   │   ├── settings/                # Settings
+│   │   ├── splash/                  # Splash screen
+│   │   └── theme/                   # Theme settings
+│   └── shared/                      # Shared components
+│       ├── utils/                   # Shared utilities
+│       └── widgets/                 # Shared widgets
+├── assets/                          # Asset files
+│   ├── audio/effects/               # Sound effect files
+│   ├── images/                      # Image resources
+│   └── translations/                # Translation files
+├── test/                           # Test files
+└── docs/                           # Documentation
 ```
 
-## 🏗️ 架构设计
+## 🏗️ Architecture Design
 
 ### Clean Architecture
-项目采用 Clean Architecture 架构模式，分为三层：
+The project adopts Clean Architecture pattern with three layers:
 
-- **Presentation Layer** - UI 界面和状态管理
-- **Domain Layer** - 业务逻辑和实体定义
-- **Data Layer** - 数据访问和外部服务
+- **Presentation Layer** - UI interface and state management
+- **Domain Layer** - Business logic and entity definitions
+- **Data Layer** - Data access and external services
 
 ### BLoC Pattern
-使用 BLoC 模式进行状态管理：
+Uses BLoC pattern for state management:
 
-- **Events** - 用户操作事件
-- **States** - UI 状态定义
-- **BLoCs** - 业务逻辑处理
+- **Events** - User action events
+- **States** - UI state definitions
+- **BLoCs** - Business logic processing
 
-### 依赖注入
-使用 GetIt + Injectable 进行依赖注入管理，确保代码的可测试性和可维护性。
+### Dependency Injection
+Uses GetIt + Injectable for dependency injection management, ensuring code testability and maintainability.
 
-## 🧪 测试
+## 🧪 Testing
 
-项目包含完整的测试套件：
+The project includes a complete test suite:
 
 ```bash
-# 运行所有测试
+# Run all tests
 flutter test
 
-# 运行特定测试
+# Run specific test
 flutter test test/database_test.dart
 
-# 测试覆盖率
+# Test coverage
 flutter test --coverage
 ```
 
-### 测试类型
-- **单元测试** - 核心业务逻辑测试
-- **组件测试** - UI 组件测试
-- **集成测试** - 功能集成测试
-- **本地化测试** - 多语言支持测试
+### Test Types
+- **Unit Tests** - Core business logic testing
+- **Widget Tests** - UI component testing
+- **Integration Tests** - Feature integration testing
+- **Localization Tests** - Multi-language support testing
 
-## 📦 构建与发布
+## 📦 Build & Release
 
-项目提供完整的构建和发布脚本：
+The project provides complete build and release scripts:
 
-### 自动化脚本
-- `build_all.sh` - 跨平台构建
-- `build_android.sh` - Android 构建
-- `build_ios.sh` - iOS 构建
-- `release_android.sh` - Android 发布
-- `release_ios.sh` - iOS 发布
-- `version_manager.sh` - 版本管理
+### Automation Scripts
+- `build_all.sh` - Cross-platform build
+- `build_android.sh` - Android build
+- `build_ios.sh` - iOS build
+- `release_android.sh` - Android release
+- `release_ios.sh` - iOS release
+- `version_manager.sh` - Version management
 
-### 快速部署
+### Quick Deployment
 ```bash
-# 开发环境部署
+# Development environment deployment
 ./scripts/quick_deploy.sh -e dev
 
-# 生产环境部署
+# Production environment deployment
 ./scripts/quick_deploy.sh -e prod
 ```
 
-详细说明请参考 [构建发布指南](BUILD_RELEASE_README.md)。
+For detailed instructions, see [Build Release Guide](BUILD_RELEASE_README.md).
 
-## 🌍 国际化
+## 🌍 Internationalization
 
-应用支持多语言：
+The app supports multiple languages:
 
-- 🇨🇳 **简体中文** - 默认语言
-- 🇺🇸 **English** - 英语支持
+- 🇨🇳 **Simplified Chinese** - Default language
+- 🇺🇸 **English** - English support
 
-### 添加新语言
-1. 在 `lib/core/localization/app_localizations.dart` 中添加翻译
-2. 更新 `supportedLocales` 配置
-3. 重新构建应用
+### Adding New Languages
+1. Add translations in `lib/core/localization/app_localizations.dart`
+2. Update `supportedLocales` configuration
+3. Rebuild the app
 
-## 🤝 贡献指南
+## 🤝 Contributing
 
-欢迎贡献代码！请遵循以下步骤：
+Contributions are welcome! Please follow these steps:
 
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 创建 Pull Request
+1. Fork the project
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add some amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Create Pull Request
 
-### 代码规范
-- 遵循 Dart 官方代码风格
-- 使用 `dart format` 格式化代码
-- 通过 `flutter analyze` 静态分析
-- 编写相应的测试用例
+### Code Standards
+- Follow Dart official code style
+- Use `dart format` to format code
+- Pass `flutter analyze` static analysis
+- Write corresponding test cases
 
-## 📄 许可证
+## 📄 License
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
 
-## 🙏 致谢
+## 🙏 Acknowledgments
 
-感谢以下开源项目：
+Thanks to the following open source projects:
 
-- [Flutter](https://flutter.dev) - 跨平台 UI 框架
-- [BLoC](https://bloclibrary.dev) - 状态管理库
-- [AudioPlayers](https://pub.dev/packages/audioplayers) - 音频播放
-- [GoRouter](https://pub.dev/packages/go_router) - 路由管理
+- [Flutter](https://flutter.dev) - Cross-platform UI framework
+- [BLoC](https://bloclibrary.dev) - State management library
+- [AudioPlayers](https://pub.dev/packages/audioplayers) - Audio playback
+- [GoRouter](https://pub.dev/packages/go_router) - Route management
 
-## 📞 支持与反馈
+## 📞 Support & Feedback
 
-- 📧 **邮箱**: support@mindra.app
-- 🐛 **问题反馈**: [GitHub Issues](https://github.com/gonewx/mindra/issues)
-- 💬 **讨论交流**: [GitHub Discussions](https://github.com/gonewx/mindra/discussions)
-- 📖 **文档**: [项目文档](docs/)
+- 📧 **Email**: support@mindra.gonewx.com
+- 🐛 **Issue Feedback**: [GitHub Issues](https://github.com/gonewx/mindra/issues)
+- 💬 **Discussion**: [GitHub Discussions](https://github.com/gonewx/mindra/discussions)
+- 📖 **Documentation**: [Project Docs](docs/)
 
-## 🗺️ 路线图
+## 🗺️ Roadmap
 
-### 已完成 ✅
-- [x] 核心播放功能
-- [x] 素材管理系统
-- [x] 冥想会话追踪
-- [x] 多主题支持
-- [x] 国际化支持
-- [x] 跨平台支持
-- [x] Android 平台测试验证
-- [x] Linux 平台测试验证
+### Completed ✅
+- [x] Core playback functionality
+- [x] Content management system
+- [x] Meditation session tracking
+- [x] Multi-theme support
+- [x] Internationalization support
+- [x] Cross-platform support
+- [x] Android platform testing verification
+- [x] Linux platform testing verification
 
-### 开发中 🚧
-- [ ] 社区功能
-- [ ] AI 推荐系统
-- [ ] 云同步功能
-- [ ] 高级统计分析
+### In Development 🚧
+- [ ] Community features
+- [ ] AI recommendation system
+- [ ] Cloud sync functionality
+- [ ] Advanced statistical analysis
 
-### 计划中 📋
-- [ ] 智能语音助手
-- [ ] VR/AR 冥想体验
-- [ ] 专业课程内容
-- [ ] 社交分享功能
+### Planned 📋
+- [ ] Smart voice assistant
+- [ ] VR/AR meditation experience
+- [ ] Professional course content
+- [ ] Social sharing features
 
 ---
 
 <div align="center">
-  <p>用心打造，专注冥想 🧘‍♀️</p>
+  <p>Crafted with care, focused on meditation 🧘‍♀️</p>
   <p>Made with ❤️ by Mindra Team</p>
 </div>

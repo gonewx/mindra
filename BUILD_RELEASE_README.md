@@ -246,7 +246,7 @@ git commit -m "fix: critical bug fix"
 
 ## 📞 支持
 
-- 📧 **邮箱**: support@mindra.app
+- 📧 **邮箱**: support@mindra.gonewx.com
 - 📖 **文档**: 查看 `docs/` 目录
 - 🐛 **问题**: 提交 GitHub Issues
 - 💬 **讨论**: GitHub Discussions

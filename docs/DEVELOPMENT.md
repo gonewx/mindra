@@ -1,204 +1,208 @@
-# Mindra 开发指南
+# Mindra Development Guide
 
-## 🚀 快速开始
+**Language / 语言:** [🇺🇸 English](#english) | [🇨🇳 中文](DEVELOPMENT_ZH.md)
 
-### 一次性环境设置
+---
+
+## 🚀 Quick Start
+
+### One-time Environment Setup
 ```bash
-# 设置开发环境（只需运行一次）
+# Set up development environment (run only once)
 make dev-setup
 ```
 
-这个命令会：
-- 安装Flutter依赖
-- 设置Git hooks
-- 配置开发环境
+This command will:
+- Install Flutter dependencies
+- Set up Git hooks
+- Configure development environment
 
-## 📋 日常开发工作流
+## 📋 Daily Development Workflow
 
-### 1. 开发前检查
+### 1. Pre-development Check
 ```bash
-# 快速检查代码质量
+# Quick code quality check
 make check
 
-# 或者使用脚本
+# Or use script
 ./scripts/dev_check.sh -q
 ```
 
-### 2. 代码修改后
+### 2. After Code Changes
 ```bash
-# 自动修复常见问题
+# Auto-fix common issues
 make fix
 
-# 或者分步骤
-make format    # 格式化代码
-make analyze   # 静态分析
-make test      # 运行测试
+# Or step by step
+make format    # Format code
+make analyze   # Static analysis
+make test      # Run tests
 ```
 
-### 3. 提交前
-当你运行 `git commit` 时，pre-commit hook会自动：
-- ✅ 格式化代码
-- ✅ 运行静态分析
-- ✅ 运行测试
-- ✅ 检查敏感信息
+### 3. Before Commit
+When you run `git commit`, the pre-commit hook will automatically:
+- ✅ Format code
+- ✅ Run static analysis
+- ✅ Run tests
+- ✅ Check for sensitive information
 
-如果检查失败，提交会被阻止，你需要修复问题后重新提交。
+If checks fail, the commit will be blocked and you need to fix issues before committing again.
 
-## 🛠️ 可用命令
+## 🛠️ Available Commands
 
-### Make 命令
+### Make Commands
 ```bash
-make help          # 显示所有可用命令
-make check         # 快速检查
-make check-full    # 完整检查
-make format        # 格式化代码
-make analyze       # 静态分析
-make test          # 运行测试
-make fix           # 自动修复
-make pre-commit    # 手动运行提交前检查
-make build-android # 构建Android APK
-make build-aab     # 构建Android AAB
-make run           # 运行应用
+make help          # Show all available commands
+make check         # Quick check
+make check-full    # Full check
+make format        # Format code
+make analyze       # Static analysis
+make test          # Run tests
+make fix           # Auto fix
+make pre-commit    # Manually run pre-commit checks
+make build-android # Build Android APK
+make build-aab     # Build Android AAB
+make run           # Run application
 ```
 
-### 脚本命令
+### Script Commands
 ```bash
-# 开发检查脚本
-./scripts/dev_check.sh --help    # 显示帮助
-./scripts/dev_check.sh -q        # 快速检查
-./scripts/dev_check.sh --fix     # 自动修复
-./scripts/dev_check.sh -f        # 仅格式化
-./scripts/dev_check.sh -a        # 仅分析
-./scripts/dev_check.sh -t        # 仅测试
-./scripts/dev_check.sh --strict  # 严格模式
+# Development check script
+./scripts/dev_check.sh --help    # Show help
+./scripts/dev_check.sh -q        # Quick check
+./scripts/dev_check.sh --fix     # Auto fix
+./scripts/dev_check.sh -f        # Format only
+./scripts/dev_check.sh -a        # Analyze only
+./scripts/dev_check.sh -t        # Test only
+./scripts/dev_check.sh --strict  # Strict mode
 ```
 
-## 🎯 VS Code 集成
+## 🎯 VS Code Integration
 
-### 自动保存时格式化
-VS Code已配置为保存时自动格式化代码和整理导入。
+### Auto-format on Save
+VS Code is configured to auto-format code and organize imports on save.
 
-### 任务快捷键
-在VS Code中按 `Ctrl+Shift+P`，然后输入 "Tasks: Run Task"，选择：
-- **Quick Check** - 快速检查
-- **Full Check** - 完整检查
-- **Format Code** - 格式化代码
-- **Auto Fix Issues** - 自动修复
-- **Run Tests** - 运行测试
-- **Pre-commit Check** - 提交前检查
+### Task Shortcuts
+In VS Code, press `Ctrl+Shift+P`, then type "Tasks: Run Task" and select:
+- **Quick Check** - Quick check
+- **Full Check** - Full check
+- **Format Code** - Format code
+- **Auto Fix Issues** - Auto fix
+- **Run Tests** - Run tests
+- **Pre-commit Check** - Pre-commit check
 
-## 🔧 工具配置
+## 🔧 Tool Configuration
 
 ### Git Hooks
-- **pre-commit**: 提交前自动检查代码质量
-- 位置: `.git/hooks/pre-commit`
-- 自动安装: `make install-hooks`
+- **pre-commit**: Auto-check code quality before commit
+- Location: `.git/hooks/pre-commit`
+- Auto install: `make install-hooks`
 
-### VS Code 设置
-- **自动格式化**: 保存时自动格式化
-- **自动导入整理**: 保存时整理导入
-- **代码长度限制**: 80字符
-- **配置文件**: `.vscode/settings.json`
+### VS Code Settings
+- **Auto format**: Format on save
+- **Auto import organize**: Organize imports on save
+- **Line length limit**: 80 characters
+- **Config file**: `.vscode/settings.json`
 
-### 分析配置
-- **规则文件**: `analysis_options.yaml`
-- **严格模式**: 所有info级别问题都视为错误
-- **排除目录**: build, .dart_tool 等
+### Analysis Configuration
+- **Rules file**: `analysis_options.yaml`
+- **Strict mode**: All info-level issues treated as errors
+- **Excluded directories**: build, .dart_tool, etc.
 
-## 🚫 常见问题解决
+## 🚫 Common Issue Resolution
 
-### 1. 格式化问题
+### 1. Format Issues
 ```bash
-# 自动修复格式问题
+# Auto-fix format issues
 make format
 
-# 或手动
+# Or manually
 dart format .
 ```
 
-### 2. 静态分析错误
+### 2. Static Analysis Errors
 ```bash
-# 查看详细错误
+# View detailed errors
 dart analyze
 
-# 自动修复部分问题
+# Auto-fix some issues
 make fix
 ```
 
-### 3. 测试失败
+### 3. Test Failures
 ```bash
-# 运行特定测试
+# Run specific test
 flutter test test/specific_test.dart
 
-# 查看详细输出
+# View detailed output
 flutter test --reporter=expanded
 ```
 
-### 4. 依赖问题
+### 4. Dependency Issues
 ```bash
-# 清理并重新获取依赖
+# Clean and re-fetch dependencies
 make clean
 make setup
 
-# 或手动
+# Or manually
 flutter clean
 flutter pub get
 ```
 
-### 5. 跳过pre-commit检查（不推荐）
+### 5. Skip Pre-commit Check (Not Recommended)
 ```bash
-# 仅在紧急情况下使用
+# Use only in emergency
 git commit --no-verify -m "emergency fix"
 ```
 
-## 📊 代码质量指标
+## 📊 Code Quality Metrics
 
-### 目标指标
-- **测试覆盖率**: ≥ 80%
-- **静态分析**: 0 errors, 0 warnings
-- **代码格式**: 100% 符合Dart标准
-- **构建**: 所有平台构建成功
+### Target Metrics
+- **Test Coverage**: ≥ 80%
+- **Static Analysis**: 0 errors, 0 warnings
+- **Code Format**: 100% compliant with Dart standards
+- **Build**: All platforms build successfully
 
-### 检查工具
-- **格式化**: `dart format`
-- **静态分析**: `dart analyze`
-- **测试**: `flutter test`
-- **构建**: `flutter build`
+### Check Tools
+- **Format**: `dart format`
+- **Static Analysis**: `dart analyze`
+- **Test**: `flutter test`
+- **Build**: `flutter build`
 
-## 🔄 CI/CD 集成
+## 🔄 CI/CD Integration
 
 ### GitHub Actions
-- **Quick Check**: PR时快速验证
-- **Build and Test**: push时完整构建
-- **Release**: tag时自动发布
+- **Quick Check**: Quick validation on PR
+- **Build and Test**: Full build on push
+- **Release**: Auto release on tag
 
-### 本地优先策略
-大部分检查在本地完成，CI主要用于：
-- 验证本地检查是否正确执行
-- 多平台构建验证
-- 自动发布
+### Local-first Strategy
+Most checks are done locally, CI mainly used for:
+- Verify local checks are executed correctly
+- Multi-platform build validation
+- Auto release
 
-## 💡 最佳实践
+## 💡 Best Practices
 
-### 1. 提交前
-- 运行 `make check` 确保代码质量
-- 确保所有测试通过
-- 检查是否有未提交的格式化更改
+### 1. Before Commit
+- Run `make check` to ensure code quality
+- Ensure all tests pass
+- Check for uncommitted formatting changes
 
-### 2. 代码审查
-- 关注业务逻辑而非格式问题
-- 自动化工具已处理格式和基本质量问题
+### 2. Code Review
+- Focus on business logic rather than format issues
+- Automated tools handle format and basic quality issues
 
-### 3. 持续改进
-- 定期运行 `make deps-outdated` 检查依赖更新
-- 关注静态分析新规则
-- 保持测试覆盖率
+### 3. Continuous Improvement
+- Regularly run `make deps-outdated` to check dependency updates
+- Pay attention to new static analysis rules
+- Maintain test coverage
 
-## 🆘 获取帮助
+## 🆘 Getting Help
 
-如果遇到问题：
-1. 查看错误信息和建议的修复命令
-2. 运行 `make help` 查看可用命令
-3. 查看 `./scripts/dev_check.sh --help`
-4. 检查VS Code问题面板
-5. 联系团队其他成员 
+If you encounter issues:
+1. Check error messages and suggested fix commands
+2. Run `make help` to see available commands
+3. Check `./scripts/dev_check.sh --help`
+4. Check VS Code problems panel
+5. Contact other team members

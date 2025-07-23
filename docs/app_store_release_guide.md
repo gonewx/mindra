@@ -1,404 +1,522 @@
-# Mindra 应用商店发布指南
+# Mindra App Store Release Guide
 
-本指南详细介绍如何将 Mindra 应用发布到 Google Play Store 和 Apple App Store。
+**Language / 语言:** [🇺🇸 English](#english) | [🇨🇳 中文](app_store_release_guide_ZH.md)
 
-## 目录
+---
 
-- [准备工作](#准备工作)
-- [Google Play Store 发布](#google-play-store-发布)
-- [Apple App Store 发布](#apple-app-store-发布)
-- [应用元数据](#应用元数据)
-- [截图要求](#截图要求)
-- [发布后维护](#发布后维护)
+This guide provides detailed instructions on how to release the Mindra app to Google Play Store and Apple App Store.
 
-## 准备工作
+## Table of Contents
 
-### 1. 构建应用
+- [Prerequisites](#prerequisites)
+- [Google Play Store Release](#google-play-store-release)
+- [Apple App Store Release](#apple-app-store-release)
+- [App Metadata](#app-metadata)
+- [Screenshot Requirements](#screenshot-requirements)
+- [Post-Release Maintenance](#post-release-maintenance)
 
-在发布前，确保已经构建了生产版本的应用：
+## Prerequisites
+
+### 1. Build the App
+
+Before releasing, ensure you have built production versions of the app:
 
 ```bash
-# 构建所有平台
+# Build all platforms
 ./scripts/build_all.sh --archive
 
-# 或分别构建
-./scripts/build_android.sh -b  # 构建 AAB
-./scripts/build_ios.sh -a      # 创建 Archive
+# Or build separately
+./scripts/build_android.sh -b  # Build AAB
+./scripts/build_ios.sh -a      # Create Archive
 ```
 
-### 2. 测试应用
+### 2. Test the App
 
-- 在真实设备上测试应用功能
-- 验证所有核心功能正常工作
-- 检查应用性能和稳定性
-- 确保符合各平台的设计规范
+- Test app functionality on real devices
+- Verify all core features work properly
+- Check app performance and stability
+- Ensure compliance with platform design guidelines
 
-### 3. 准备应用资源
+### 3. Prepare App Assets
 
-- 应用图标（各种尺寸）
-- 启动画面
-- 应用截图
-- 宣传图片
-- 应用描述文本
+- App icons (various sizes)
+- Splash screens
+- App screenshots
+- Promotional images
+- App description text
 
-## Google Play Store 发布
+## Google Play Store Release
 
-### 1. 开发者账号设置
+### 1. Developer Account Setup
 
-1. 注册 [Google Play Console](https://play.google.com/console) 开发者账号
-2. 支付一次性注册费用（$25）
-3. 完成身份验证和税务信息
+1. Register for [Google Play Console](https://play.google.com/console) developer account
+2. Pay one-time registration fee ($25)
+3. Complete identity verification and tax information
 
-### 2. 创建应用
+### 2. Create App
 
-1. 在 Google Play Console 中点击"创建应用"
-2. 填写应用信息：
-   - **应用名称**: Mindra
-   - **默认语言**: 中文（简体）
-   - **应用类型**: 应用
-   - **免费或付费**: 免费
+1. Click "Create app" in Google Play Console
+2. Fill in app information:
+   - **App name**: Mindra
+   - **Default language**: English (United States)
+   - **App type**: App
+   - **Free or paid**: Free
 
-### 3. 应用内容设置
+### 3. App Content Setup
 
-#### 应用详情
-- **应用名称**: Mindra
-- **简短描述**: 专业的冥想与正念应用，帮助您找到内心的平静与专注
-- **完整描述**: 
+#### App Details
+- **App name**: Mindra
+- **Short description**: Professional meditation and mindfulness app to help you find inner peace and focus
+- **Full description**: 
 ```
-Mindra 是一款专业的冥想与正念应用，致力于帮助用户在快节奏的生活中找到内心的平静与专注。
+Mindra is a professional meditation and mindfulness app dedicated to helping users find inner peace and focus in their fast-paced lives.
 
-🧘‍♀️ 主要功能：
-• 丰富的冥想内容库，包含引导冥想、自然声音等
-• 个性化的冥想计划，适合不同水平的用户
-• 专注计时器，帮助建立冥想习惯
-• 进度跟踪，记录您的冥想历程
-• 优美的界面设计，营造宁静的冥想氛围
+🧘‍♀️ Key Features:
+• Rich meditation content library with guided meditations and nature sounds
+• Personalized meditation plans suitable for users of all levels
+• Focus timer to help build meditation habits
+• Progress tracking to record your meditation journey
+• Beautiful interface design creating a serene meditation atmosphere
 
-🌟 特色亮点：
-• 专业的冥想指导内容
-• 多样化的背景音效
-• 简洁直观的用户界面
-• 支持离线使用
-• 完全免费，无广告干扰
+🌟 Highlights:
+• Professional meditation guidance content
+• Diverse background sound effects
+• Clean and intuitive user interface
+• Offline usage support
+• Completely free with no ads
 
-无论您是冥想新手还是有经验的练习者，Mindra 都能为您提供合适的冥想体验。让我们一起开始这段内心探索的旅程吧！
+Whether you're a meditation beginner or an experienced practitioner, Mindra provides the right meditation experience for you. Let's start this journey of inner exploration together!
 ```
 
-#### 应用分类
-- **类别**: 健康与健身
-- **标签**: 冥想、正念、健康、放松
+#### App Category
+- **Category**: Health & Fitness
+- **Tags**: Meditation, Mindfulness, Health, Relaxation
 
-#### 联系详情
-- **网站**: https://mindra.app
-- **电子邮件**: support@mindra.app
-- **隐私政策**: https://mindra.app/privacy
+#### Contact Details
+- **Website**: https://mindra.gonewx.com
+- **Email**: support@mindra.gonewx.com
+- **Privacy Policy**: https://mindra.gonewx.com/privacy
 
-### 4. 内容分级
+### 4. Content Rating
 
-根据应用内容填写内容分级问卷：
-- 目标年龄组：所有年龄
-- 内容类型：教育/健康
-- 无暴力、成人内容等
+Fill out the content rating questionnaire based on app content:
+- Target age group: All ages
+- Content type: Educational/Health
+- No violence, adult content, etc.
 
-### 5. 目标受众和内容
+### 5. Target Audience and Content
 
-- **目标年龄组**: 13岁以上
-- **目标受众**: 关注心理健康和个人成长的用户
-- **内容适宜性**: 适合所有年龄
+- **Target age group**: 13+
+- **Target audience**: Users interested in mental health and personal growth
+- **Content appropriateness**: Suitable for all ages
 
-### 6. 应用签名
+### 6. App Signing
 
-确保使用生产密钥库签名：
+Ensure using production keystore for signing:
 ```bash
-# 检查签名
+# Check signature
 jarsigner -verify build/app/outputs/bundle/release/app-release.aab
 ```
 
-### 7. 发布轨道
+### 7. Release Tracks
 
-#### 内部测试
-- 最多 100 个测试者
-- 用于开发团队内部测试
-- 几分钟内可用
+#### Internal Testing
+- Up to 100 testers
+- For internal team testing
+- Available within minutes
 
-#### 封闭测试 (Alpha)
-- 邀请制测试
-- 用于小范围用户测试
-- 几小时内可用
+#### Closed Testing (Alpha)
+- Invitation-only testing
+- For small-scale user testing
+- Available within hours
 
-#### 开放测试 (Beta)
-- 公开测试，用户需要加入
-- 用于大范围用户测试
-- 几小时内可用
+#### Open Testing (Beta)
+- Public testing, users need to join
+- For large-scale user testing
+- Available within hours
 
-#### 生产发布
-- 所有用户可见
-- 需要 1-3 天审核时间
+#### Production Release
+- Visible to all users
+- Requires 1-3 days review time
 
-### 8. 上传应用
+### 8. Upload App
 
 ```bash
-# 使用脚本上传
+# Upload using script
 ./scripts/release_android.sh -t internal
 
-# 或手动上传 AAB 文件
-# 在 Google Play Console 中上传 build/app/outputs/bundle/release/app-release.aab
+# Or manually upload AAB file
+# Upload build/app/outputs/bundle/release/app-release.aab in Google Play Console
 ```
 
-## Apple App Store 发布
+## Apple App Store Release
 
-### 1. 开发者账号设置
+### 1. Developer Account Setup
 
-1. 注册 [Apple Developer Program](https://developer.apple.com/programs/)
-2. 支付年费（$99/年）
-3. 完成身份验证
+1. Register for [Apple Developer Program](https://developer.apple.com/programs/)
+2. Pay annual fee ($99/year)
+3. Complete identity verification
 
-### 2. App Store Connect 设置
+### 2. App Store Connect Setup
 
-1. 登录 [App Store Connect](https://appstoreconnect.apple.com)
-2. 创建新应用：
-   - **名称**: Mindra
+1. Log in to [App Store Connect](https://appstoreconnect.apple.com)
+2. Create new app:
+   - **Name**: Mindra
    - **Bundle ID**: com.mindra.app
    - **SKU**: mindra-app
-   - **用户访问权限**: 完全访问权限
+   - **User Access**: Full Access
 
-### 3. 应用信息
+### 3. App Information
 
-#### 基本信息
-- **名称**: Mindra
-- **副标题**: 冥想与正念
-- **类别**: 
-  - 主要：健康健美
-  - 次要：生活
-- **内容分级**: 4+
+#### Basic Information
+- **Name**: Mindra
+- **Subtitle**: Meditation & Mindfulness
+- **Category**: 
+  - Primary: Health & Fitness
+  - Secondary: Lifestyle
+- **Content Rating**: 4+
 
-#### 应用描述
+#### App Description
 ```
-Mindra 是一款专业的冥想与正念应用，致力于帮助用户在快节奏的生活中找到内心的平静与专注。
+Mindra is a professional meditation and mindfulness app dedicated to helping users find inner peace and focus in their fast-paced lives.
 
-主要功能：
-• 丰富的冥想内容库
-• 个性化的冥想计划
-• 专注计时器
-• 进度跟踪
-• 优美的界面设计
+Key Features:
+• Rich meditation content library
+• Personalized meditation plans
+• Focus timer
+• Progress tracking
+• Beautiful interface design
 
-特色亮点：
-• 专业的冥想指导
-• 多样化的背景音效
-• 简洁直观的界面
-• 支持离线使用
-• 完全免费
+Highlights:
+• Professional meditation guidance
+• Diverse background sound effects
+• Clean and intuitive interface
+• Offline usage support
+• Completely free
 
-无论您是冥想新手还是有经验的练习者，Mindra 都能为您提供合适的冥想体验。
-```
-
-#### 关键词
-```
-冥想,正念,放松,专注,健康,心理健康,减压,睡眠,瑜伽,呼吸
+Whether you're a meditation beginner or an experienced practitioner, Mindra provides the right meditation experience for you.
 ```
 
-#### 支持 URL
-- **营销网址**: https://mindra.app
-- **支持网址**: https://mindra.app/support
-- **隐私政策网址**: https://mindra.app/privacy
-
-### 4. 定价和销售范围
-
-- **价格**: 免费
-- **销售范围**: 全球（根据需要调整）
-
-### 5. App Review 信息
-
-- **联系信息**: 
-  - 姓名：[您的姓名]
-  - 电话：[您的电话]
-  - 电子邮件：support@mindra.app
-- **演示账户**: 如果需要登录，提供测试账户
-- **备注**: 应用的特殊说明
-
-### 6. 版本信息
-
-- **版本号**: 1.0.0
-- **版本说明**: 
+#### Keywords
 ```
-欢迎使用 Mindra！
-
-这是我们的首个版本，包含以下功能：
-• 精选冥想内容
-• 专注计时器
-• 个人进度跟踪
-• 优美的用户界面
-
-我们将持续更新，为您带来更好的冥想体验。
+meditation,mindfulness,relaxation,focus,health,mental health,stress relief,sleep,yoga,breathing
 ```
 
-### 7. 构建上传
+#### Support URLs
+- **Marketing URL**: https://mindra.gonewx.com
+- **Support URL**: https://mindra.gonewx.com/support
+- **Privacy Policy URL**: https://mindra.gonewx.com/privacy
+
+### 4. Pricing and Availability
+
+- **Price**: Free
+- **Availability**: Worldwide (adjust as needed)
+
+### 5. App Review Information
+
+- **Contact Information**: 
+  - Name: [Your Name]
+  - Phone: [Your Phone]
+  - Email: support@mindra.gonewx.com
+- **Demo Account**: Provide test account if login required
+- **Notes**: Special instructions for the app
+
+### 6. Version Information
+
+- **Version Number**: 1.0.0
+- **What's New**: 
+```
+Welcome to Mindra!
+
+This is our first release, featuring:
+• Curated meditation content
+• Focus timer
+• Personal progress tracking
+• Beautiful user interface
+
+We'll continue updating to bring you a better meditation experience.
+```
+
+### 7. Build Upload
 
 ```bash
-# 使用脚本上传
+# Upload using script
 ./scripts/release_ios.sh -t
 
-# 或使用 Xcode
-# 1. 打开 Xcode
+# Or use Xcode
+# 1. Open Xcode
 # 2. Window > Organizer
-# 3. 选择 Archive
+# 3. Select Archive
 # 4. Distribute App > App Store Connect
 ```
 
-### 8. 提交审核
+### 8. Submit for Review
 
-1. 确保所有信息完整
-2. 添加截图和元数据
-3. 点击"提交以供审核"
-4. 等待审核结果（通常 1-7 天）
+1. Ensure all information is complete
+2. Add screenshots and metadata
+3. Click "Submit for Review"
+4. Wait for review results (usually 1-7 days)
 
-## 应用元数据
+## App Metadata
 
-### 应用图标要求
-
-#### Android
-- **自适应图标**: 512x512 px (PNG)
-- **传统图标**: 512x512 px (PNG)
-- **高分辨率图标**: 512x512 px (PNG)
-
-#### iOS
-- **App Store 图标**: 1024x1024 px (PNG)
-- **应用内图标**: 多种尺寸，由 Xcode 自动生成
-
-### 应用截图
-
-#### Android 截图要求
-- **手机截图**: 至少 2 张，最多 8 张
-- **尺寸**: 16:9 或 9:16 比例
-- **分辨率**: 最小 320px，最大 3840px
-- **格式**: PNG 或 JPG
-
-#### iOS 截图要求
-- **iPhone 截图**: 至少 1 张，最多 10 张
-- **尺寸**: 
-  - 6.7" 显示屏: 1290x2796 px
-  - 6.5" 显示屏: 1242x2688 px
-  - 5.5" 显示屏: 1242x2208 px
-- **格式**: PNG 或 JPG
-
-### 宣传图片
+### App Icon Requirements
 
 #### Android
-- **功能图片**: 1024x500 px (可选)
-- **宣传视频**: 最长 30 秒 (可选)
+- **Adaptive Icon**: 512x512 px (PNG)
+- **Legacy Icon**: 512x512 px (PNG)
+- **High-res Icon**: 512x512 px (PNG)
 
 #### iOS
-- **预览视频**: 15-30 秒 (可选)
+- **App Store Icon**: 1024x1024 px (PNG)
+- **App Icons**: Various sizes, auto-generated by Xcode
 
-## 发布后维护
+### App Screenshots
 
-### 1. 监控应用表现
+#### Android Screenshot Requirements
+- **Phone Screenshots**: At least 2, maximum 8
+- **Dimensions**: 16:9 or 9:16 aspect ratio
+- **Resolution**: Minimum 320px, maximum 3840px
+- **Format**: PNG or JPG
 
-- 下载量和安装量
-- 用户评分和评论
-- 崩溃报告
-- 性能指标
+#### iOS Screenshot Requirements
+- **iPhone Screenshots**: At least 1, maximum 10
+- **Dimensions**: 
+  - 6.7" Display: 1290x2796 px
+  - 6.5" Display: 1242x2688 px
+  - 5.5" Display: 1242x2208 px
+- **Format**: PNG or JPG
 
-### 2. 用户反馈处理
+### Promotional Images
 
-- 及时回复用户评论
-- 收集用户建议
-- 修复报告的问题
+#### Android
+- **Feature Graphic**: 1024x500 px (optional)
+- **Promo Video**: Maximum 30 seconds (optional)
 
-### 3. 应用更新
+#### iOS
+- **App Preview**: 15-30 seconds (optional)
 
-- 定期发布更新
-- 修复 bug 和安全问题
-- 添加新功能
-- 优化性能
+## Post-Release Maintenance
 
-### 4. 合规性维护
+### 1. Monitor App Performance
 
-- 遵守平台政策更新
-- 更新隐私政策
-- 处理法律要求
+- Download and install metrics
+- User ratings and reviews
+- Crash reports
+- Performance metrics
 
-## 常见问题
+### 2. Handle User Feedback
 
-### Q: 应用被拒绝怎么办？
-A: 仔细阅读拒绝原因，修复问题后重新提交。常见问题包括：
-- 功能不完整
-- 界面问题
-- 违反平台政策
-- 元数据不准确
+- Respond to user reviews promptly
+- Collect user suggestions
+- Fix reported issues
 
-### Q: 如何提高应用可见性？
+### 3. App Updates
+
+- Release updates regularly
+- Fix bugs and security issues
+- Add new features
+- Optimize performance
+
+### 4. Compliance Maintenance
+
+- Follow platform policy updates
+- Update privacy policy
+- Handle legal requirements
+
+## Release Checklist
+
+### Pre-Release Checklist
+
+#### Technical Checks
+- [ ] App tested on real devices
+- [ ] All core features working properly
+- [ ] App performance is good, no obvious lag
+- [ ] Memory usage is reasonable, no memory leaks
+- [ ] Network requests handled correctly
+- [ ] Offline functionality works
+- [ ] App startup time is reasonable
+- [ ] Supports different screen sizes
+
+#### Content Checks
+- [ ] App icon is clear and beautiful
+- [ ] Splash screen displays correctly
+- [ ] All text content has no typos
+- [ ] Image resources are high quality
+- [ ] Audio files play correctly
+- [ ] Multi-language support is correct (if applicable)
+
+#### Compliance Checks
+- [ ] Privacy policy prepared
+- [ ] Terms of service prepared
+- [ ] Complies with platform content policies
+- [ ] Age rating is correct
+- [ ] Permission requests are reasonable
+- [ ] Data collection is transparent
+
+#### Store Listing Checks
+- [ ] App name and description are accurate
+- [ ] Keywords optimization completed
+- [ ] Screenshots are high quality
+- [ ] Category selection is correct
+- [ ] Contact information is complete
+- [ ] Pricing strategy determined
+
+### Android Release Checklist
+- [ ] AAB file generated
+- [ ] App signing is correct
+- [ ] Google Play Console account ready
+- [ ] Release track selected correctly
+- [ ] Content rating completed
+- [ ] Target audience set correctly
+
+### iOS Release Checklist
+- [ ] Archive created
+- [ ] Certificates and provisioning profiles valid
+- [ ] App Store Connect account ready
+- [ ] App information complete
+- [ ] Screenshots meet requirements
+- [ ] Review information prepared completely
+
+## Common Issues
+
+### Q: What to do if app is rejected?
+A: Carefully read the rejection reason, fix issues and resubmit. Common issues include:
+- Incomplete functionality
+- Interface issues
+- Platform policy violations
+- Inaccurate metadata
+
+### Q: How to improve app visibility?
 A: 
-- 优化应用商店描述和关键词
-- 获得正面用户评价
-- 定期更新应用
-- 进行应用推广
+- Optimize app store description and keywords
+- Get positive user reviews
+- Update app regularly
+- Promote the app
 
-### Q: 多久更新一次应用？
-A: 建议：
-- 重要 bug 修复：立即
-- 小功能更新：每月
-- 大版本更新：每季度
+### Q: How often to update the app?
+A: Recommended:
+- Critical bug fixes: Immediately
+- Minor feature updates: Monthly
+- Major version updates: Quarterly
 
-## 发布检查清单
+## Quick Start Guide
 
-### 发布前检查
+### For First-Time Release
 
-#### 技术检查
-- [ ] 应用在真实设备上测试通过
-- [ ] 所有核心功能正常工作
-- [ ] 应用性能良好，无明显卡顿
-- [ ] 内存使用合理，无内存泄漏
-- [ ] 网络请求处理正确
-- [ ] 离线功能正常
-- [ ] 应用启动时间合理
-- [ ] 支持不同屏幕尺寸
+1. **Setup Signing**:
+   ```bash
+   # Android
+   ./scripts/create_release_keystore.sh
 
-#### 内容检查
-- [ ] 应用图标清晰美观
-- [ ] 启动画面正常显示
-- [ ] 所有文本内容无错别字
-- [ ] 图片资源质量良好
-- [ ] 音频文件播放正常
-- [ ] 多语言支持正确（如适用）
+   # iOS - Configure certificates in Xcode
+   ```
 
-#### 合规检查
-- [ ] 隐私政策已准备
-- [ ] 用户协议已准备
-- [ ] 符合平台内容政策
-- [ ] 年龄分级正确
-- [ ] 权限申请合理
-- [ ] 数据收集透明
+2. **Set Environment Variables**:
+   ```bash
+   # Android
+   export ANDROID_HOME=/path/to/android/sdk
 
-#### 商店资料检查
-- [ ] 应用名称和描述准确
-- [ ] 关键词优化完成
-- [ ] 截图质量良好
-- [ ] 分类选择正确
-- [ ] 联系信息完整
-- [ ] 定价策略确定
+   # iOS
+   export APPLE_ID=your-apple-id@example.com
+   export APP_SPECIFIC_PASSWORD=your-app-password
+   ```
 
-### Android 发布检查
-- [ ] AAB 文件已生成
-- [ ] 应用签名正确
-- [ ] Google Play Console 账号准备就绪
-- [ ] 发布轨道选择正确
-- [ ] 内容分级完成
-- [ ] 目标受众设置正确
+3. **Install Dependencies**:
+   ```bash
+   # Fastlane
+   gem install fastlane
 
-### iOS 发布检查
-- [ ] Archive 已创建
-- [ ] 证书和配置文件有效
-- [ ] App Store Connect 账号准备就绪
-- [ ] 应用信息完整
-- [ ] 截图符合要求
-- [ ] 审核信息准备完整
+   # Flutter
+   flutter doctor
+   ```
 
-## 联系支持
+### Daily Development Workflow
 
-如果在发布过程中遇到问题，可以联系：
+1. **Development Phase**:
+   ```bash
+   # Build and test
+   ./scripts/build_all.sh --skip-tests
 
-- **Google Play 支持**: [Google Play Console 帮助](https://support.google.com/googleplay/android-developer)
-- **Apple 支持**: [App Store Connect 帮助](https://developer.apple.com/support/app-store-connect/)
-- **Mindra 团队**: support@mindra.app
+   # Deploy to internal testing
+   ./scripts/quick_deploy.sh -e dev
+   ```
+
+2. **Testing Phase**:
+   ```bash
+   # Increment version and deploy to staging
+   ./scripts/quick_deploy.sh -e staging --bump-version patch
+   ```
+
+3. **Production Release**:
+   ```bash
+   # Release to production
+   ./scripts/quick_deploy.sh -e prod --bump-version minor
+   ```
+
+### Release Track Descriptions
+
+| Track | Android | iOS | Purpose |
+|-------|---------|-----|---------|
+| internal | Internal Testing | TestFlight Internal | Development team testing |
+| alpha | Closed Testing | TestFlight External | Small-scale user testing |
+| beta | Open Testing | TestFlight Public | Large-scale user testing |
+| production | Production | App Store | All users |
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Android Signing Failure**:
+   - Check `android/key.properties` configuration
+   - Verify keystore file path
+
+2. **iOS Certificate Issues**:
+   - Reconfigure certificates in Xcode
+   - Check provisioning profile validity
+
+3. **Version Number Conflicts**:
+   - Use `version_manager.sh` for unified management
+   - Check existing versions in app stores
+
+4. **Build Failures**:
+   - Run `flutter doctor` to check environment
+   - Clean build cache: `flutter clean`
+
+### Debugging Tips
+
+1. **Use `--dry-run` for simulation**
+2. **Check build logs and report files**
+3. **Use `build_summary.sh` to view build status**
+
+## Best Practices
+
+1. **Version Management**:
+   - Use semantic versioning
+   - Increment build number for each release
+   - Create Git tags for important versions
+
+2. **Testing Strategy**:
+   - Internal → Closed → Open → Production
+   - Thoroughly test each stage before proceeding
+
+3. **Automation**:
+   - Use CI/CD to reduce manual operations
+   - Automate testing and quality checks
+   - Auto-generate release reports
+
+4. **Security**:
+   - Securely store signing keys
+   - Use environment variables for sensitive data
+   - Regularly update dependencies and tools
+
+## Contact Support
+
+If you encounter issues during the release process, contact:
+
+- **Google Play Support**: [Google Play Console Help](https://support.google.com/googleplay/android-developer)
+- **Apple Support**: [App Store Connect Help](https://developer.apple.com/support/app-store-connect/)
+- **Mindra Team**: support@mindra.gonewx.com
+
+---
+
+**Note**: Please carefully read the help information for each script before first use, and adjust configurations according to your actual environment.
