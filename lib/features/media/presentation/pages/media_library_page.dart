@@ -12,6 +12,8 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../domain/entities/media_item.dart';
 import '../../../../core/constants/media_category.dart';
 import '../../data/datasources/media_local_datasource.dart';
+import '../../domain/services/media_library_settings_service.dart';
+import '../../../../core/database/database_helper.dart';
 
 class MediaLibraryPage extends StatefulWidget {
   const MediaLibraryPage({super.key});
@@ -38,6 +40,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   String _selectedCategory = 'All';
   bool _isGridView = true;
   bool _isBatchDeleteMode = false;
+  bool _isDragSortMode = false;
   final Set<String> _selectedForDelete = {};
   final TextEditingController _searchController = TextEditingController();
 
@@ -84,6 +87,8 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   @override
   void initState() {
     super.initState();
+    // 加载保存的视图模式
+    _loadViewMode();
     // 在下一帧触发加载事件，确保context已经完全初始化
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -93,6 +98,16 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
         context.read<MediaBloc>().add(LoadMediaItems());
       }
     });
+  }
+
+  // 加载保存的视图模式
+  Future<void> _loadViewMode() async {
+    final savedViewMode = await MediaLibrarySettingsService.getViewMode();
+    if (mounted) {
+      setState(() {
+        _isGridView = savedViewMode;
+      });
+    }
   }
 
   @override
@@ -115,6 +130,16 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
         ),
         Row(
           children: [
+            // 拖动排序按钮（仅在列表视图时显示）
+            if (!_isGridView)
+              IconButton(
+                onPressed: _toggleDragSortMode,
+                icon: Icon(
+                  Icons.swap_vert,
+                  color: _isDragSortMode ? theme.colorScheme.primary : null,
+                ),
+                tooltip: _isDragSortMode ? '退出排序模式' : '排序模式',
+              ),
             // 批量删除按钮
             IconButton(
               onPressed: _enterBatchDeleteMode,
@@ -174,6 +199,53 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
     );
   }
 
+  Widget _buildDragSortHeader() {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        IconButton(
+          onPressed: _exitDragSortMode,
+          icon: const Icon(Icons.close),
+          tooltip: '退出排序模式',
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.swap_vert,
+                    color: theme.colorScheme.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '拖动排序模式',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '长按并拖动项目以调整顺序',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   void _enterBatchDeleteMode() {
     setState(() {
       _isBatchDeleteMode = true;
@@ -188,6 +260,23 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
     });
   }
 
+  void _toggleDragSortMode() {
+    setState(() {
+      _isDragSortMode = !_isDragSortMode;
+      // 退出其他模式
+      if (_isDragSortMode) {
+        _isBatchDeleteMode = false;
+        _selectedForDelete.clear();
+      }
+    });
+  }
+
+  void _exitDragSortMode() {
+    setState(() {
+      _isDragSortMode = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -198,7 +287,9 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
           // Header
           Padding(
             padding: const EdgeInsets.all(20),
-            child: _isBatchDeleteMode
+            child: _isDragSortMode
+                ? _buildDragSortHeader()
+                : _isBatchDeleteMode
                 ? _buildBatchDeleteHeader()
                 : _buildNormalHeader(),
           ),
@@ -254,7 +345,7 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                 MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
-                    onTap: () => setState(() => _isGridView = !_isGridView),
+                    onTap: () => _toggleViewMode(),
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -465,41 +556,119 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
           responsiveChildAspectRatio = 1.0; // 大屏幕使用更方正的比例
         }
 
-        return GridView.builder(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: responsiveCrossAxisCount,
-            childAspectRatio: responsiveChildAspectRatio,
-            crossAxisSpacing: effectiveSpacing,
-            mainAxisSpacing: effectiveSpacing,
-          ),
-          itemCount: mediaItems.length,
-          itemBuilder: (context, index) {
-            try {
-              final item = mediaItems[index];
-              return _buildMediaCard(item, false);
-            } catch (e) {
-              // 如果单个项目渲染失败，显示错误占位符
-              return _buildErrorCard('项目渲染失败');
-            }
-          },
+        // 网格视图暂不支持拖动排序，显示提示
+        return Stack(
+          children: [
+            GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: responsiveCrossAxisCount,
+                childAspectRatio: responsiveChildAspectRatio,
+                crossAxisSpacing: effectiveSpacing,
+                mainAxisSpacing: effectiveSpacing,
+              ),
+              itemCount: mediaItems.length,
+              itemBuilder: (context, index) {
+                try {
+                  final item = mediaItems[index];
+                  return _buildMediaCard(item, false, allItems: mediaItems);
+                } catch (e) {
+                  // 如果单个项目渲染失败，显示错误占位符
+                  return _buildErrorCard('项目渲染失败');
+                }
+              },
+            ),
+            if (!_isBatchDeleteMode)
+              Positioned(
+                bottom: 16,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surface.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      '切换到列表视图以使用拖动排序',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );
   }
 
   Widget _buildListView(List<MediaItem> mediaItems) {
-    return ListView.builder(
+    // 在批量删除模式或非拖动模式下使用普通ListView
+    if (_isBatchDeleteMode || !_isDragSortMode) {
+      return ListView.builder(
+        itemCount: mediaItems.length,
+        itemBuilder: (context, index) {
+          try {
+            final item = mediaItems[index];
+            return Padding(
+              key: ValueKey(item.id),
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildMediaCard(item, true, allItems: mediaItems),
+            );
+          } catch (e) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildErrorCard('项目渲染失败'),
+            );
+          }
+        },
+      );
+    }
+
+    // 拖动排序模式下使用ReorderableListView
+    return ReorderableListView.builder(
       itemCount: mediaItems.length,
+      onReorder: (oldIndex, newIndex) =>
+          _handleReorder(mediaItems, oldIndex, newIndex),
+      proxyDecorator: (child, index, animation) {
+        return AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) {
+            return Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(12),
+              shadowColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.3),
+              child: child,
+            );
+          },
+          child: child,
+        );
+      },
       itemBuilder: (context, index) {
         try {
           final item = mediaItems[index];
           return Padding(
+            key: ValueKey(item.id),
             padding: const EdgeInsets.only(bottom: 8),
-            child: _buildMediaCard(item, true),
+            child: _buildMediaCard(item, true, allItems: mediaItems),
           );
         } catch (e) {
-          // 如果单个项目渲染失败，显示错误占位符
-          return Padding(
+          return Container(
+            key: ValueKey('error_$index'),
             padding: const EdgeInsets.only(bottom: 8),
             child: _buildErrorCard('项目渲染失败'),
           );
@@ -508,7 +677,11 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
     );
   }
 
-  Widget _buildMediaCard(MediaItem item, bool isListView) {
+  Widget _buildMediaCard(
+    MediaItem item,
+    bool isListView, {
+    List<MediaItem>? allItems,
+  }) {
     try {
       // 安全地格式化时长
       String formattedDuration = '0:00';
@@ -577,23 +750,71 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
           ),
         );
       } else {
-        // 正常模式下的卡片 - 支持右键菜单和长按
-        return GestureDetector(
-          onTap: () => _playMedia(item.id),
-          onLongPress: () => _showMediaContextMenu(context, item),
-          onSecondaryTapDown: (details) => _showMediaContextMenu(
-            context,
-            item,
-            position: details.globalPosition,
-          ),
-          child: AnimatedMediaCard(
-            title: item.title.isNotEmpty ? item.title : '未命名',
-            duration: formattedDuration,
-            category: categoryDisplayName,
-            isListView: isListView,
+        // 正常模式下的卡片
+        if (isListView && allItems != null) {
+          // 拖动排序模式
+          if (_isDragSortMode) {
+            return Row(
+              children: [
+                // 拖动手柄图标
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Icon(
+                    Icons.drag_handle,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                // 媒体卡片（禁用点击）
+                Expanded(
+                  child: AnimatedMediaCard(
+                    title: item.title.isNotEmpty ? item.title : '未命名',
+                    duration: formattedDuration,
+                    category: categoryDisplayName,
+                    isListView: isListView,
+                    onTap: null, // 拖动模式下禁用点击
+                  ),
+                ),
+              ],
+            );
+          } else {
+            // 正常列表视图：支持所有交互
+            return GestureDetector(
+              onTap: () => _playMedia(item.id),
+              onLongPress: () => _showMediaContextMenu(context, item),
+              onSecondaryTapDown: (details) => _showMediaContextMenu(
+                context,
+                item,
+                position: details.globalPosition,
+              ),
+              child: AnimatedMediaCard(
+                title: item.title.isNotEmpty ? item.title : '未命名',
+                duration: formattedDuration,
+                category: categoryDisplayName,
+                isListView: isListView,
+                onTap: () => _playMedia(item.id),
+              ),
+            );
+          }
+        } else {
+          // 网格视图：保留长按菜单
+          return GestureDetector(
             onTap: () => _playMedia(item.id),
-          ),
-        );
+            onLongPress: () => _showMediaContextMenu(context, item),
+            onSecondaryTapDown: (details) => _showMediaContextMenu(
+              context,
+              item,
+              position: details.globalPosition,
+            ),
+            child: AnimatedMediaCard(
+              title: item.title.isNotEmpty ? item.title : '未命名',
+              duration: formattedDuration,
+              category: categoryDisplayName,
+              isListView: isListView,
+              onTap: () => _playMedia(item.id),
+            ),
+          );
+        }
       }
     } catch (e) {
       return _buildErrorCard('卡片渲染失败');
@@ -941,5 +1162,76 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
   void _refreshMediaList() {
     final enumName = _getCategoryEnumName(_selectedCategory);
     context.read<MediaBloc>().add(LoadMediaItemsByCategory(enumName));
+  }
+
+  // 切换视图模式并保存
+  Future<void> _toggleViewMode() async {
+    setState(() {
+      _isGridView = !_isGridView;
+      // 切换到网格视图时自动退出拖动模式
+      if (_isGridView) {
+        _isDragSortMode = false;
+      }
+    });
+    await MediaLibrarySettingsService.setViewMode(_isGridView);
+  }
+
+  // 处理拖动排序
+  Future<void> _handleReorder(
+    List<MediaItem> mediaItems,
+    int oldIndex,
+    int newIndex,
+  ) async {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+
+    // 创建新的排序列表
+    final List<MediaItem> reorderedItems = List.from(mediaItems);
+    final item = reorderedItems.removeAt(oldIndex);
+    reorderedItems.insert(newIndex, item);
+
+    // 获取新的ID顺序
+    final List<String> newOrder = reorderedItems
+        .map((item) => item.id)
+        .toList();
+
+    try {
+      // 更新数据库中的排序
+      await DatabaseHelper.updateMediaItemsSortOrder(newOrder);
+
+      // 保存排序顺序到设置
+      await MediaLibrarySettingsService.setSortOrder(newOrder);
+
+      // 刷新列表以应用新排序
+      _refreshMediaList();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('排序已更新'),
+            duration: const Duration(seconds: 1),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('排序失败: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    }
   }
 }

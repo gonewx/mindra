@@ -16,6 +16,7 @@ class MediaItem extends Equatable {
   final List<String> tags;
   final bool isFavorite;
   final String? sourceUrl; // for network resources
+  final int sortIndex; // 排序索引
 
   const MediaItem({
     required this.id,
@@ -32,6 +33,7 @@ class MediaItem extends Equatable {
     this.tags = const [],
     this.isFavorite = false,
     this.sourceUrl,
+    this.sortIndex = 0,
   });
 
   MediaItem copyWith({
@@ -49,6 +51,7 @@ class MediaItem extends Equatable {
     List<String>? tags,
     bool? isFavorite,
     String? sourceUrl,
+    int? sortIndex,
   }) {
     return MediaItem(
       id: id ?? this.id,
@@ -65,6 +68,7 @@ class MediaItem extends Equatable {
       tags: tags ?? this.tags,
       isFavorite: isFavorite ?? this.isFavorite,
       sourceUrl: sourceUrl ?? this.sourceUrl,
+      sortIndex: sortIndex ?? this.sortIndex,
     );
   }
 
@@ -84,6 +88,7 @@ class MediaItem extends Equatable {
       'tags': tags.join(','),
       'is_favorite': isFavorite ? 1 : 0,
       'source_url': sourceUrl,
+      'sort_index': sortIndex,
     };
   }
 
@@ -213,6 +218,17 @@ class MediaItem extends Equatable {
         }
       }
 
+      // 安全地解析排序索引
+      int sortIndex = 0;
+      if (map['sort_index'] != null) {
+        try {
+          sortIndex = int.parse(map['sort_index'].toString());
+          if (sortIndex < 0) sortIndex = 0; // 确保非负
+        } catch (e) {
+          sortIndex = 0;
+        }
+      }
+
       return MediaItem(
         id: map['id'].toString(),
         title: map['title'].toString(),
@@ -228,6 +244,7 @@ class MediaItem extends Equatable {
         tags: tags,
         isFavorite: isFavorite,
         sourceUrl: map['source_url']?.toString(),
+        sortIndex: sortIndex,
       );
     } catch (e) {
       // 如果完全解析失败，抛出更详细的异常
@@ -274,6 +291,7 @@ class MediaItem extends Equatable {
     tags,
     isFavorite,
     sourceUrl,
+    sortIndex,
   ];
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../domain/entities/media_item.dart';
 import '../../../../core/database/database_helper.dart';
+import '../../domain/services/media_library_settings_service.dart';
 
 // Conditional import for web storage
 import '../../../../core/database/web_storage_helper.dart'
@@ -22,12 +23,21 @@ class MediaLocalDataSource {
 
   Future<List<MediaItem>> getMediaItems() async {
     return await _executeWithRetry(() async {
+      List<MediaItem> items;
       if (kIsWeb) {
-        return await WebStorageHelper.getMediaItems();
+        items = await WebStorageHelper.getMediaItems();
       } else {
         final maps = await DatabaseHelper.getMediaItems();
-        return _parseMediaItems(maps);
+        items = _parseMediaItems(maps);
       }
+
+      // 应用保存的排序顺序
+      final savedOrder = await MediaLibrarySettingsService.getSortOrder();
+      if (savedOrder.isNotEmpty) {
+        items = _applySortOrder(items, savedOrder);
+      }
+
+      return items;
     }, 'getMediaItems');
   }
 
@@ -49,15 +59,24 @@ class MediaLocalDataSource {
 
   Future<List<MediaItem>> getMediaItemsByCategory(String category) async {
     return await _executeWithRetry(() async {
+      List<MediaItem> items;
       if (kIsWeb) {
-        return await WebStorageHelper.getMediaItemsByCategory(category);
+        items = await WebStorageHelper.getMediaItemsByCategory(category);
       } else {
         if (category == '全部') {
           return await getMediaItems();
         }
         final maps = await DatabaseHelper.getMediaItemsByCategory(category);
-        return _parseMediaItems(maps);
+        items = _parseMediaItems(maps);
       }
+
+      // 应用保存的排序顺序
+      final savedOrder = await MediaLibrarySettingsService.getSortOrder();
+      if (savedOrder.isNotEmpty) {
+        items = _applySortOrder(items, savedOrder);
+      }
+
+      return items;
     }, 'getMediaItemsByCategory');
   }
 
@@ -297,5 +316,43 @@ class MediaLocalDataSource {
     throw Exception(
       'Failed to execute $operationName after $_maxRetries attempts. Last error: $lastException',
     );
+  }
+
+  /// 应用保存的排序顺序
+  List<MediaItem> _applySortOrder(
+    List<MediaItem> items,
+    List<String> savedOrder,
+  ) {
+    if (items.isEmpty || savedOrder.isEmpty) {
+      return items;
+    }
+
+    // 创建ID到索引的映射
+    final orderMap = <String, int>{};
+    for (int i = 0; i < savedOrder.length; i++) {
+      orderMap[savedOrder[i]] = i;
+    }
+
+    // 分离有排序索引和没有排序索引的项目
+    final sortedItems = <MediaItem>[];
+    final unsortedItems = <MediaItem>[];
+
+    for (final item in items) {
+      if (orderMap.containsKey(item.id)) {
+        sortedItems.add(item);
+      } else {
+        unsortedItems.add(item);
+      }
+    }
+
+    // 根据保存的顺序排序
+    sortedItems.sort((a, b) {
+      final indexA = orderMap[a.id] ?? 999999;
+      final indexB = orderMap[b.id] ?? 999999;
+      return indexA.compareTo(indexB);
+    });
+
+    // 将未排序的项目添加到末尾
+    return [...sortedItems, ...unsortedItems];
   }
 }

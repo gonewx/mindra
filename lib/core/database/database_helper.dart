@@ -334,7 +334,8 @@ class DatabaseHelper {
           play_count INTEGER DEFAULT 0,
           tags TEXT,
           is_favorite INTEGER DEFAULT 0,
-          source_url TEXT
+          source_url TEXT,
+          sort_index INTEGER DEFAULT 0
         )
       ''');
 
@@ -395,13 +396,25 @@ class DatabaseHelper {
 
       // 处理数据库升级逻辑
       if (oldVersion < newVersion) {
-        // 这里添加具体的升级逻辑
-        // 例如：添加新列、创建新表等
+        // 版本1到版本2：添加sort_index字段
+        if (oldVersion < 2) {
+          try {
+            await db.execute(
+              'ALTER TABLE $_mediaItemsTable ADD COLUMN sort_index INTEGER DEFAULT 0',
+            );
+            debugPrint('Added sort_index column to $_mediaItemsTable');
 
-        // 示例：如果需要添加新列
-        // if (oldVersion < 2) {
-        //   await db.execute('ALTER TABLE $_mediaItemsTable ADD COLUMN new_column TEXT');
-        // }
+            // 为现有记录设置初始排序索引
+            await db.execute('''
+              UPDATE $_mediaItemsTable 
+              SET sort_index = ROWID 
+              WHERE sort_index IS NULL OR sort_index = 0
+            ''');
+          } catch (e) {
+            debugPrint('Error adding sort_index column: $e');
+            // 如果列已存在，不抛出错误
+          }
+        }
       }
 
       debugPrint('Database upgrade completed successfully');
@@ -499,7 +512,10 @@ class DatabaseHelper {
   static Future<List<Map<String, dynamic>>> getMediaItems() async {
     return await _executeWithRetry(() async {
       final db = await database;
-      return await db.query(_mediaItemsTable, orderBy: 'created_at DESC');
+      return await db.query(
+        _mediaItemsTable,
+        orderBy: 'sort_index ASC, created_at DESC',
+      );
     }, 'getMediaItems');
   }
 
@@ -533,7 +549,7 @@ class DatabaseHelper {
         _mediaItemsTable,
         where: 'category = ?',
         whereArgs: [category],
-        orderBy: 'created_at DESC',
+        orderBy: 'sort_index ASC, created_at DESC',
       );
     }, 'getMediaItemsByCategory');
   }
@@ -623,6 +639,29 @@ class DatabaseHelper {
         }
       });
     }, 'deleteMediaItem');
+  }
+
+  // 批量更新媒体项的排序索引
+  static Future<void> updateMediaItemsSortOrder(List<String> mediaIds) async {
+    if (mediaIds.isEmpty) {
+      return;
+    }
+
+    await _executeWithRetry(() async {
+      final db = await database;
+
+      // 使用事务确保原子性
+      await db.transaction((txn) async {
+        for (int i = 0; i < mediaIds.length; i++) {
+          await txn.update(
+            _mediaItemsTable,
+            {'sort_index': i},
+            where: 'id = ?',
+            whereArgs: [mediaIds[i]],
+          );
+        }
+      });
+    }, 'updateMediaItemsSortOrder');
   }
 
   // Meditation Sessions operations
