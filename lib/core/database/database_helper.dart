@@ -601,15 +601,27 @@ class DatabaseHelper {
 
     await _executeWithRetry(() async {
       final db = await database;
-      final result = await db.delete(
-        _mediaItemsTable,
-        where: 'id = ?',
-        whereArgs: [id],
-      );
 
-      if (result == 0) {
-        debugPrint('Warning: No rows deleted for media item ID: $id');
-      }
+      // 开始事务以确保数据一致性
+      await db.transaction((txn) async {
+        // 首先删除相关的冥想会话记录
+        await txn.delete(
+          _meditationSessionsTable,
+          where: 'media_item_id = ?',
+          whereArgs: [id],
+        );
+
+        // 然后删除媒体项
+        final result = await txn.delete(
+          _mediaItemsTable,
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+
+        if (result == 0) {
+          debugPrint('Warning: No rows deleted for media item ID: $id');
+        }
+      });
     }, 'deleteMediaItem');
   }
 

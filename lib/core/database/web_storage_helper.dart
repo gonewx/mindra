@@ -181,9 +181,20 @@ class WebStorageHelper {
   }
 
   static Future<void> deleteMediaItem(String id) async {
+    // 首先删除相关的冥想会话记录
+    final sessions = await getAllMeditationSessions();
+    final filteredSessions = sessions
+        .where((session) => session.mediaItemId != id)
+        .toList();
+    await _saveMeditationSessions(filteredSessions);
+
+    // 然后删除媒体项
     final items = await getMediaItems();
     items.removeWhere((item) => item.id == id);
     await _saveMediaItems(items);
+
+    // 清理内存中的媒体字节数据
+    _mediaBytes.remove(id);
   }
 
   static Future<void> _saveMediaItems(List<MediaItem> items) async {
