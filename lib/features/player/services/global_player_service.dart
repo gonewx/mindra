@@ -172,8 +172,8 @@ class GlobalPlayerService extends ChangeNotifier {
       // 更新会话进度，让MeditationSessionManager处理实时更新
       MeditationSessionManager.updateSessionProgress(position.inSeconds);
 
-      // 增加保存频率：每5秒或位置变化大于3秒时保存
-      if (positionDiff > 3.0 || (_currentPosition % 5 == 0)) {
+      // 减少保存频率：只在位置变化较大时保存
+      if (positionDiff > 10.0) {
         _saveLastPlayedPosition();
       }
     });
@@ -313,6 +313,7 @@ class GlobalPlayerService extends ChangeNotifier {
       if (lastPlayedMediaId != null && lastPlayedMediaId.isNotEmpty) {
         debugPrint('Restoring last played media: $lastPlayedMediaId');
         await _loadMediaById(lastPlayedMediaId, autoPlay: false);
+        // 只在应用启动时恢复播放位置，播放过程中不恢复
         await _restoreLastPlayedPosition();
         debugPrint('Successfully restored last played media');
       } else {
@@ -330,6 +331,7 @@ class GlobalPlayerService extends ChangeNotifier {
 
       if (_currentIndex >= 0) {
         final media = _mediaItems[_currentIndex];
+
         _currentMedia = media;
         _isFavorited = media.isFavorite;
 
@@ -431,7 +433,7 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   Future<void> loadMedia(String mediaId, {bool autoPlay = true}) async {
-    // 检查是否是不同的音频，只有在切换音频时才重置时间显示
+    // 检查是否是不同的音频
     final isDifferentMedia = _currentMedia?.id != mediaId;
 
     if (isDifferentMedia) {
@@ -447,14 +449,10 @@ class GlobalPlayerService extends ChangeNotifier {
         }
       }
 
-      // 立即重置时间显示，给用户即时反馈
-      _currentPosition = 0.0;
-      _totalDuration = 0.0;
-      // 不手动设置 _isPlaying，让音频播放器的 playingStream 来管理
-      debugPrint('切换到不同音频，立即重置时间显示: ${_currentPosition}s / ${_totalDuration}s');
-      notifyListeners();
+      // 只在切换不同音频时重置位置，相同音频保持当前状态
+      debugPrint('切换到不同音频: $mediaId');
     } else {
-      debugPrint('播放相同音频，不重置时间显示');
+      debugPrint('播放相同音频，保持当前状态: ${_currentPosition}s');
     }
 
     await _loadMediaById(mediaId, autoPlay: autoPlay);
@@ -524,14 +522,22 @@ class GlobalPlayerService extends ChangeNotifier {
           );
         }
 
-        // 确保播放位置重置为0
-        await _audioPlayer.seek(Duration.zero); // 重置位置，不显示缓冲
-        _currentPosition = 0.0;
+        // 根据是否是新音频决定是否重置位置
+        final shouldResetPosition = _currentMedia?.filePath != filePath;
+        if (shouldResetPosition) {
+          await _audioPlayer.seek(Duration.zero);
+          _currentPosition = 0.0;
+          debugPrint('Reset position to 0 for new audio file');
+        } else {
+          debugPrint(
+            'Keeping existing position: ${_currentPosition}s for same file',
+          );
+        }
+
         debugPrint(
           'Updated position and duration: ${_currentPosition}s / ${_totalDuration}s',
         );
         notifyListeners();
-        debugPrint('Audio position reset to 0');
       } catch (e) {
         debugPrint('Could not get audio duration immediately: $e');
         // 不抛出异常，让durationStream处理
@@ -626,13 +632,6 @@ class GlobalPlayerService extends ChangeNotifier {
     // 保存之前的播放状态
     final wasPlaying = _isPlaying;
 
-    // 立即重置时间显示，给用户即时反馈
-    _currentPosition = 0.0;
-    _totalDuration = 0.0;
-    // 不手动设置 _isPlaying，让音频播放器的 playingStream 来管理
-    debugPrint('切换到下一首，立即重置时间显示: ${_currentPosition}s / ${_totalDuration}s');
-    notifyListeners();
-
     if (_currentIndex < playlist.length - 1) {
       _currentIndex++;
     } else {
@@ -648,13 +647,6 @@ class GlobalPlayerService extends ChangeNotifier {
 
     // 保存之前的播放状态
     final wasPlaying = _isPlaying;
-
-    // 立即重置时间显示，给用户即时反馈
-    _currentPosition = 0.0;
-    _totalDuration = 0.0;
-    // 不手动设置 _isPlaying，让音频播放器的 playingStream 来管理
-    debugPrint('切换到上一首，立即重置时间显示: ${_currentPosition}s / ${_totalDuration}s');
-    notifyListeners();
 
     if (_currentIndex > 0) {
       _currentIndex--;

@@ -58,12 +58,12 @@ class _PlayerPageState extends State<PlayerPage> {
       // Listen for service changes first
       _playerService.addListener(_onPlayerServiceChanged);
 
-      // Load media if specified, otherwise check if service already has media
+      // Load media if specified, otherwise use existing media from service
       if (widget.mediaId != null) {
         debugPrint('PlayerPage: Loading media with ID: ${widget.mediaId}');
         await _playerService.loadMedia(widget.mediaId!, autoPlay: false);
       } else if (_playerService.currentMedia != null) {
-        // Service already has media loaded (possibly restored from last session)
+        // Service already has media loaded
         debugPrint(
           'PlayerPage: Using existing media from service: ${_playerService.currentMedia!.title}',
         );
