@@ -16,6 +16,7 @@ import 'core/database/database_health_checker.dart';
 import 'core/database/database_connection_manager.dart';
 import 'core/services/reminder_scheduler_service.dart';
 import 'core/localization/app_localizations.dart';
+import 'core/services/app_lifecycle_manager.dart';
 import 'features/player/services/global_player_service.dart';
 
 void main() async {
@@ -36,6 +37,7 @@ class MindraApp extends StatefulWidget {
 
 class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
   late ThemeProvider _themeProvider;
+  AppLifecycleManager? _lifecycleManager;
 
   @override
   void initState() {
@@ -52,6 +54,9 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    // 先处理生命周期管理器
+    _lifecycleManager?.dispose();
+
     // 移除应用生命周期监听
     WidgetsBinding.instance.removeObserver(this);
 
@@ -380,7 +385,11 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
       // 这样可以减少用户首次打开播放器时的等待时间
       await globalPlayerService.initialize();
 
-      debugPrint('Audio services initialization started (background)');
+      // 初始化应用生命周期管理器
+      _lifecycleManager = AppLifecycleManager.instance;
+      _lifecycleManager!.initialize(globalPlayerService);
+
+      debugPrint('Audio services and lifecycle manager initialized');
     } catch (e) {
       debugPrint('Failed to start audio services initialization: $e');
       // 即使预热失败，也不影响应用启动

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:async';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/animated_media_card.dart';
 import '../../../../features/meditation/domain/entities/meditation_session.dart';
+import '../../../../features/meditation/data/services/meditation_session_manager.dart';
 import '../../../../features/media/domain/entities/media_item.dart';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/database/web_storage_helper.dart';
@@ -50,11 +52,63 @@ class RecentSessionsList extends StatefulWidget {
 class _RecentSessionsListState extends State<RecentSessionsList> {
   List<RecentSessionWithMedia> _recentSessions = [];
   bool _isLoading = true;
+  StreamSubscription? _dataUpdateSubscription;
+  StreamSubscription? _realTimeUpdateSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadRecentSessions();
+
+    // 监听数据更新
+    _dataUpdateSubscription = MeditationSessionManager.dataUpdateStream.listen((
+      _,
+    ) {
+      if (mounted) {
+        _loadRecentSessions();
+      }
+    });
+
+    // 监听实时进度更新
+    _realTimeUpdateSubscription = MeditationSessionManager.realTimeUpdateStream
+        .listen((updateData) {
+          if (mounted) {
+            _handleRealTimeUpdate(updateData);
+          }
+        });
+  }
+
+  @override
+  void dispose() {
+    _dataUpdateSubscription?.cancel();
+    _realTimeUpdateSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// 处理实时进度更新
+  void _handleRealTimeUpdate(Map<String, dynamic> updateData) {
+    // 如果当前播放的媒体在最近会话列表中，更新其显示时长
+    final mediaItemId = updateData['mediaItemId'] as String?;
+    final actualDuration = updateData['actualDuration'] as int?;
+
+    if (mediaItemId != null && actualDuration != null) {
+      setState(() {
+        // 查找并更新对应的会话项
+        for (int i = 0; i < _recentSessions.length; i++) {
+          if (_recentSessions[i].session.mediaItemId == mediaItemId) {
+            // 为了实时显示，我们创建一个临时的会话对象
+            final updatedSession = _recentSessions[i].session.copyWith(
+              actualDuration: actualDuration,
+            );
+            _recentSessions[i] = RecentSessionWithMedia(
+              session: updatedSession,
+              mediaItem: _recentSessions[i].mediaItem,
+            );
+            break;
+          }
+        }
+      });
+    }
   }
 
   Future<void> _loadRecentSessions() async {
@@ -110,6 +164,7 @@ class _RecentSessionsListState extends State<RecentSessionsList> {
           _recentSessions = sessionsWithMedia;
           _isLoading = false;
         });
+        debugPrint('最近会话列表数据已刷新，共${sessionsWithMedia.length}条记录');
       }
     } catch (e) {
       debugPrint('Error loading recent sessions: $e');

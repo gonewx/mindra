@@ -161,16 +161,19 @@ class GlobalPlayerService extends ChangeNotifier {
       _handlePlayingStateChange(isPlaying);
     });
 
-    // Listen to position changes
+    // Listen to position changes with enhanced progress tracking
     _positionSubscription = _audioPlayer.positionStream.listen((position) {
       final newPosition = position.inSeconds.toDouble();
       final positionDiff = (newPosition - _currentPosition).abs();
 
       _currentPosition = newPosition;
       notifyListeners();
+
+      // 更新会话进度，让MeditationSessionManager处理实时更新
       MeditationSessionManager.updateSessionProgress(position.inSeconds);
 
-      if (positionDiff > 5.0 || (_currentPosition % 10 == 0)) {
+      // 增加保存频率：每5秒或位置变化大于3秒时保存
+      if (positionDiff > 3.0 || (_currentPosition % 5 == 0)) {
         _saveLastPlayedPosition();
       }
     });
@@ -186,7 +189,7 @@ class GlobalPlayerService extends ChangeNotifier {
       }
     });
 
-    // Listen to player state changes
+    // Listen to player state changes with enhanced handling
     _playerStateSubscription = _audioPlayer.playerStateStream.listen((state) {
       _playerState = state;
       _isLoading =
@@ -777,11 +780,45 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   Future<void> pauseForBackground() async {
-    // 冥想应用通常需要后台播放，所以这里不做特殊处理
+    // 保存当前会话状态到数据库，防止数据丢失
+    try {
+      await MeditationSessionManager.forceSaveCurrentState();
+      await _saveLastPlayedPosition();
+      debugPrint('Saved player state before going to background');
+    } catch (e) {
+      debugPrint('Error saving state before background: $e');
+    }
   }
 
   Future<void> resumeFromBackground() async {
-    // 从后台返回时不需要特殊处理，音频会继续播放
+    // 从后台返回时验证并恢复状态
+    try {
+      // 验证当前会话是否仍然有效
+      if (MeditationSessionManager.hasActiveSession) {
+        debugPrint('Resumed from background with active session');
+        // 可以在这里添加额外的状态验证逻辑
+      }
+    } catch (e) {
+      debugPrint('Error resuming from background: $e');
+    }
+  }
+
+  /// 处理应用即将终止的情况
+  Future<void> prepareForTermination() async {
+    try {
+      // 强制保存所有状态
+      await MeditationSessionManager.forceSaveCurrentState();
+      await _saveLastPlayedPosition();
+
+      // 如果有活跃会话，标记为停止（而不是完成）
+      if (MeditationSessionManager.hasActiveSession) {
+        await MeditationSessionManager.stopSession();
+      }
+
+      debugPrint('Prepared for app termination');
+    } catch (e) {
+      debugPrint('Error preparing for termination: $e');
+    }
   }
 
   @override
@@ -797,6 +834,14 @@ class GlobalPlayerService extends ChangeNotifier {
     await _durationSubscription?.cancel();
     await _playerStateSubscription?.cancel();
     await _bufferProgressSubscription?.cancel();
+
+    // 在dispose前保存状态
+    try {
+      await MeditationSessionManager.forceSaveCurrentState();
+      await _saveLastPlayedPosition();
+    } catch (e) {
+      debugPrint('Error saving state during dispose: $e');
+    }
 
     if (MeditationSessionManager.hasActiveSession) {
       await MeditationSessionManager.stopSession();

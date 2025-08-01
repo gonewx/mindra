@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../../../meditation/presentation/widgets/goal_settings_dialog.dart';
 import '../../../../features/goals/data/services/goal_service.dart';
 import '../../../../features/goals/domain/entities/user_goal.dart';
 import '../../../../features/meditation/data/services/meditation_statistics_service.dart';
 import '../../../../features/meditation/domain/entities/meditation_statistics.dart';
+import '../../../../features/meditation/data/services/meditation_session_manager.dart';
 import '../../../../core/localization/app_localizations.dart';
 
 class DailyGoalCard extends StatefulWidget {
@@ -24,11 +26,73 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
   UserGoal? _currentGoal;
   MeditationStatistics? _statistics;
   double _progressValue = 0.0;
+  StreamSubscription? _dataUpdateSubscription;
+  StreamSubscription? _realTimeUpdateSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadGoalAndProgress();
+
+    // 监听数据更新
+    _dataUpdateSubscription = MeditationSessionManager.dataUpdateStream.listen((
+      _,
+    ) {
+      if (mounted) {
+        _loadGoalAndProgress();
+      }
+    });
+
+    // 监听实时进度更新
+    _realTimeUpdateSubscription = MeditationSessionManager.realTimeUpdateStream
+        .listen((updateData) {
+          if (mounted) {
+            _handleRealTimeUpdate(updateData);
+          }
+        });
+  }
+
+  @override
+  void dispose() {
+    _dataUpdateSubscription?.cancel();
+    _realTimeUpdateSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// 处理实时进度更新
+  void _handleRealTimeUpdate(Map<String, dynamic> updateData) {
+    // 实时更新不需要重新加载完整数据，只更新进度显示
+    // 这样可以提供更流畅的用户体验
+    if (_currentGoal != null && _statistics != null) {
+      setState(() {
+        _calculateProgressWithRealTimeData(updateData);
+      });
+    }
+  }
+
+  /// 使用实时数据计算进度
+  void _calculateProgressWithRealTimeData(Map<String, dynamic> updateData) {
+    if (_currentGoal == null) {
+      _progressValue = 0.0;
+      return;
+    }
+
+    // 获取每日目标时长（分钟）
+    final goalMinutes = _getGoalMinutes();
+
+    // 获取今日实际冥想时长（包括当前正在进行的会话）
+    final today = DateTime.now();
+    var todayMinutes = _getTodayMinutes(today);
+
+    // 如果有实时会话数据，添加当前会话的时长
+    if (updateData['actualDuration'] != null) {
+      final currentSessionMinutes =
+          (updateData['actualDuration'] as int) / 60.0;
+      todayMinutes += currentSessionMinutes.round();
+    }
+
+    // 计算进度
+    _progressValue = (todayMinutes / goalMinutes).clamp(0.0, 1.0);
   }
 
   Future<void> _loadGoalAndProgress() async {
@@ -42,6 +106,7 @@ class _DailyGoalCardState extends State<DailyGoalCard> {
           _statistics = statistics;
           _calculateProgress();
         });
+        debugPrint('日常目标卡片数据已刷新');
       }
     } catch (e) {
       debugPrint('Error loading goal and progress: $e');
