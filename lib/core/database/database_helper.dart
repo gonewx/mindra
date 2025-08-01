@@ -18,7 +18,14 @@ class DatabaseHelper {
 
   static Future<Database> get database async {
     if (_database != null && _database!.isOpen) {
-      return _database!;
+      // 验证数据库连接是否仍然有效
+      try {
+        await _database!.rawQuery('SELECT 1');
+        return _database!;
+      } catch (e) {
+        debugPrint('Database connection lost, reinitializing: $e');
+        _database = null;
+      }
     }
 
     // 防止并发初始化
@@ -28,7 +35,13 @@ class DatabaseHelper {
         await Future.delayed(const Duration(milliseconds: 100));
       }
       if (_database != null && _database!.isOpen) {
-        return _database!;
+        try {
+          await _database!.rawQuery('SELECT 1');
+          return _database!;
+        } catch (e) {
+          debugPrint('Database connection lost after initialization wait: $e');
+          _database = null;
+        }
       }
     }
 
@@ -44,76 +57,80 @@ class DatabaseHelper {
 
     final List<String> candidatePaths = [];
 
-    try {
-      // 方案1: 标准数据库路径
-      final factory = databaseFactory;
-      final standardPath = await factory.getDatabasesPath();
-      candidatePaths.add(join(standardPath, AppConstants.databaseName));
-    } catch (e) {
-      debugPrint('Failed to get standard database path: $e');
-    }
+    // Android平台优先使用官方推荐的数据库路径
+    if (Platform.isAndroid) {
+      try {
+        // 方案1: 标准数据库路径（Android官方推荐）
+        final factory = databaseFactory;
+        final standardPath = await factory.getDatabasesPath();
+        final primaryPath = join(standardPath, AppConstants.databaseName);
+        candidatePaths.add(primaryPath);
+        debugPrint('Android primary database path: $primaryPath');
 
-    // 方案2: 应用文档目录
-    try {
-      // 对于Android，尝试使用应用私有目录
-      if (Platform.isAndroid) {
+        // 检查是否已存在数据库文件在其他位置，如果存在则迁移
+        await _migrateExistingDatabaseToStandardPath(primaryPath);
+      } catch (e) {
+        debugPrint('Failed to get standard database path: $e');
+      }
+
+      // 方案2: 应用私有数据库目录（备用）
+      try {
         final appDataDir = Platform.environment['ANDROID_DATA'] ?? '/data/data';
-        final packageName = 'com.mindra.app'; // 根据实际包名调整
-        candidatePaths.add(
-          join(appDataDir, packageName, 'databases', AppConstants.databaseName),
+        final packageName = 'com.mindra.app';
+        final backupPath = join(
+          appDataDir,
+          packageName,
+          'databases',
+          AppConstants.databaseName,
         );
+        candidatePaths.add(backupPath);
+        debugPrint('Android backup database path: $backupPath');
+      } catch (e) {
+        debugPrint('Failed to get Android app data path: $e');
       }
-    } catch (e) {
-      debugPrint('Failed to get Android app data path: $e');
-    }
-
-    // 方案3: 外部存储目录（仅Android）
-    try {
-      if (Platform.isAndroid) {
-        final externalStorage =
-            Platform.environment['EXTERNAL_STORAGE'] ?? '/sdcard';
-        final appDir = join(
-          externalStorage,
-          'Android',
-          'data',
-          'com.mindra.app',
-          'files',
-        );
-        candidatePaths.add(join(appDir, AppConstants.databaseName));
+    } else {
+      // 非Android平台的处理逻辑
+      try {
+        // 方案1: 标准数据库路径
+        final factory = databaseFactory;
+        final standardPath = await factory.getDatabasesPath();
+        candidatePaths.add(join(standardPath, AppConstants.databaseName));
+      } catch (e) {
+        debugPrint('Failed to get standard database path: $e');
       }
-    } catch (e) {
-      debugPrint('Failed to get external storage path: $e');
-    }
 
-    // 方案4: AppImage环境特殊处理
-    final isAppImage =
-        Platform.environment['APPIMAGE'] != null ||
-        Platform.environment['APPDIR'] != null;
-    if (isAppImage) {
-      final homeDir = Platform.environment['HOME'];
-      if (homeDir != null) {
-        final userDataDir = join(homeDir, '.local', 'share', 'Mindra');
-        candidatePaths.add(join(userDataDir, AppConstants.databaseName));
+      // 方案2: AppImage环境特殊处理
+      final isAppImage =
+          Platform.environment['APPIMAGE'] != null ||
+          Platform.environment['APPDIR'] != null;
+      if (isAppImage) {
+        final homeDir = Platform.environment['HOME'];
+        if (homeDir != null) {
+          final userDataDir = join(homeDir, '.local', 'share', 'Mindra');
+          candidatePaths.add(join(userDataDir, AppConstants.databaseName));
+        }
       }
-    }
 
-    // 方案5: 用户主目录
-    try {
-      final homeDir = Platform.environment['HOME'];
-      if (homeDir != null) {
-        candidatePaths.add(join(homeDir, '.mindra', AppConstants.databaseName));
+      // 方案3: 用户主目录
+      try {
+        final homeDir = Platform.environment['HOME'];
+        if (homeDir != null) {
+          candidatePaths.add(
+            join(homeDir, '.mindra', AppConstants.databaseName),
+          );
+        }
+      } catch (e) {
+        debugPrint('Failed to get home directory path: $e');
       }
-    } catch (e) {
-      debugPrint('Failed to get home directory path: $e');
-    }
 
-    // 方案6: 临时目录作为最后备用
-    try {
-      final tempDir = Directory.systemTemp;
-      final fallbackDir = join(tempDir.path, 'mindra_db');
-      candidatePaths.add(join(fallbackDir, AppConstants.databaseName));
-    } catch (e) {
-      debugPrint('Failed to get temp directory path: $e');
+      // 方案4: 临时目录作为最后备用
+      try {
+        final tempDir = Directory.systemTemp;
+        final fallbackDir = join(tempDir.path, 'mindra_db');
+        candidatePaths.add(join(fallbackDir, AppConstants.databaseName));
+      } catch (e) {
+        debugPrint('Failed to get temp directory path: $e');
+      }
     }
 
     // 尝试每个候选路径
@@ -147,6 +164,66 @@ class DatabaseHelper {
     throw Exception(
       'No suitable database path found after trying ${candidatePaths.length} options',
     );
+  }
+
+  /// 迁移已存在的数据库到标准路径（仅Android）
+  static Future<void> _migrateExistingDatabaseToStandardPath(
+    String standardPath,
+  ) async {
+    if (!Platform.isAndroid) return;
+
+    try {
+      final standardFile = File(standardPath);
+      if (await standardFile.exists()) {
+        debugPrint('Database already exists at standard path');
+        return;
+      }
+
+      // 检查旧的可能位置
+      final List<String> oldPaths = [
+        // 外部存储位置
+        join(
+          Platform.environment['EXTERNAL_STORAGE'] ?? '/sdcard',
+          'Android/data/com.mindra.app/files',
+          AppConstants.databaseName,
+        ),
+        // 应用数据目录
+        join(
+          Platform.environment['ANDROID_DATA'] ?? '/data/data',
+          'com.mindra.app/databases',
+          AppConstants.databaseName,
+        ),
+      ];
+
+      for (final oldPath in oldPaths) {
+        final oldFile = File(oldPath);
+        if (await oldFile.exists()) {
+          debugPrint('Found existing database at: $oldPath');
+          debugPrint('Migrating to standard path: $standardPath');
+
+          // 确保目标目录存在
+          final standardDir = Directory(dirname(standardPath));
+          if (!await standardDir.exists()) {
+            await standardDir.create(recursive: true);
+          }
+
+          // 复制数据库文件
+          await oldFile.copy(standardPath);
+
+          // 验证复制成功
+          final newFile = File(standardPath);
+          if (await newFile.exists()) {
+            debugPrint('Database migration successful');
+            // 可选：删除旧文件（为了安全，暂时保留）
+            // await oldFile.delete();
+          }
+          break;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error during database migration: $e');
+      // 迁移失败不应该阻止应用启动
+    }
   }
 
   static Future<Database> _initDatabase() async {

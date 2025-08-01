@@ -13,6 +13,7 @@ import 'core/di/injection_container.dart';
 import 'core/config/app_config_service.dart';
 import 'core/database/database_helper.dart';
 import 'core/database/database_health_checker.dart';
+import 'core/database/database_connection_manager.dart';
 import 'core/services/reminder_scheduler_service.dart';
 import 'core/localization/app_localizations.dart';
 import 'features/player/services/global_player_service.dart';
@@ -33,17 +34,79 @@ class MindraApp extends StatefulWidget {
   State<MindraApp> createState() => _MindraAppState();
 }
 
-class _MindraAppState extends State<MindraApp> {
+class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
   late ThemeProvider _themeProvider;
 
   @override
   void initState() {
     super.initState();
+    // 添加应用生命周期监听
+    WidgetsBinding.instance.addObserver(this);
+
     // 使用默认主题立即启动
     _themeProvider = ThemeProvider();
 
     // 后台初始化所有服务
     _initializeBackgroundServices();
+  }
+
+  @override
+  void dispose() {
+    // 移除应用生命周期监听
+    WidgetsBinding.instance.removeObserver(this);
+
+    // 停止数据库连接监控
+    if (Platform.isAndroid) {
+      DatabaseConnectionManager.stopConnectionMonitoring();
+    }
+
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (!Platform.isAndroid) return;
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        debugPrint('App resumed - checking database connection');
+        _handleAppResumed();
+        break;
+      case AppLifecycleState.paused:
+        debugPrint('App paused - maintaining database connection');
+        break;
+      case AppLifecycleState.inactive:
+        debugPrint('App inactive');
+        break;
+      case AppLifecycleState.detached:
+        debugPrint('App detached - stopping database monitoring');
+        DatabaseConnectionManager.stopConnectionMonitoring();
+        break;
+      case AppLifecycleState.hidden:
+        debugPrint('App hidden');
+        break;
+    }
+  }
+
+  /// 处理应用恢复
+  void _handleAppResumed() async {
+    try {
+      // 检查数据库连接状态
+      final isConnected = await DatabaseConnectionManager.checkConnection();
+      if (!isConnected) {
+        debugPrint('Database connection lost, attempting recovery...');
+        await DatabaseHelper.forceReinitialize();
+      }
+
+      // 重新启动连接监控
+      if (!DatabaseConnectionManager.isMonitoring) {
+        DatabaseConnectionManager.startConnectionMonitoring();
+      }
+    } catch (e) {
+      debugPrint('Error handling app resume: $e');
+    }
   }
 
   Future<void> _initializeBackgroundServices() async {
@@ -158,6 +221,12 @@ class _MindraAppState extends State<MindraApp> {
           // 执行数据库健康检查（后台异步执行）
           _performDatabaseHealthCheck();
 
+          // 启动数据库连接监控（仅Android平台）
+          if (Platform.isAndroid) {
+            DatabaseConnectionManager.startConnectionMonitoring();
+            debugPrint('Android database connection monitoring started');
+          }
+
           return;
         } else {
           throw Exception('Database is not open after initialization');
@@ -194,10 +263,26 @@ class _MindraAppState extends State<MindraApp> {
       final androidInfo = Platform.version;
       debugPrint('Android version info: $androidInfo');
 
-      // 初始化数据库
-      await DatabaseHelper.database;
+      // 检查数据库是否需要恢复
+      final dbStatus = DatabaseHelper.getInitializationStatus();
+      if (dbStatus['lastError'] != null) {
+        debugPrint(
+          'Previous database initialization failed, attempting recovery...',
+        );
+        await DatabaseHelper.forceReinitialize();
+      }
 
-      debugPrint('Android database initialized successfully');
+      // 初始化数据库
+      final db = await DatabaseHelper.database;
+
+      // 验证数据库功能
+      final testResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM media_items',
+      );
+      final mediaCount = testResult.first['count'] as int;
+      debugPrint(
+        'Android database initialized successfully, media items: $mediaCount',
+      );
     } catch (e) {
       debugPrint('Android database initialization failed: $e');
 
@@ -205,9 +290,18 @@ class _MindraAppState extends State<MindraApp> {
       try {
         debugPrint('Attempting Android database recovery...');
         await DatabaseHelper.forceReinitialize();
+
+        // 验证恢复是否成功
+        final db = await DatabaseHelper.database;
+        await db.rawQuery('SELECT 1');
         debugPrint('Android database recovery successful');
       } catch (recoveryError) {
         debugPrint('Android database recovery failed: $recoveryError');
+
+        // 记录详细错误信息以便调试
+        final dbStatus = DatabaseHelper.getInitializationStatus();
+        debugPrint('Database status after recovery attempt: $dbStatus');
+
         rethrow;
       }
     }
