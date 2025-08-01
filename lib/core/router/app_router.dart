@@ -156,6 +156,7 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
+  bool _isNavigating = false; // 防止快速重复点击
 
   static const List<String> _routes = [
     AppRouter.home,
@@ -173,10 +174,16 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   void _updateSelectedIndex() {
     final String location = GoRouterState.of(context).matchedLocation;
-    setState(() {
-      _selectedIndex = _routes.indexOf(location);
-      if (_selectedIndex < 0) _selectedIndex = 0;
-    });
+    final newIndex = _routes.indexOf(location);
+    if (newIndex >= 0 && newIndex != _selectedIndex) {
+      setState(() {
+        _selectedIndex = newIndex;
+      });
+    } else if (newIndex < 0 && _selectedIndex != 0) {
+      setState(() {
+        _selectedIndex = 0;
+      });
+    }
   }
 
   @override
@@ -194,8 +201,47 @@ class _MainScaffoldState extends State<MainScaffold> {
       ),
       bottomNavigationBar: AnimatedBottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) {
-          context.go(_routes[index]);
+        onTap: (index) async {
+          // 优化的导航逻辑：防抖+状态检查+错误处理
+          if (_isNavigating) {
+            debugPrint('Navigation in progress, ignoring tap');
+            return;
+          }
+
+          if (index == _selectedIndex) {
+            debugPrint('Same index tapped, ignoring');
+            return;
+          }
+
+          if (index < 0 || index >= _routes.length) {
+            debugPrint('Invalid index: $index');
+            return;
+          }
+
+          try {
+            setState(() {
+              _isNavigating = true;
+            });
+
+            context.go(_routes[index]);
+
+            // 使用延迟来确保导航完成
+            await Future.delayed(const Duration(milliseconds: 100));
+
+            // 导航完成后重置状态
+            if (mounted) {
+              setState(() {
+                _isNavigating = false;
+              });
+            }
+          } catch (e) {
+            debugPrint('Navigation error: $e');
+            if (mounted) {
+              setState(() {
+                _isNavigating = false;
+              });
+            }
+          }
         },
         items: [
           AnimatedBottomNavigationItem(

@@ -80,10 +80,11 @@ class _FloatingPlayerState extends State<FloatingPlayer>
 
   void _setDefaultPosition() {
     final screenSize = MediaQuery.of(context).size;
-    // 右下角位置，距离底部导航栏(约80px)上面20px，距离右边20px
+    // 调整默认位置，确保不干扰导航栏
+    // 导航栏现在高度为68px + SafeArea，预留更多空间
     final defaultX = screenSize.width - 80.0; // 60(浮动球宽度) + 20(边距)
     final defaultY =
-        screenSize.height - 160.0; // 80(导航栏高度) + 20(间距) + 60(浮动球高度)
+        screenSize.height - 180.0; // 增加间距：68(导航栏) + 52(SafeArea+间距) + 60(浮动球高度)
 
     setState(() {
       _position = Offset(defaultX, defaultY);
@@ -139,10 +140,14 @@ class _FloatingPlayerState extends State<FloatingPlayer>
           setState(() {
             _position += details.delta;
 
-            // 限制在屏幕边界内
+            // 增强边界限制，确保不会干扰导航栏
+            final navBarHeight = 68 + 20; // 导航栏高度 + 安全间距
             _position = Offset(
               _position.dx.clamp(0, screenSize.width - 60),
-              _position.dy.clamp(0, screenSize.height - 60),
+              _position.dy.clamp(
+                0,
+                screenSize.height - 60 - navBarHeight,
+              ), // 限制在导航栏之上
             );
           });
         },

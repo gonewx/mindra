@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AnimatedBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
@@ -36,7 +37,7 @@ class AnimatedBottomNavigationBar extends StatelessWidget {
       ),
       child: SafeArea(
         child: SizedBox(
-          height: 58, // 明确设定导航栏高度，提供足够点击区域
+          height: 68, // 增加导航栏高度，提供更大的点击区域
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -84,15 +85,31 @@ class _AnimatedNavItem extends StatefulWidget {
 
 class _AnimatedNavItemState extends State<_AnimatedNavItem> {
   bool _isHovered = false;
+  bool _isPressed = false;
 
   void _onHoverChange(bool isHovered) {
-    setState(() {
-      _isHovered = isHovered;
-    });
+    if (mounted) {
+      setState(() {
+        _isHovered = isHovered;
+      });
+    }
+  }
+
+  void _onPressedChange(bool isPressed) {
+    if (mounted) {
+      setState(() {
+        _isPressed = isPressed;
+      });
+    }
   }
 
   Color _getItemColor(ThemeData theme) {
-    if (_isHovered) {
+    if (_isPressed) {
+      // 按下时的颜色，比选中状态稍深
+      return widget.isSelected
+          ? theme.colorScheme.primary.withValues(alpha: 0.8)
+          : theme.colorScheme.secondary.withValues(alpha: 0.8);
+    } else if (_isHovered) {
       // .nav-item:hover { color: var(--app-secondary); }
       // 悬停时始终显示次级颜色，不管是否选中
       return theme.colorScheme.secondary;
@@ -112,31 +129,48 @@ class _AnimatedNavItemState extends State<_AnimatedNavItem> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => _onHoverChange(true),
-      onExit: (_) => _onHoverChange(false),
-      child: InkWell(
-        onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: SizedBox(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(widget.icon, size: 25, color: _getItemColor(theme)),
-              const SizedBox(height: 3),
-              Text(
-                widget.label,
-                style: theme.textTheme.bodySmall!.copyWith(
-                  color: _getItemColor(theme),
-                  fontWeight: widget.isSelected
-                      ? FontWeight.w600
-                      : FontWeight.w400,
-                  fontSize: 11,
-                  height: 1.0,
+    return Expanded(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => _onHoverChange(true),
+        onExit: (_) => _onHoverChange(false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque, // 确保整个区域都可以响应点击
+          onTap: () {
+            // 添加触觉反馈
+            HapticFeedback.lightImpact();
+            widget.onTap();
+          },
+          onTapDown: (_) => _onPressedChange(true),
+          onTapUp: (_) => _onPressedChange(false), // 直接重置，去除延迟
+          onTapCancel: () => _onPressedChange(false),
+          child: Container(
+            height: 68, // 增加点击区域高度，改善移动端体验
+            padding: const EdgeInsets.symmetric(
+              horizontal: 2, // 减小水平内边距，增加点击区域
+              vertical: 6, // 增加垂直内边距，改善视觉平衡
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(widget.icon, size: 25, color: _getItemColor(theme)),
+                const SizedBox(height: 3),
+                Text(
+                  widget.label,
+                  style: theme.textTheme.bodySmall!.copyWith(
+                    color: _getItemColor(theme),
+                    fontWeight: widget.isSelected
+                        ? FontWeight.w600
+                        : FontWeight.w400,
+                    fontSize: 11,
+                    height: 1.0,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
