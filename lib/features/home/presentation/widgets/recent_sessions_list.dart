@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
+import 'dart:math';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/animated_media_card.dart';
 import '../../../../features/meditation/domain/entities/meditation_session.dart';
@@ -31,14 +32,10 @@ class RecentSessionWithMedia {
   }
 
   static String _getDefaultImageUrl(String title) {
-    // 根据标题生成默认图片URL
-    if (title.contains('晨间') || title.contains('早晨')) {
-      return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=80&h=80&fit=crop';
-    } else if (title.contains('睡眠') || title.contains('晚上')) {
-      return 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=80&h=80&fit=crop';
-    } else {
-      return 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=80&h=80&fit=crop';
-    }
+    // 使用随机模式从5张本地冥想图片中选择
+    final random = Random();
+    final imageIndex = random.nextInt(5) + 1;
+    return 'assets/images/defaults/meditation_$imageIndex.jpg';
   }
 }
 

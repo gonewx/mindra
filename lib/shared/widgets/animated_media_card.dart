@@ -216,7 +216,7 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                         child: Stack(
                           children: [
                             widget.imageUrl != null
-                                ? Image.network(
+                                ? _buildImageWidget(
                                     widget.imageUrl!,
                                     width: double.infinity,
                                     height: double.infinity,
@@ -377,7 +377,7 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                         child: widget.imageUrl != null
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
+                                child: _buildImageWidget(
                                   widget.imageUrl!,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
@@ -479,5 +479,34 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
         },
       ),
     );
+  }
+
+  // 辅助方法：根据路径类型构建图片组件
+  Widget _buildImageWidget(
+    String imageUrl, {
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.cover,
+    Widget Function(BuildContext, Object, StackTrace?)? errorBuilder,
+  }) {
+    // 检查是否为本地资源路径
+    if (imageUrl.startsWith('assets/')) {
+      return Image.asset(
+        imageUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: errorBuilder,
+      );
+    } else {
+      // 网络图片
+      return Image.network(
+        imageUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: errorBuilder,
+      );
+    }
   }
 }
