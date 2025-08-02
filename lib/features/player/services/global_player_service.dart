@@ -867,8 +867,11 @@ class GlobalPlayerService extends ChangeNotifier {
     final playlist = _currentPlaylist;
     if (playlist.isEmpty) return;
 
-    // 保存之前的播放状态
-    final wasPlaying = _isPlaying;
+    // 对于全部循环模式，总是自动播放下一首
+    final shouldAutoPlay = _repeatMode == RepeatMode.all ? true : _isPlaying;
+    debugPrint(
+      'playNext called: _isPlaying=$_isPlaying, shouldAutoPlay=$shouldAutoPlay, currentIndex=$_currentIndex',
+    );
 
     if (_currentIndex < playlist.length - 1) {
       _currentIndex++;
@@ -876,8 +879,12 @@ class GlobalPlayerService extends ChangeNotifier {
       _currentIndex = 0;
     }
 
+    debugPrint(
+      'Moving to next index: $_currentIndex, shouldAutoPlay=$shouldAutoPlay',
+    );
+
     // 使用增强版会话管理器切换媒体，避免数据丢失
-    await _switchToMediaAtIndex(_currentIndex, shouldAutoPlay: wasPlaying);
+    await _switchToMediaAtIndex(_currentIndex, shouldAutoPlay: shouldAutoPlay);
   }
 
   Future<void> playPrevious() async {
@@ -949,7 +956,11 @@ class GlobalPlayerService extends ChangeNotifier {
       );
 
       if (shouldAutoPlay) {
+        debugPrint('Auto-playing after enhanced media switch');
         await _audioPlayer.play();
+        debugPrint('Enhanced auto-play command sent');
+      } else {
+        debugPrint('Not auto-playing: shouldAutoPlay=$shouldAutoPlay');
       }
     } catch (e) {
       debugPrint(
@@ -986,7 +997,11 @@ class GlobalPlayerService extends ChangeNotifier {
       await _saveLastPlayedMedia();
 
       if (shouldAutoPlay) {
+        debugPrint('Auto-playing after fallback media switch');
         await _audioPlayer.play();
+        debugPrint('Fallback auto-play command sent');
+      } else {
+        debugPrint('Fallback not auto-playing: shouldAutoPlay=$shouldAutoPlay');
       }
     } catch (e) {
       debugPrint('Error in fallback loading media at index $index: $e');
