@@ -1,4 +1,6 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class MeditationSession extends Equatable {
   final String id;
@@ -118,7 +120,31 @@ class MeditationSession extends Equatable {
 enum SessionType { meditation, breathing, sleep, focus, relaxation }
 
 extension SessionTypeExtension on SessionType {
-  String get displayName {
+  String getDisplayName(BuildContext context) {
+    try {
+      final localizations = AppLocalizations.of(context);
+      if (localizations == null) {
+        return _getDefaultDisplayName();
+      }
+
+      switch (this) {
+        case SessionType.meditation:
+          return localizations.categoryMeditation;
+        case SessionType.breathing:
+          return localizations.categoryBreathing;
+        case SessionType.sleep:
+          return localizations.categorySleep;
+        case SessionType.focus:
+          return localizations.categoryFocus;
+        case SessionType.relaxation:
+          return localizations.categoryRelax;
+      }
+    } catch (e) {
+      return _getDefaultDisplayName();
+    }
+  }
+
+  String _getDefaultDisplayName() {
     switch (this) {
       case SessionType.meditation:
         return '冥想';
@@ -131,5 +157,10 @@ extension SessionTypeExtension on SessionType {
       case SessionType.relaxation:
         return '放松';
     }
+  }
+
+  @Deprecated('Use getDisplayName(context) instead')
+  String get displayName {
+    return _getDefaultDisplayName();
   }
 }

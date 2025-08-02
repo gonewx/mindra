@@ -31,7 +31,6 @@ class _PlayerPageState extends State<PlayerPage> {
 
   // Media data getters that use the global service
   String get _title => _playerService.title;
-  String get _category => _playerService.category;
   bool get _isPlaying => _playerService.isPlaying;
   bool get _isFavorited => _playerService.isFavorited;
   bool get _isShuffled => _playerService.isShuffled;
@@ -374,7 +373,7 @@ class _PlayerPageState extends State<PlayerPage> {
               ),
               const SizedBox(height: 12),
               Text(
-                _category,
+                _currentMedia?.category.getDisplayName(context) ?? '',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),

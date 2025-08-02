@@ -245,7 +245,7 @@ class _RecentSessionsListState extends State<RecentSessionsList> {
           ),
           child: AnimatedMediaCard(
             title: sessionWithMedia.displayTitle,
-            category: sessionWithMedia.session.type.displayName,
+            category: sessionWithMedia.session.type.getDisplayName(context),
             duration: _formatDuration(sessionWithMedia.session.actualDuration),
             imageUrl: sessionWithMedia.displayImageUrl,
             isListView: true,
