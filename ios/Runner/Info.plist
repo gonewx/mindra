@@ -49,5 +49,24 @@
 		<true/>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
+		
+		<!-- Background Audio Support for Meditation App -->
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>audio</string>
+			<string>background-processing</string>
+		</array>
+		
+		<!-- Audio Session Category -->
+		<key>AVAudioSessionCategory</key>
+		<string>AVAudioSessionCategoryPlayback</string>
+		
+		<!-- Privacy Description for Microphone (if needed) -->
+		<key>NSMicrophoneUsageDescription</key>
+		<string>This app may use the microphone for meditation recording features.</string>
+		
+		<!-- Prevent idle timer during meditation -->
+		<key>UIRequiresPersistentWiFi</key>
+		<false/>
 	</dict>
 </plist>

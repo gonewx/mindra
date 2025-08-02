@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../../core/audio/audio_player.dart';
 import '../../../features/media/domain/entities/media_item.dart';
 import '../../../features/meditation/data/services/meditation_session_manager.dart';
+import '../../../features/meditation/data/services/enhanced_meditation_session_manager.dart';
 import '../../media/data/datasources/media_local_datasource.dart';
 import '../../media/domain/usecases/media_usecases.dart';
 import '../../../core/di/injection_container.dart';
@@ -169,8 +170,11 @@ class GlobalPlayerService extends ChangeNotifier {
       _currentPosition = newPosition;
       notifyListeners();
 
-      // 更新会话进度，让MeditationSessionManager处理实时更新
+      // 更新会话进度，让两个管理器都处理实时更新
       MeditationSessionManager.updateSessionProgress(position.inSeconds);
+      EnhancedMeditationSessionManager.updateSessionProgress(
+        position.inSeconds,
+      );
 
       // 减少保存频率：只在位置变化较大时保存
       if (positionDiff > 10.0) {
@@ -209,12 +213,25 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   void _handlePlayingStateChange(bool isPlaying) {
-    if (isPlaying &&
-        !MeditationSessionManager.hasActiveSession &&
-        _currentMedia != null) {
-      _startMeditationSession();
-    } else if (!isPlaying && MeditationSessionManager.hasActiveSession) {
-      MeditationSessionManager.pauseSession();
+    if (isPlaying) {
+      // 优先使用增强版会话管理器
+      if (!EnhancedMeditationSessionManager.hasActiveSession &&
+          !MeditationSessionManager.hasActiveSession &&
+          _currentMedia != null) {
+        _startMeditationSession();
+      } else if (EnhancedMeditationSessionManager.hasActiveSession) {
+        EnhancedMeditationSessionManager.resumeSession();
+      } else if (MeditationSessionManager.hasActiveSession) {
+        MeditationSessionManager.resumeSession();
+      }
+    } else {
+      // 暂停时同时处理两个管理器
+      if (EnhancedMeditationSessionManager.hasActiveSession) {
+        EnhancedMeditationSessionManager.pauseSession();
+      }
+      if (MeditationSessionManager.hasActiveSession) {
+        MeditationSessionManager.pauseSession();
+      }
     }
   }
 
@@ -226,12 +243,18 @@ class GlobalPlayerService extends ChangeNotifier {
         _handleTrackCompletion();
         break;
       case MindraPlayerState.playing:
+        if (EnhancedMeditationSessionManager.hasActiveSession) {
+          EnhancedMeditationSessionManager.resumeSession();
+        }
         if (MeditationSessionManager.hasActiveSession) {
           MeditationSessionManager.resumeSession();
         }
         break;
       case MindraPlayerState.paused:
       case MindraPlayerState.stopped:
+        if (EnhancedMeditationSessionManager.hasActiveSession) {
+          EnhancedMeditationSessionManager.pauseSession();
+        }
         if (MeditationSessionManager.hasActiveSession) {
           MeditationSessionManager.pauseSession();
         }
@@ -259,9 +282,10 @@ class GlobalPlayerService extends ChangeNotifier {
     if (_currentMedia == null) return;
 
     try {
-      final sessionType = MeditationSessionManager.getSessionTypeFromCategory(
-        _currentMedia!.category.name,
-      );
+      final sessionType =
+          EnhancedMeditationSessionManager.getSessionTypeFromCategory(
+            _currentMedia!.category.name,
+          );
 
       List<String> soundEffects = [];
       try {
@@ -274,23 +298,49 @@ class GlobalPlayerService extends ChangeNotifier {
         soundEffects = [];
       }
 
-      await MeditationSessionManager.startSession(
-        mediaItem: _currentMedia!,
-        sessionType: sessionType,
-        soundEffects: soundEffects,
-      );
-      debugPrint('Started meditation session for: ${_currentMedia!.title}');
+      // 优先使用增强版会话管理器
+      try {
+        await EnhancedMeditationSessionManager.startSession(
+          mediaItem: _currentMedia!,
+          sessionType: sessionType,
+          soundEffects: soundEffects,
+        );
+        debugPrint(
+          'Started enhanced meditation session for: ${_currentMedia!.title}',
+        );
+      } catch (e) {
+        debugPrint(
+          'Enhanced session manager failed, falling back to traditional: $e',
+        );
+
+        // 回退到传统会话管理器
+        await MeditationSessionManager.startSession(
+          mediaItem: _currentMedia!,
+          sessionType: sessionType,
+          soundEffects: soundEffects,
+        );
+        debugPrint(
+          'Started traditional meditation session for: ${_currentMedia!.title}',
+        );
+      }
     } catch (e) {
       debugPrint('Error starting meditation session: $e');
     }
   }
 
   Future<void> _completeMeditationSession() async {
-    if (!MeditationSessionManager.hasActiveSession) return;
-
     try {
-      await MeditationSessionManager.completeSession();
-      debugPrint('Completed meditation session');
+      // 优先完成增强版会话管理器的会话
+      if (EnhancedMeditationSessionManager.hasActiveSession) {
+        await EnhancedMeditationSessionManager.completeSession();
+        debugPrint('Completed enhanced meditation session');
+      }
+
+      // 如果还有传统管理器的会话，也完成它
+      if (MeditationSessionManager.hasActiveSession) {
+        await MeditationSessionManager.completeSession();
+        debugPrint('Completed traditional meditation session');
+      }
     } catch (e) {
       debugPrint('Error completing meditation session: $e');
     }
@@ -437,25 +487,56 @@ class GlobalPlayerService extends ChangeNotifier {
     final isDifferentMedia = _currentMedia?.id != mediaId;
 
     if (isDifferentMedia) {
-      // 如果切换到不同的音频，需要先结束当前的session
-      if (MeditationSessionManager.hasActiveSession) {
+      debugPrint('切换到不同音频: $mediaId');
+
+      // 先加载媒体信息，准备切换
+      await _loadMediaById(mediaId, autoPlay: false);
+
+      // 使用增强版会话管理器智能切换媒体
+      // 这将保存当前进度并继续累计到当天的统计中
+      if (_currentMedia != null) {
         try {
-          await MeditationSessionManager.stopSession();
+          final sessionType =
+              EnhancedMeditationSessionManager.getSessionTypeFromCategory(
+                _currentMedia!.category.name,
+              );
+
+          List<String> soundEffects = [];
+          try {
+            soundEffects = _soundEffectsPlayer.currentVolumes.entries
+                .where((entry) => entry.value > 0.0)
+                .map((entry) => entry.key)
+                .toList();
+          } catch (e) {
+            debugPrint('Error getting active sound effects: $e');
+            soundEffects = [];
+          }
+
+          await EnhancedMeditationSessionManager.switchToMedia(
+            newMediaItem: _currentMedia!,
+            sessionType: sessionType,
+            soundEffects: soundEffects,
+          );
+
           debugPrint(
-            'Stopped previous meditation session when switching media',
+            'Successfully switched to new media with enhanced session manager',
           );
         } catch (e) {
-          debugPrint('Error stopping previous session: $e');
+          debugPrint('Error switching media with enhanced session manager: $e');
+          // 回退到传统方式
+          if (MeditationSessionManager.hasActiveSession) {
+            await MeditationSessionManager.stopSession();
+          }
         }
       }
 
-      // 只在切换不同音频时重置位置，相同音频保持当前状态
-      debugPrint('切换到不同音频: $mediaId');
+      if (autoPlay) {
+        await play();
+      }
     } else {
       debugPrint('播放相同音频，保持当前状态: ${_currentPosition}s');
+      await _loadMediaById(mediaId, autoPlay: autoPlay);
     }
-
-    await _loadMediaById(mediaId, autoPlay: autoPlay);
   }
 
   Future<void> _loadAudioFile(String filePath) async {
@@ -594,6 +675,10 @@ class GlobalPlayerService extends ChangeNotifier {
     await _saveLastPlayedPosition();
     await _pauseSoundEffects();
 
+    // 停止所有活跃的会话
+    if (EnhancedMeditationSessionManager.hasActiveSession) {
+      await EnhancedMeditationSessionManager.stopSession();
+    }
     if (MeditationSessionManager.hasActiveSession) {
       await MeditationSessionManager.stopSession();
     }
@@ -638,7 +723,8 @@ class GlobalPlayerService extends ChangeNotifier {
       _currentIndex = 0;
     }
 
-    await _loadMediaAtIndex(_currentIndex, shouldAutoPlay: wasPlaying);
+    // 使用增强版会话管理器切换媒体，避免数据丢失
+    await _switchToMediaAtIndex(_currentIndex, shouldAutoPlay: wasPlaying);
   }
 
   Future<void> playPrevious() async {
@@ -654,10 +740,81 @@ class GlobalPlayerService extends ChangeNotifier {
       _currentIndex = playlist.length - 1;
     }
 
-    await _loadMediaAtIndex(_currentIndex, shouldAutoPlay: wasPlaying);
+    // 使用增强版会话管理器切换媒体，避免数据丢失
+    await _switchToMediaAtIndex(_currentIndex, shouldAutoPlay: wasPlaying);
   }
 
-  Future<void> _loadMediaAtIndex(
+  /// 使用增强版会话管理器切换到指定索引的媒体
+  Future<void> _switchToMediaAtIndex(
+    int index, {
+    bool shouldAutoPlay = false,
+  }) async {
+    final playlist = _currentPlaylist;
+    if (index < 0 || index >= playlist.length) return;
+
+    final media = playlist[index];
+
+    debugPrint('Switching to media at index $index: ${media.title}');
+
+    try {
+      // 使用增强版会话管理器智能切换媒体
+      // 这将保存当前进度并继续累计到当天的统计中
+      final sessionType =
+          EnhancedMeditationSessionManager.getSessionTypeFromCategory(
+            media.category.name,
+          );
+
+      List<String> soundEffects = [];
+      try {
+        soundEffects = _soundEffectsPlayer.currentVolumes.entries
+            .where((entry) => entry.value > 0.0)
+            .map((entry) => entry.key)
+            .toList();
+      } catch (e) {
+        debugPrint('Error getting active sound effects: $e');
+        soundEffects = [];
+      }
+
+      // 先更新UI显示的媒体信息
+      _currentMedia = media;
+      _isFavorited = media.isFavorite;
+      notifyListeners();
+
+      // 加载音频文件
+      await _loadAudioFile(media.filePath);
+      await _saveLastPlayedMedia();
+
+      // 使用增强版会话管理器切换
+      await EnhancedMeditationSessionManager.switchToMedia(
+        newMediaItem: media,
+        sessionType: sessionType,
+        soundEffects: soundEffects,
+      );
+
+      debugPrint(
+        'Successfully switched to new media with enhanced session manager',
+      );
+
+      if (shouldAutoPlay) {
+        await _audioPlayer.play();
+      }
+    } catch (e) {
+      debugPrint(
+        'Error switching to media at index $index with enhanced session: $e',
+      );
+
+      // 回退到传统方式，但仍然避免会话数据丢失
+      try {
+        await _loadMediaAtIndexFallback(index, shouldAutoPlay: shouldAutoPlay);
+      } catch (fallbackError) {
+        debugPrint('Fallback also failed: $fallbackError');
+        rethrow;
+      }
+    }
+  }
+
+  /// 回退方案：传统的媒体切换方式（保留原有逻辑）
+  Future<void> _loadMediaAtIndexFallback(
     int index, {
     bool shouldAutoPlay = false,
   }) async {
@@ -679,7 +836,7 @@ class GlobalPlayerService extends ChangeNotifier {
         await _audioPlayer.play();
       }
     } catch (e) {
-      debugPrint('Error loading media at index $index: $e');
+      debugPrint('Error in fallback loading media at index $index: $e');
       rethrow;
     }
   }
@@ -774,6 +931,7 @@ class GlobalPlayerService extends ChangeNotifier {
   Future<void> pauseForBackground() async {
     // 保存当前会话状态到数据库，防止数据丢失
     try {
+      await EnhancedMeditationSessionManager.forceSaveCurrentState();
       await MeditationSessionManager.forceSaveCurrentState();
       await _saveLastPlayedPosition();
       debugPrint('Saved player state before going to background');
@@ -786,9 +944,10 @@ class GlobalPlayerService extends ChangeNotifier {
     // 从后台返回时验证并恢复状态
     try {
       // 验证当前会话是否仍然有效
-      if (MeditationSessionManager.hasActiveSession) {
-        debugPrint('Resumed from background with active session');
-        // 可以在这里添加额外的状态验证逻辑
+      if (EnhancedMeditationSessionManager.hasActiveSession) {
+        debugPrint('Resumed from background with active enhanced session');
+      } else if (MeditationSessionManager.hasActiveSession) {
+        debugPrint('Resumed from background with active traditional session');
       }
     } catch (e) {
       debugPrint('Error resuming from background: $e');
@@ -799,10 +958,14 @@ class GlobalPlayerService extends ChangeNotifier {
   Future<void> prepareForTermination() async {
     try {
       // 强制保存所有状态
+      await EnhancedMeditationSessionManager.forceSaveCurrentState();
       await MeditationSessionManager.forceSaveCurrentState();
       await _saveLastPlayedPosition();
 
       // 如果有活跃会话，标记为停止（而不是完成）
+      if (EnhancedMeditationSessionManager.hasActiveSession) {
+        await EnhancedMeditationSessionManager.stopSession();
+      }
       if (MeditationSessionManager.hasActiveSession) {
         await MeditationSessionManager.stopSession();
       }
@@ -829,12 +992,17 @@ class GlobalPlayerService extends ChangeNotifier {
 
     // 在dispose前保存状态
     try {
+      await EnhancedMeditationSessionManager.forceSaveCurrentState();
       await MeditationSessionManager.forceSaveCurrentState();
       await _saveLastPlayedPosition();
     } catch (e) {
       debugPrint('Error saving state during dispose: $e');
     }
 
+    // 停止所有活跃会话
+    if (EnhancedMeditationSessionManager.hasActiveSession) {
+      await EnhancedMeditationSessionManager.stopSession();
+    }
     if (MeditationSessionManager.hasActiveSession) {
       await MeditationSessionManager.stopSession();
     }
