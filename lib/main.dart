@@ -293,31 +293,22 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
           }
         }
 
-        // 验证数据库状态
-        final dbStatus = DatabaseHelper.getInitializationStatus();
-        debugPrint('Database initialization status: $dbStatus');
+        // 简单验证数据库是否成功初始化
+        final db = await DatabaseHelper.database;
+        await db.rawQuery('SELECT 1');
 
-        if (dbStatus['isOpen'] == true) {
-          debugPrint(
-            'Database services initialized successfully on attempt $attempt',
-          );
+        debugPrint('Database services initialized successfully');
 
-          // 执行应用数据验证
-          await _performAppDataValidation();
-
-          // 执行数据库健康检查（后台异步执行）
-          _performDatabaseHealthCheck();
-
-          // 启动数据库连接监控（仅Android平台）
-          if (Platform.isAndroid) {
-            DatabaseConnectionManager.startConnectionMonitoring();
-            debugPrint('Android database connection monitoring started');
-          }
-
-          return;
-        } else {
-          throw Exception('Database is not open after initialization');
+        // 启动简化的连接监控（仅Android平台）
+        if (Platform.isAndroid) {
+          DatabaseConnectionManager.startConnectionMonitoring();
         }
+
+        // 执行数据验证和健康检查
+        await _performAppDataValidation();
+        _performDatabaseHealthCheck();
+
+        return;
       } catch (e) {
         debugPrint(
           'Database services initialization attempt $attempt failed: $e',
@@ -343,15 +334,25 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
   /// Android平台数据库初始化
   Future<void> _initializeAndroidDatabase() async {
     try {
-      debugPrint('Initializing Android database...');
+      debugPrint('=== Android Database Initialization Start ===');
 
       // Android特定的初始化逻辑
       // 检查Android版本和权限
       final androidInfo = Platform.version;
       debugPrint('Android version info: $androidInfo');
 
+      // 获取当前应用的包信息
+      try {
+        final packageName = 'com.mindra.app';
+        debugPrint('Package name: $packageName');
+      } catch (e) {
+        debugPrint('Could not get package info: $e');
+      }
+
       // 检查数据库是否需要恢复
       final dbStatus = DatabaseHelper.getInitializationStatus();
+      debugPrint('Database status before initialization: $dbStatus');
+
       if (dbStatus['lastError'] != null) {
         debugPrint(
           'Previous database initialization failed, attempting recovery...',
@@ -359,19 +360,40 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
         await DatabaseHelper.forceReinitialize();
       }
 
+      // 在初始化前检查现有的数据库文件
+      final existingFiles = await DatabaseHelper.findExistingDatabaseFiles();
+      debugPrint('Existing database files found: $existingFiles');
+
       // 初始化数据库
+      debugPrint('Starting database initialization...');
       final db = await DatabaseHelper.database;
+      debugPrint('Database path: ${db.path}');
 
       // 验证数据库功能
       final testResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM media_items',
       );
       final mediaCount = testResult.first['count'] as int;
-      debugPrint(
-        'Android database initialized successfully, media items: $mediaCount',
+
+      final sessionResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM meditation_sessions',
       );
+      final sessionCount = sessionResult.first['count'] as int;
+
+      final prefResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM user_preferences',
+      );
+      final prefCount = prefResult.first['count'] as int;
+
+      debugPrint('=== Android Database Status ===');
+      debugPrint('Media items count: $mediaCount');
+      debugPrint('Meditation sessions count: $sessionCount');
+      debugPrint('User preferences count: $prefCount');
+      debugPrint('Database file exists: ${await File(db.path).exists()}');
+      debugPrint('Database file size: ${await File(db.path).length()} bytes');
+      debugPrint('=== Android Database Initialization Complete ===');
     } catch (e) {
-      debugPrint('Android database initialization failed: $e');
+      debugPrint('!!! Android database initialization failed: $e');
 
       // 尝试强制重新初始化
       try {
@@ -383,7 +405,7 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
         await db.rawQuery('SELECT 1');
         debugPrint('Android database recovery successful');
       } catch (recoveryError) {
-        debugPrint('Android database recovery failed: $recoveryError');
+        debugPrint('!!! Android database recovery failed: $recoveryError');
 
         // 记录详细错误信息以便调试
         final dbStatus = DatabaseHelper.getInitializationStatus();

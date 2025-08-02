@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/theme_provider.dart';
 import '../../../../core/router/app_router.dart';
@@ -143,6 +144,13 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: localizations.privacyPolicy,
                   onTap: _navigateToPrivacyPolicy,
                 ),
+                // 调试选项 - 仅在开发模式下显示
+                if (kDebugMode)
+                  _SettingItem(
+                    icon: Icons.bug_report,
+                    title: '数据库调试信息',
+                    onTap: _navigateToDatabaseDebug,
+                  ),
               ],
             ),
             const SizedBox(height: 24),
@@ -560,6 +568,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _navigateToPrivacyPolicy() {
     context.go(AppRouter.privacyPolicy);
+  }
+
+  void _navigateToDatabaseDebug() {
+    context.go(AppRouter.databaseDebug);
   }
 
   Widget _buildSettingsSection({

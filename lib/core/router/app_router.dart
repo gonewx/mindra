@@ -9,6 +9,7 @@ import '../../features/player/presentation/pages/player_page.dart';
 import '../../features/meditation/presentation/pages/meditation_history_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/privacy_policy_page.dart';
+import '../../features/settings/presentation/pages/database_debug_page.dart';
 import '../../features/media/presentation/bloc/media_bloc.dart';
 import '../../shared/widgets/animated_bottom_navigation.dart';
 import '../../features/player/presentation/widgets/floating_player.dart';
@@ -24,6 +25,7 @@ class AppRouter {
   static const String meditationHistory = '/meditation-history';
   static const String settings = '/settings';
   static const String privacyPolicy = '/settings/privacy-policy';
+  static const String databaseDebug = '/settings/database-debug';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash, // Start with splash screen
@@ -107,6 +109,14 @@ class AppRouter {
                 pageBuilder: (context, state) => NoTransitionPage<void>(
                   key: state.pageKey,
                   child: const PrivacyPolicyPage(),
+                ),
+              ),
+              GoRoute(
+                path: 'database-debug',
+                name: 'database-debug',
+                pageBuilder: (context, state) => NoTransitionPage<void>(
+                  key: state.pageKey,
+                  child: const DatabaseDebugPage(),
                 ),
               ),
             ],

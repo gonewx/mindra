@@ -5,10 +5,13 @@ import '../../features/media/domain/repositories/media_repository.dart';
 import '../../features/media/domain/usecases/media_usecases.dart';
 import '../../features/media/presentation/bloc/media_bloc.dart';
 import '../../features/player/services/global_player_service.dart';
+import '../database/database_manager.dart';
 
 final getIt = GetIt.instance;
 
 Future<void> configureDependencies() async {
+  // Database
+  getIt.registerLazySingleton<DatabaseManager>(() => DatabaseManager.instance);
   // Services
   getIt.registerLazySingleton<GlobalPlayerService>(() => GlobalPlayerService());
 
