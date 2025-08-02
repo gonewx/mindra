@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:math';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/database/web_storage_helper.dart';
 import '../../domain/entities/meditation_session.dart';
@@ -53,6 +54,7 @@ class MeditationSessionManager {
         type: sessionType,
         soundEffects: soundEffects,
         isCompleted: false,
+        defaultImageIndex: Random().nextInt(5) + 1, // 随机选择1-5之间的图片索引
       );
 
       _sessionStartTime = startTime;

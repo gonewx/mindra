@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
-import 'dart:math';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/animated_media_card.dart';
 import '../../../../features/meditation/domain/entities/meditation_session.dart';
@@ -28,14 +27,13 @@ class RecentSessionWithMedia {
         mediaItem!.thumbnailPath!.isNotEmpty) {
       return mediaItem!.thumbnailPath!;
     }
-    return _getDefaultImageUrl(displayTitle);
+    return _getDefaultImageUrl(session.defaultImageIndex);
   }
 
-  static String _getDefaultImageUrl(String title) {
-    // 使用随机模式从5张本地冥想图片中选择
-    final random = Random();
-    final imageIndex = random.nextInt(5) + 1;
-    return 'assets/images/defaults/meditation_$imageIndex.jpg';
+  static String _getDefaultImageUrl(int imageIndex) {
+    // 使用固定的图片索引从5张本地冥想图片中选择
+    final validIndex = imageIndex.clamp(1, 5); // 确保索引在1-5范围内
+    return 'assets/images/defaults/meditation_$validIndex.jpg';
   }
 }
 

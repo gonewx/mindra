@@ -15,6 +15,7 @@ class MeditationSession extends Equatable {
   final double rating; // 1-5 stars
   final String? notes;
   final bool isCompleted;
+  final int defaultImageIndex; // 默认图片索引 (1-5)
 
   const MeditationSession({
     required this.id,
@@ -29,6 +30,7 @@ class MeditationSession extends Equatable {
     this.rating = 0.0,
     this.notes,
     required this.isCompleted,
+    required this.defaultImageIndex,
   });
 
   MeditationSession copyWith({
@@ -44,6 +46,7 @@ class MeditationSession extends Equatable {
     double? rating,
     String? notes,
     bool? isCompleted,
+    int? defaultImageIndex,
   }) {
     return MeditationSession(
       id: id ?? this.id,
@@ -58,6 +61,7 @@ class MeditationSession extends Equatable {
       rating: rating ?? this.rating,
       notes: notes ?? this.notes,
       isCompleted: isCompleted ?? this.isCompleted,
+      defaultImageIndex: defaultImageIndex ?? this.defaultImageIndex,
     );
   }
 
@@ -75,6 +79,7 @@ class MeditationSession extends Equatable {
       'rating': rating,
       'notes': notes,
       'is_completed': isCompleted ? 1 : 0,
+      'default_image_index': defaultImageIndex,
     };
   }
 
@@ -97,6 +102,7 @@ class MeditationSession extends Equatable {
       rating: map['rating']?.toDouble() ?? 0.0,
       notes: map['notes'],
       isCompleted: map['is_completed'] == 1,
+      defaultImageIndex: map['default_image_index'] ?? 1, // 默认值为1
     );
   }
 
@@ -114,6 +120,7 @@ class MeditationSession extends Equatable {
     rating,
     notes,
     isCompleted,
+    defaultImageIndex,
   ];
 }
 

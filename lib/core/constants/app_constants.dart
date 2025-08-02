@@ -4,7 +4,7 @@ class AppConstants {
 
   // Database
   static const String databaseName = 'mindra.db';
-  static const int databaseVersion = 2;
+  static const int databaseVersion = 3;
 
   // Storage Keys
   static const String themeKey = 'theme_mode';

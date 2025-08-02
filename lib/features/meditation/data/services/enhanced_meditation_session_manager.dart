@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:math';
+import 'dart:async';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/database/web_storage_helper.dart';
 import '../../domain/entities/meditation_session.dart';
 import '../../../media/domain/entities/media_item.dart';
-import 'dart:async';
 
 /// 增强版冥想会话管理器 - 解决数据丢失和统计不准确问题
 ///
@@ -84,6 +85,7 @@ class EnhancedMeditationSessionManager {
         type: sessionType,
         soundEffects: soundEffects,
         isCompleted: false,
+        defaultImageIndex: Random().nextInt(5) + 1, // 随机选择1-5之间的图片索引
       );
 
       _sessionStartTime = startTime;

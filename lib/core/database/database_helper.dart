@@ -356,6 +356,7 @@ class DatabaseHelper {
           rating REAL DEFAULT 0.0,
           notes TEXT,
           is_completed INTEGER DEFAULT 0,
+          default_image_index INTEGER DEFAULT 1,
           FOREIGN KEY (media_item_id) REFERENCES $_mediaItemsTable (id)
         )
       ''');
@@ -414,6 +415,34 @@ class DatabaseHelper {
             ''');
           } catch (e) {
             debugPrint('Error adding sort_index column: $e');
+            // 如果列已存在，不抛出错误
+          }
+        }
+
+        // 版本2到版本3：添加default_image_index字段
+        if (oldVersion < 3) {
+          try {
+            await db.execute(
+              'ALTER TABLE $_meditationSessionsTable ADD COLUMN default_image_index INTEGER DEFAULT 1',
+            );
+            debugPrint(
+              'Added default_image_index column to $_meditationSessionsTable',
+            );
+
+            // 为现有记录随机分配图片索引
+            final sessions = await db.query(_meditationSessionsTable);
+            for (final session in sessions) {
+              final randomIndex = (session['id'].hashCode % 5) + 1;
+              await db.update(
+                _meditationSessionsTable,
+                {'default_image_index': randomIndex},
+                where: 'id = ?',
+                whereArgs: [session['id']],
+              );
+            }
+            debugPrint('Assigned random image indices to existing sessions');
+          } catch (e) {
+            debugPrint('Error adding default_image_index column: $e');
             // 如果列已存在，不抛出错误
           }
         }
