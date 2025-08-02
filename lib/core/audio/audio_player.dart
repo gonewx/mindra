@@ -38,11 +38,12 @@ class MindraAudioPlayer {
     try {
       _audioPlayer = AudioPlayer();
       _setupListeners();
-      // 延迟配置音频上下文
+      // 延迟配置音频上下文，增加更多错误处理
       Future.microtask(() => _configureAudioContextSafely());
     } catch (e) {
       debugPrint('Failed to initialize audio player: $e');
-      rethrow;
+      _currentState = MindraPlayerState.error;
+      // 不重新抛出异常，允许应用继续运行
     }
   }
 
@@ -51,73 +52,139 @@ class MindraAudioPlayer {
 
     try {
       // 增加延迟以确保音频播放器完全初始化
-      await Future.delayed(const Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // 检查播放器是否仍然有效
+      if (_audioPlayer == null) {
+        debugPrint('Audio player was disposed before configuration');
+        return;
+      }
 
       final audioContext = _audioFocusManager.getMainAudioContext();
       await _audioPlayer!.setAudioContext(audioContext);
       debugPrint('Audio player context configured successfully');
     } catch (e) {
       debugPrint('Failed to configure audio context: $e');
-      // 继续运行，不抛出异常
+      // 如果配置失败，尝试使用默认上下文
+      try {
+        if (_audioPlayer != null) {
+          // 使用简化的音频上下文配置
+          final fallbackContext = AudioContext(
+            android: AudioContextAndroid(
+              isSpeakerphoneOn: false,
+              stayAwake: true,
+              contentType: AndroidContentType.music,
+              usageType: AndroidUsageType.media,
+              audioFocus: AndroidAudioFocus.none, // 不请求音频焦点，避免冲突
+            ),
+            iOS: AudioContextIOS(
+              category: AVAudioSessionCategory.playback,
+              options: {AVAudioSessionOptions.defaultToSpeaker},
+            ),
+          );
+          await _audioPlayer!.setAudioContext(fallbackContext);
+          debugPrint('Fallback audio context configured');
+        }
+      } catch (fallbackError) {
+        debugPrint(
+          'Fallback audio context configuration also failed: $fallbackError',
+        );
+        // 继续运行，不抛出异常
+      }
     }
   }
 
   void _setupListeners() {
     if (_audioPlayer == null) return;
 
-    // 监听播放状态变化
-    _audioPlayer!.onPlayerStateChanged.listen((state) {
-      debugPrint('Audio player state changed to: $state');
-      switch (state) {
-        case PlayerState.playing:
-          _currentState = MindraPlayerState.playing;
-          _playingController.add(true);
-          _playerStateController.add(MindraPlayerState.playing);
-          _audioFocusManager.notifyMainAudioStarted();
-          break;
-        case PlayerState.paused:
-          _currentState = MindraPlayerState.paused;
-          _playingController.add(false);
-          _playerStateController.add(MindraPlayerState.paused);
-          _audioFocusManager.notifyMainAudioStopped();
-          break;
-        case PlayerState.stopped:
-          _currentState = MindraPlayerState.stopped;
-          _playingController.add(false);
-          _positionController.add(Duration.zero);
-          _playerStateController.add(MindraPlayerState.stopped);
-          _audioFocusManager.notifyMainAudioStopped();
-          break;
-        case PlayerState.completed:
-          _currentState = MindraPlayerState.completed;
-          _playingController.add(false);
-          _positionController.add(Duration.zero);
-          _playerStateController.add(MindraPlayerState.completed);
-          _audioFocusManager.notifyMainAudioStopped();
-          break;
-        case PlayerState.disposed:
-          _currentState = MindraPlayerState.disposed;
-          _playingController.add(false);
-          _playerStateController.add(MindraPlayerState.disposed);
-          _audioFocusManager.notifyMainAudioStopped();
-          break;
-      }
-    });
+    try {
+      // 监听播放状态变化
+      _audioPlayer!.onPlayerStateChanged.listen(
+        (state) {
+          debugPrint('Audio player state changed to: $state');
+          try {
+            switch (state) {
+              case PlayerState.playing:
+                _currentState = MindraPlayerState.playing;
+                _playingController.add(true);
+                _playerStateController.add(MindraPlayerState.playing);
+                _audioFocusManager.notifyMainAudioStarted();
+                break;
+              case PlayerState.paused:
+                _currentState = MindraPlayerState.paused;
+                _playingController.add(false);
+                _playerStateController.add(MindraPlayerState.paused);
+                _audioFocusManager.notifyMainAudioStopped();
+                break;
+              case PlayerState.stopped:
+                _currentState = MindraPlayerState.stopped;
+                _playingController.add(false);
+                _positionController.add(Duration.zero);
+                _playerStateController.add(MindraPlayerState.stopped);
+                _audioFocusManager.notifyMainAudioStopped();
+                break;
+              case PlayerState.completed:
+                _currentState = MindraPlayerState.completed;
+                _playingController.add(false);
+                _positionController.add(Duration.zero);
+                _playerStateController.add(MindraPlayerState.completed);
+                _audioFocusManager.notifyMainAudioStopped();
+                break;
+              case PlayerState.disposed:
+                _currentState = MindraPlayerState.disposed;
+                _playingController.add(false);
+                _playerStateController.add(MindraPlayerState.disposed);
+                _audioFocusManager.notifyMainAudioStopped();
+                break;
+            }
+          } catch (e) {
+            debugPrint('Error handling player state change: $e');
+          }
+        },
+        onError: (error) {
+          debugPrint('Player state stream error: $error');
+          _currentState = MindraPlayerState.error;
+          _playerStateController.add(MindraPlayerState.error);
+        },
+      );
 
-    // 监听时长变化
-    _audioPlayer!.onDurationChanged.listen((duration) {
-      _durationController.add(duration);
-    });
+      // 监听时长变化
+      _audioPlayer!.onDurationChanged.listen(
+        (duration) {
+          try {
+            _durationController.add(duration);
+          } catch (e) {
+            debugPrint('Error handling duration change: $e');
+          }
+        },
+        onError: (error) {
+          debugPrint('Duration stream error: $error');
+        },
+      );
 
-    // 监听播放位置变化
-    _audioPlayer!.onPositionChanged.listen((position) {
-      _positionController.add(position);
+      // 监听播放位置变化
+      _audioPlayer!.onPositionChanged.listen(
+        (position) {
+          try {
+            _positionController.add(position);
 
-      // 计算缓冲进度（对于网络音频）
-      if (_isNetworkSource) {
-        _updateBufferProgress(position);
-      }
-    });
+            // 计算缓冲进度（对于网络音频）
+            if (_isNetworkSource) {
+              _updateBufferProgress(position);
+            }
+          } catch (e) {
+            debugPrint('Error handling position change: $e');
+          }
+        },
+        onError: (error) {
+          debugPrint('Position stream error: $error');
+        },
+      );
+    } catch (e) {
+      debugPrint('Error setting up audio player listeners: $e');
+      _currentState = MindraPlayerState.error;
+      _playerStateController.add(MindraPlayerState.error);
+    }
 
     // 注意：不需要重复监听 onPlayerStateChanged，上面已经处理了所有状态转换
   }
@@ -215,57 +282,103 @@ class MindraAudioPlayer {
   }
 
   Future<void> play() async {
-    if (_audioPlayer == null) throw Exception('Audio player not initialized');
+    if (_audioPlayer == null) {
+      debugPrint('Cannot play: Audio player not initialized');
+      _currentState = MindraPlayerState.error;
+      _playerStateController.add(MindraPlayerState.error);
+      return;
+    }
 
     debugPrint('Play called');
 
-    // 只有在真正需要加载时才显示缓冲状态
-    if (_currentState == MindraPlayerState.loading) {
-      _currentState = MindraPlayerState.buffering;
-      _playerStateController.add(MindraPlayerState.buffering);
-    }
+    try {
+      // 只有在真正需要加载时才显示缓冲状态
+      if (_currentState == MindraPlayerState.loading) {
+        _currentState = MindraPlayerState.buffering;
+        _playerStateController.add(MindraPlayerState.buffering);
+      }
 
-    // 重新配置音频上下文以确保最新的混音设置
-    await _configureAudioContextSafely();
-    await _audioPlayer!.resume();
-    _audioFocusManager.notifyMainAudioStarted();
+      // 重新配置音频上下文以确保最新的混音设置
+      await _configureAudioContextSafely();
+
+      // 检查播放器是否仍然有效
+      if (_audioPlayer == null) {
+        debugPrint('Audio player became null during play operation');
+        return;
+      }
+
+      await _audioPlayer!.resume();
+      _audioFocusManager.notifyMainAudioStarted();
+    } catch (e) {
+      debugPrint('Error during play: $e');
+      _currentState = MindraPlayerState.error;
+      _playerStateController.add(MindraPlayerState.error);
+    }
   }
 
   Future<void> pause() async {
-    if (_audioPlayer == null) throw Exception('Audio player not initialized');
+    if (_audioPlayer == null) {
+      debugPrint('Cannot pause: Audio player not initialized');
+      return;
+    }
 
     debugPrint('Pause called');
-    await _audioPlayer!.pause();
-    _audioFocusManager.notifyMainAudioStopped();
+    try {
+      await _audioPlayer!.pause();
+      _audioFocusManager.notifyMainAudioStopped();
+    } catch (e) {
+      debugPrint('Error during pause: $e');
+    }
   }
 
   Future<void> stop() async {
-    if (_audioPlayer == null) throw Exception('Audio player not initialized');
+    if (_audioPlayer == null) {
+      debugPrint('Cannot stop: Audio player not initialized');
+      return;
+    }
 
     debugPrint('Stop called');
-    await _audioPlayer!.stop();
-    _audioFocusManager.notifyMainAudioStopped();
+    try {
+      await _audioPlayer!.stop();
+      _audioFocusManager.notifyMainAudioStopped();
+    } catch (e) {
+      debugPrint('Error during stop: $e');
+    }
   }
 
   Future<void> seek(Duration position, {bool showBuffering = false}) async {
-    if (_audioPlayer == null) throw Exception('Audio player not initialized');
+    if (_audioPlayer == null) {
+      debugPrint('Cannot seek: Audio player not initialized');
+      return;
+    }
 
     debugPrint(
       'Seek to ${position.inSeconds}s (showBuffering: $showBuffering)',
     );
 
-    // 只有在明确需要时才显示缓冲状态（比如用户拖拽进度条）
-    if (showBuffering && _isNetworkSource) {
-      _currentState = MindraPlayerState.buffering;
-      _playerStateController.add(MindraPlayerState.buffering);
-    }
+    try {
+      // 只有在明确需要时才显示缓冲状态（比如用户拖拽进度条）
+      if (showBuffering && _isNetworkSource) {
+        _currentState = MindraPlayerState.buffering;
+        _playerStateController.add(MindraPlayerState.buffering);
+      }
 
-    await _audioPlayer!.seek(position);
+      await _audioPlayer!.seek(position);
+    } catch (e) {
+      debugPrint('Error during seek: $e');
+    }
   }
 
   Future<void> setVolume(double volume) async {
-    if (_audioPlayer == null) throw Exception('Audio player not initialized');
-    await _audioPlayer!.setVolume(volume);
+    if (_audioPlayer == null) {
+      debugPrint('Cannot set volume: Audio player not initialized');
+      return;
+    }
+    try {
+      await _audioPlayer!.setVolume(volume);
+    } catch (e) {
+      debugPrint('Error setting volume: $e');
+    }
   }
 
   // Getters

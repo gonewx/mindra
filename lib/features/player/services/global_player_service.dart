@@ -290,9 +290,19 @@ class GlobalPlayerService extends ChangeNotifier {
   void _handlePlayerStateChange(MindraPlayerState state) {
     switch (state) {
       case MindraPlayerState.completed:
-        _completeMeditationSession();
-        _clearLastPlayedRecord();
-        _handleTrackCompletion();
+        // 检查是否需要循环播放
+        if (_repeatMode == RepeatMode.one) {
+          // 单曲循环：不结束会话，直接重新开始
+          debugPrint(
+            'Single repeat mode: preparing to restart without ending session',
+          );
+          _handleTrackCompletion();
+        } else {
+          // 非循环模式：正常结束会话
+          _completeMeditationSession();
+          _clearLastPlayedRecord();
+          _handleTrackCompletion();
+        }
         break;
       case MindraPlayerState.playing:
         if (EnhancedMeditationSessionManager.hasActiveSession) {
@@ -319,14 +329,86 @@ class GlobalPlayerService extends ChangeNotifier {
   void _handleTrackCompletion() {
     switch (_repeatMode) {
       case RepeatMode.one:
-        _audioPlayer.seek(Duration.zero); // 自动seek，不显示缓冲
-        _audioPlayer.play();
+        // 单曲循环：异步重新开始播放
+        _restartCurrentTrack();
         break;
       case RepeatMode.all:
         playNext();
         break;
       case RepeatMode.none:
         break;
+    }
+  }
+
+  /// 重新开始播放当前曲目（用于单曲循环）
+  Future<void> _restartCurrentTrack() async {
+    if (_currentMedia == null) {
+      debugPrint('Cannot restart: no current media');
+      return;
+    }
+
+    try {
+      debugPrint(
+        'Restarting current track for repeat mode: ${_currentMedia!.title}',
+      );
+      debugPrint(
+        'Current player state before restart: ${_audioPlayer.currentState}',
+      );
+
+      // 最可靠的方法：重新加载音频文件
+      debugPrint('Reloading audio file for guaranteed restart');
+
+      // 先停止当前播放
+      await _audioPlayer.stop();
+      debugPrint('Stopped current playback');
+
+      // 等待停止完成
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // 重新加载音频文件
+      await _loadAudioFile(_currentMedia!.filePath);
+      debugPrint('Audio file reloaded successfully');
+
+      // 等待加载完成
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // 开始播放
+      await _audioPlayer.play();
+      debugPrint('Play command sent after reload');
+
+      // 等待一下检查播放状态
+      await Future.delayed(const Duration(milliseconds: 300));
+      debugPrint(
+        'Player state after reload and restart: ${_audioPlayer.currentState}',
+      );
+
+      if (_audioPlayer.currentState == MindraPlayerState.playing) {
+        debugPrint('Track restarted successfully (file reload method)');
+      } else {
+        debugPrint('Warning: Player still not playing after file reload');
+      }
+    } catch (e) {
+      debugPrint('Error restarting track with file reload: $e');
+
+      // 最后的尝试：等待更长时间再重试
+      try {
+        debugPrint('Final retry with longer delays');
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (_currentMedia!.filePath.startsWith('http')) {
+          await _audioPlayer.setUrl(_currentMedia!.filePath);
+        } else {
+          await _audioPlayer.setFilePath(_currentMedia!.filePath);
+        }
+
+        await Future.delayed(const Duration(milliseconds: 300));
+        await _audioPlayer.play();
+
+        debugPrint('Final retry completed');
+      } catch (finalError) {
+        debugPrint('All restart attempts failed: $finalError');
+        notifyListeners();
+      }
     }
   }
 

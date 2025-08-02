@@ -20,6 +20,7 @@ class AudioFocusManager {
         category: AVAudioSessionCategory.playback,
         options: {
           AVAudioSessionOptions.mixWithOthers, // 允许与其他音频混合
+          AVAudioSessionOptions.defaultToSpeaker, // 默认使用扬声器
         },
       ),
       android: AudioContextAndroid(
@@ -27,8 +28,8 @@ class AudioFocusManager {
         stayAwake: true,
         contentType: AndroidContentType.music,
         usageType: AndroidUsageType.media,
-        // 主音频使用 gain，获得音频焦点但允许背景音效混合
-        audioFocus: AndroidAudioFocus.gain,
+        // 使用更保守的音频焦点设置
+        audioFocus: AndroidAudioFocus.gainTransientMayDuck,
       ),
     );
   }
