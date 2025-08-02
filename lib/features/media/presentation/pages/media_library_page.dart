@@ -121,13 +121,18 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          AppLocalizations.of(context)?.mediaLibraryTitle ?? 'Media Library',
-          style: theme.textTheme.headlineLarge?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.bold,
+        Expanded(
+          child: Text(
+            AppLocalizations.of(context)?.mediaLibraryTitle ?? 'Media Library',
+            style: theme.textTheme.headlineLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ),
+        const SizedBox(width: 8),
         Row(
           children: [
             // 拖动排序按钮（仅在列表视图时显示）
@@ -223,11 +228,15 @@ class _MediaLibraryViewState extends State<_MediaLibraryView> {
                     size: 24,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    '拖动排序模式',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.primary,
+                  Expanded(
+                    child: Text(
+                      '拖动排序模式',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.primary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
                 ],

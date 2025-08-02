@@ -52,13 +52,25 @@ class _EnhancedMeditationHistoryPageState
   @override
   bool get wantKeepAlive => true; // 保持页面状态
 
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initializeData();
     _setupDataStreams();
     _startAutoRefreshTimer();
+    // 不在 initState 中初始化数据，等待 didChangeDependencies
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 在这里初始化数据，确保 Localizations 已经可用
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _initializeData();
+    }
   }
 
   @override

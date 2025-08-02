@@ -210,15 +210,9 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
         widget.playerState == MindraPlayerState.loading ||
         widget.playerState == MindraPlayerState.buffering;
 
-    debugPrint(
-      'PlayButton: State=${widget.playerState}, isLoading=$isLoading, isPlaying=${widget.isPlaying}',
-    );
-
     if (isLoading && !(_loadingController?.isAnimating ?? false)) {
-      debugPrint('PlayButton: Starting loading animation');
       _loadingController?.repeat();
     } else if (!isLoading && (_loadingController?.isAnimating ?? false)) {
-      debugPrint('PlayButton: Stopping loading animation');
       _loadingController?.stop();
     }
   }

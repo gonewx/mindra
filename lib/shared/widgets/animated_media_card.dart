@@ -258,7 +258,8 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 // Category badge
-                                Flexible(
+                                Expanded(
+                                  flex: 3,
                                   child: Container(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: isSmallScreen ? 6 : 8,
@@ -281,21 +282,28 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                                             fontWeight: FontWeight.w500,
                                           ),
                                       overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 4),
                                 // Duration
-                                Text(
-                                  widget.duration,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
-                                        fontSize: durationFontSize,
-                                      ),
+                                Expanded(
+                                  flex: 1,
+                                  child: Text(
+                                    widget.duration,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
+                                          fontSize: durationFontSize,
+                                        ),
+                                    textAlign: TextAlign.end,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
                                 ),
                               ],
                             ),
@@ -417,7 +425,8 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                             SizedBox(height: isSmallScreen ? 3 : 4),
                             Row(
                               children: [
-                                Flexible(
+                                Expanded(
+                                  flex: 3,
                                   child: Container(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: isSmallScreen ? 6 : 8,
@@ -443,20 +452,27 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                                             fontSize: categoryFontSize,
                                           ),
                                       overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ),
                                 ),
                                 SizedBox(width: isSmallScreen ? 6 : 8),
-                                Text(
-                                  widget.duration,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
-                                        fontSize: durationFontSize,
-                                      ),
+                                Expanded(
+                                  flex: 1,
+                                  child: Text(
+                                    widget.duration,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
+                                          fontSize: durationFontSize,
+                                        ),
+                                    textAlign: TextAlign.end,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
                                 ),
                               ],
                             ),

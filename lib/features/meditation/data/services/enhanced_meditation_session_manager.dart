@@ -356,7 +356,6 @@ class EnhancedMeditationSessionManager {
       );
 
       await _saveDailyStatsData(dailyStats);
-      debugPrint('Saved daily stats: ${dailyStats.totalDurationSeconds}s');
     } catch (e) {
       debugPrint('Error saving daily stats: $e');
     }

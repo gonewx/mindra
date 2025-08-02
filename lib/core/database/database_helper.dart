@@ -25,39 +25,14 @@ class DatabaseHelper {
   static Future<Database> get database async {
     // 如果数据库已经初始化且连接正常，直接返回
     if (_database != null && _database!.isOpen) {
-      try {
-        // 仅执行最简单的连接测试
-        await _database!.rawQuery('SELECT 1');
-        return _database!;
-      } catch (e) {
-        debugPrint('Database connection failed, reinitializing: $e');
-        try {
-          await _database!.close();
-        } catch (_) {}
-        _database = null;
-      }
+      return _database!;
     }
 
     // 如果正在初始化，等待初始化完成
     if (_initializationCompleter != null &&
         !_initializationCompleter!.isCompleted) {
       debugPrint('Database initialization in progress, waiting...');
-      try {
-        // 等待初始化完成，设置超时时间
-        final database = await _initializationCompleter!.future.timeout(
-          const Duration(seconds: 30),
-          onTimeout: () {
-            debugPrint('Database initialization timeout after 30 seconds');
-            throw TimeoutException('Database initialization timeout');
-          },
-        );
-        return database;
-      } catch (e) {
-        debugPrint('Error waiting for database initialization: $e');
-        // 如果等待失败，清理状态并重试
-        _initializationCompleter = null;
-        _isInitializing = false;
-      }
+      return await _initializationCompleter!.future;
     }
 
     // 开始新的初始化
@@ -261,183 +236,43 @@ class DatabaseHelper {
     _initializationAttempts++;
 
     try {
-      const maxRetries = 5; // 增加重试次数
-      int retryCount = 0;
-      Exception? lastException;
+      debugPrint('Database initialization attempt $_initializationAttempts');
 
-      while (retryCount < maxRetries) {
-        try {
-          debugPrint(
-            'Database initialization attempt ${retryCount + 1}/$maxRetries',
-          );
+      // 获取数据库路径
+      final path = await _getDatabasePath();
+      debugPrint('Attempting to initialize database at: $path');
 
-          // 获取数据库工厂
-          var factory = databaseFactory;
+      // 检查文件是否存在且不为空
+      final dbFile = File(path);
+      if (await dbFile.exists()) {
+        final fileSize = await dbFile.length();
+        debugPrint('Existing database file found, size: $fileSize bytes');
 
-          // 获取适当的数据库路径
-          final path = await _getDatabasePath();
-
-          debugPrint('Attempting to initialize database at: $path');
-
-          // 增强数据库文件检查，避免误删有效数据
-          final dbFile = File(path);
-          if (await dbFile.exists()) {
-            final fileSize = await dbFile.length();
-            debugPrint('Existing database file found, size: $fileSize bytes');
-
-            // 如果文件大小为0，明显是损坏的
-            if (fileSize == 0) {
-              debugPrint('Database file is empty (0 bytes), removing...');
-              try {
-                await dbFile.delete();
-              } catch (deleteError) {
-                debugPrint(
-                  'Failed to delete empty database file: $deleteError',
-                );
-              }
-            } else {
-              // 对于非空文件，尝试更详细的验证
-              bool isCorrupted = false;
-              String? corruptionReason;
-
-              try {
-                final testDb = await factory.openDatabase(path);
-
-                // 检查是否能查询系统表
-                final tables = await testDb.rawQuery(
-                  "SELECT name FROM sqlite_master WHERE type='table'",
-                );
-
-                // 检查必要的表是否存在
-                final tableNames = tables
-                    .map((t) => t['name'] as String)
-                    .toList();
-                final requiredTables = [
-                  _mediaItemsTable,
-                  _meditationSessionsTable,
-                  _userPreferencesTable,
-                ];
-                final missingTables = requiredTables
-                    .where((t) => !tableNames.contains(t))
-                    .toList();
-
-                if (missingTables.isNotEmpty) {
-                  isCorrupted = true;
-                  corruptionReason =
-                      'Missing tables: ${missingTables.join(", ")}';
-                } else {
-                  // 尝试查询每个表
-                  for (final table in requiredTables) {
-                    try {
-                      await testDb.rawQuery('SELECT COUNT(*) FROM $table');
-                    } catch (e) {
-                      isCorrupted = true;
-                      corruptionReason = 'Cannot query table $table: $e';
-                      break;
-                    }
-                  }
-                }
-
-                await testDb.close();
-
-                if (!isCorrupted) {
-                  debugPrint('Existing database file appears healthy');
-                }
-              } catch (e) {
-                // 只有在严重错误时才认为数据库损坏
-                final errorStr = e.toString().toLowerCase();
-                if (errorStr.contains('corrupt') ||
-                    errorStr.contains('malformed') ||
-                    errorStr.contains('not a database')) {
-                  isCorrupted = true;
-                  corruptionReason = 'Database file is corrupted: $e';
-                } else if (errorStr.contains('locked') ||
-                    errorStr.contains('busy')) {
-                  // 数据库被锁定不是损坏，等待后重试
-                  debugPrint('Database is locked/busy, will retry: $e');
-                  await Future.delayed(const Duration(seconds: 1));
-                  retryCount++;
-                  continue;
-                } else {
-                  debugPrint(
-                    'Database check failed with non-critical error: $e',
-                  );
-                  // 非致命错误，继续使用现有数据库
-                }
-              }
-
-              // 只有在确认损坏时才删除
-              if (isCorrupted && corruptionReason != null) {
-                debugPrint('Database is corrupted: $corruptionReason');
-
-                // 在删除前尝试备份损坏的数据库
-                try {
-                  final backupPath =
-                      '$path.corrupted.${DateTime.now().millisecondsSinceEpoch}';
-                  await dbFile.copy(backupPath);
-                  debugPrint('Backed up corrupted database to: $backupPath');
-                } catch (e) {
-                  debugPrint('Failed to backup corrupted database: $e');
-                }
-
-                try {
-                  await dbFile.delete();
-                  debugPrint('Removed corrupted database file');
-                } catch (deleteError) {
-                  debugPrint(
-                    'Failed to delete corrupted database: $deleteError',
-                  );
-                  // 如果无法删除，尝试重命名
-                  try {
-                    await dbFile.rename('$path.corrupted');
-                    debugPrint('Renamed corrupted database file');
-                  } catch (renameError) {
-                    debugPrint(
-                      'Failed to rename corrupted database: $renameError',
-                    );
-                  }
-                }
-              }
-            }
-          }
-
-          // 打开或创建数据库，简化配置
-          final database = await factory.openDatabase(
-            path,
-            options: OpenDatabaseOptions(
-              version: AppConstants.databaseVersion,
-              onCreate: _createTables,
-              onUpgrade: _onUpgrade,
-              onConfigure: _onDatabaseConfigure,
-            ),
-          );
-
-          // 简化验证：只检查连接有效性
-          await database.rawQuery('SELECT 1');
-
-          debugPrint('Database initialized successfully at: $path');
-          _lastInitializationError = null;
-          return database;
-        } catch (e) {
-          lastException = e is Exception ? e : Exception(e.toString());
-          retryCount++;
-
-          debugPrint('Database initialization attempt $retryCount failed: $e');
-
-          if (retryCount < maxRetries) {
-            // 简化退避策略，避免长时间等待
-            final delayMs =
-                500 * retryCount; // 500ms, 1000ms, 1500ms, 2000ms, 2500ms
-            debugPrint('Retrying database initialization in ${delayMs}ms...');
-            await Future.delayed(Duration(milliseconds: delayMs));
-          }
+        // 只删除明显损坏的空文件
+        if (fileSize == 0) {
+          debugPrint('Database file is empty, removing...');
+          await dbFile.delete();
         }
       }
 
-      _lastInitializationError = lastException;
-      throw Exception(
-        'Failed to initialize database after $maxRetries attempts. Last error: $lastException',
+      // 打开数据库
+      final database = await databaseFactory.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: AppConstants.databaseVersion,
+          onCreate: _createTables,
+          onUpgrade: _onUpgrade,
+          onConfigure: _onDatabaseConfigure,
+        ),
       );
+
+      debugPrint('Database initialized successfully at: $path');
+      _lastInitializationError = null;
+      return database;
+    } catch (e) {
+      _lastInitializationError = e is Exception ? e : Exception(e.toString());
+      debugPrint('Database initialization failed: $e');
+      rethrow;
     } finally {
       _isInitializing = false;
     }
@@ -703,48 +538,6 @@ class DatabaseHelper {
     }
   }
 
-  /// 执行数据库操作并在失败时重试
-  static Future<T> _executeWithRetry<T>(
-    Future<T> Function() operation,
-    String operationName, {
-    int maxRetries = 3,
-    Duration retryDelay = const Duration(milliseconds: 300),
-  }) async {
-    Exception? lastException;
-
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        return await operation();
-      } catch (e) {
-        lastException = e is Exception ? e : Exception(e.toString());
-
-        debugPrint('$operationName attempt $attempt failed: $e');
-
-        // 如果是数据库连接问题，尝试重新初始化
-        if (e.toString().toLowerCase().contains('database') &&
-            (e.toString().contains('closed') ||
-                e.toString().contains('lock'))) {
-          debugPrint(
-            'Database connection issue detected, attempting to reinitialize...',
-          );
-          try {
-            await forceReinitialize();
-          } catch (reinitError) {
-            debugPrint('Failed to reinitialize database: $reinitError');
-          }
-        }
-
-        if (attempt < maxRetries) {
-          await Future.delayed(retryDelay * attempt);
-        }
-      }
-    }
-
-    throw Exception(
-      'Failed to execute $operationName after $maxRetries attempts. Last error: $lastException',
-    );
-  }
-
   /// 获取数据库调试信息 - 符合Android标准实践
   static Future<Map<String, dynamic>> getDatabaseDebugInfo() async {
     try {
@@ -859,24 +652,20 @@ class DatabaseHelper {
 
   // Media Items operations
   static Future<void> insertMediaItem(Map<String, dynamic> item) async {
-    await _executeWithRetry(() async {
-      final db = await database;
-      await db.insert(
-        _mediaItemsTable,
-        item,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }, 'insertMediaItem');
+    final db = await database;
+    await db.insert(
+      _mediaItemsTable,
+      item,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   static Future<List<Map<String, dynamic>>> getMediaItems() async {
-    return await _executeWithRetry(() async {
-      final db = await database;
-      return await db.query(
-        _mediaItemsTable,
-        orderBy: 'sort_index ASC, created_at DESC',
-      );
-    }, 'getMediaItems');
+    final db = await database;
+    return await db.query(
+      _mediaItemsTable,
+      orderBy: 'sort_index ASC, created_at DESC',
+    );
   }
 
   static Future<Map<String, dynamic>?> getMediaItemById(String id) async {
@@ -884,16 +673,14 @@ class DatabaseHelper {
       throw ArgumentError('Media item ID cannot be empty');
     }
 
-    return await _executeWithRetry(() async {
-      final db = await database;
-      final results = await db.query(
-        _mediaItemsTable,
-        where: 'id = ?',
-        whereArgs: [id],
-        limit: 1,
-      );
-      return results.isNotEmpty ? results.first : null;
-    }, 'getMediaItemById');
+    final db = await database;
+    final results = await db.query(
+      _mediaItemsTable,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return results.isNotEmpty ? results.first : null;
   }
 
   static Future<List<Map<String, dynamic>>> getMediaItemsByCategory(
@@ -903,27 +690,23 @@ class DatabaseHelper {
       throw ArgumentError('Category cannot be empty');
     }
 
-    return await _executeWithRetry(() async {
-      final db = await database;
-      return await db.query(
-        _mediaItemsTable,
-        where: 'category = ?',
-        whereArgs: [category],
-        orderBy: 'sort_index ASC, created_at DESC',
-      );
-    }, 'getMediaItemsByCategory');
+    final db = await database;
+    return await db.query(
+      _mediaItemsTable,
+      where: 'category = ?',
+      whereArgs: [category],
+      orderBy: 'sort_index ASC, created_at DESC',
+    );
   }
 
   static Future<List<Map<String, dynamic>>> getFavoriteMediaItems() async {
-    return await _executeWithRetry(() async {
-      final db = await database;
-      return await db.query(
-        _mediaItemsTable,
-        where: 'is_favorite = ?',
-        whereArgs: [1],
-        orderBy: 'created_at DESC',
-      );
-    }, 'getFavoriteMediaItems');
+    final db = await database;
+    return await db.query(
+      _mediaItemsTable,
+      where: 'is_favorite = ?',
+      whereArgs: [1],
+      orderBy: 'created_at DESC',
+    );
   }
 
   static Future<List<Map<String, dynamic>>> getRecentMediaItems(
@@ -933,15 +716,13 @@ class DatabaseHelper {
       throw ArgumentError('Limit must be positive');
     }
 
-    return await _executeWithRetry(() async {
-      final db = await database;
-      return await db.query(
-        _mediaItemsTable,
-        where: 'last_played_at IS NOT NULL',
-        orderBy: 'last_played_at DESC',
-        limit: limit,
-      );
-    }, 'getRecentMediaItems');
+    final db = await database;
+    return await db.query(
+      _mediaItemsTable,
+      where: 'last_played_at IS NOT NULL',
+      orderBy: 'last_played_at DESC',
+      limit: limit,
+    );
   }
 
   static Future<void> updateMediaItem(
@@ -955,19 +736,17 @@ class DatabaseHelper {
       throw ArgumentError('Updates cannot be empty');
     }
 
-    await _executeWithRetry(() async {
-      final db = await database;
-      final result = await db.update(
-        _mediaItemsTable,
-        updates,
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+    final db = await database;
+    final result = await db.update(
+      _mediaItemsTable,
+      updates,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
 
-      if (result == 0) {
-        debugPrint('Warning: No rows updated for media item ID: $id');
-      }
-    }, 'updateMediaItem');
+    if (result == 0) {
+      debugPrint('Warning: No rows updated for media item ID: $id');
+    }
   }
 
   static Future<void> deleteMediaItem(String id) async {
@@ -975,30 +754,28 @@ class DatabaseHelper {
       throw ArgumentError('Media item ID cannot be empty');
     }
 
-    await _executeWithRetry(() async {
-      final db = await database;
+    final db = await database;
 
-      // 开始事务以确保数据一致性
-      await db.transaction((txn) async {
-        // 首先删除相关的冥想会话记录
-        await txn.delete(
-          _meditationSessionsTable,
-          where: 'media_item_id = ?',
-          whereArgs: [id],
-        );
+    // 开始事务以确保数据一致性
+    await db.transaction((txn) async {
+      // 首先删除相关的冥想会话记录
+      await txn.delete(
+        _meditationSessionsTable,
+        where: 'media_item_id = ?',
+        whereArgs: [id],
+      );
 
-        // 然后删除媒体项
-        final result = await txn.delete(
-          _mediaItemsTable,
-          where: 'id = ?',
-          whereArgs: [id],
-        );
+      // 然后删除媒体项
+      final result = await txn.delete(
+        _mediaItemsTable,
+        where: 'id = ?',
+        whereArgs: [id],
+      );
 
-        if (result == 0) {
-          debugPrint('Warning: No rows deleted for media item ID: $id');
-        }
-      });
-    }, 'deleteMediaItem');
+      if (result == 0) {
+        debugPrint('Warning: No rows deleted for media item ID: $id');
+      }
+    });
   }
 
   // 批量更新媒体项的排序索引
@@ -1007,21 +784,19 @@ class DatabaseHelper {
       return;
     }
 
-    await _executeWithRetry(() async {
-      final db = await database;
+    final db = await database;
 
-      // 使用事务确保原子性
-      await db.transaction((txn) async {
-        for (int i = 0; i < mediaIds.length; i++) {
-          await txn.update(
-            _mediaItemsTable,
-            {'sort_index': i},
-            where: 'id = ?',
-            whereArgs: [mediaIds[i]],
-          );
-        }
-      });
-    }, 'updateMediaItemsSortOrder');
+    // 使用事务确保原子性
+    await db.transaction((txn) async {
+      for (int i = 0; i < mediaIds.length; i++) {
+        await txn.update(
+          _mediaItemsTable,
+          {'sort_index': i},
+          where: 'id = ?',
+          whereArgs: [mediaIds[i]],
+        );
+      }
+    });
   }
 
   // Meditation Sessions operations

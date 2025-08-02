@@ -22,22 +22,25 @@ class _MeditationHistoryPageState extends State<MeditationHistoryPage> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    // 不在 initState 中立即加载数据，等待 didChangeDependencies
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Reload data when returning to this page
-    _refreshData();
+    // 在这里加载数据，确保 Localizations 已经可用
+    if (_isLoading) {
+      _loadData();
+    }
   }
 
   Future<void> _refreshData() async {
-    if (!_isLoading) {
-      setState(() {
-        _isLoading = true;
-      });
-    }
+    // 确保 context 已经可用
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+    });
     await _loadData();
   }
 
