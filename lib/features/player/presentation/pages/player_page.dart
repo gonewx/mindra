@@ -55,26 +55,16 @@ class _PlayerPageState extends State<PlayerPage> {
         await _playerService.initialize();
       }
 
-      // Listen for service changes first
+      // 首先监听服务变化
       _playerService.addListener(_onPlayerServiceChanged);
 
-      // Load media if specified, otherwise use existing media from service
-      if (widget.mediaId != null) {
-        debugPrint('PlayerPage: Loading media with ID: ${widget.mediaId}');
-        await _playerService.loadMedia(widget.mediaId!, autoPlay: false);
-      } else if (_playerService.currentMedia != null) {
-        // Service already has media loaded
-        debugPrint(
-          'PlayerPage: Using existing media from service: ${_playerService.currentMedia!.title}',
-        );
-        setState(() {});
-      } else {
-        debugPrint(
-          'PlayerPage: No media specified and no current media in service',
-        );
-      }
+      // 处理媒体加载逻辑（使用优化的方法）
+      await _playerService.prepareMediaForPlayer(
+        widget.mediaId,
+        autoPlay: false,
+      );
 
-      // Set timer if specified in URL parameters
+      // 设置定时器（如果URL参数中指定）
       if (widget.timerMinutes != null) {
         _playerService.setSleepTimer(widget.timerMinutes!);
         if (mounted) {

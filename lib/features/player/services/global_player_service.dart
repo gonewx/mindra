@@ -75,6 +75,58 @@ class GlobalPlayerService extends ChangeNotifier {
   String get title => _currentMedia?.title ?? '未选择素材';
   String get category => _currentMedia?.category.name ?? '';
 
+  /// 检查是否已加载指定的媒体
+  bool isMediaLoaded(String mediaId) {
+    return _currentMedia?.id == mediaId;
+  }
+
+  /// 获取当前媒体的详细状态
+  Map<String, dynamic> getCurrentMediaStatus() {
+    return {
+      'mediaId': _currentMedia?.id,
+      'title': _currentMedia?.title,
+      'isPlaying': _isPlaying,
+      'currentPosition': _currentPosition,
+      'totalDuration': _totalDuration,
+      'playerState': _playerState.name,
+      'isLoading': _isLoading,
+    };
+  }
+
+  /// 为播放页面准备媒体，优化的加载策略
+  Future<void> prepareMediaForPlayer(
+    String? mediaId, {
+    bool autoPlay = false,
+  }) async {
+    if (mediaId == null) {
+      debugPrint(
+        'PrepareMediaForPlayer: No mediaId provided, using current media',
+      );
+      return;
+    }
+
+    // 检查是否是相同的媒体
+    if (isMediaLoaded(mediaId)) {
+      final status = getCurrentMediaStatus();
+      debugPrint(
+        'PrepareMediaForPlayer: Same media already loaded and ready. '
+        'Status: $status',
+      );
+
+      // 相同媒体，不重新加载，只处理播放逻辑
+      if (autoPlay &&
+          !_isPlaying &&
+          _playerState != MindraPlayerState.loading) {
+        await play();
+      }
+      return;
+    }
+
+    // 不同媒体，需要加载
+    debugPrint('PrepareMediaForPlayer: Loading new media: $mediaId');
+    await loadMedia(mediaId, autoPlay: autoPlay);
+  }
+
   Future<void> initialize() async {
     if (_isInitialized) return;
 
@@ -385,15 +437,23 @@ class GlobalPlayerService extends ChangeNotifier {
         _currentMedia = media;
         _isFavorited = media.isFavorite;
 
-        // 通知UI更新媒体信息（标题、封面等）
+        // 通矵UI更新媒体信息（标题、封面等）
         notifyListeners();
 
+        // 只有在真正需要加载不同文件时才加载音频
         await _loadAudioFile(media.filePath);
         await _saveLastPlayedMedia();
 
         if (autoPlay) {
           await play();
         }
+
+        debugPrint(
+          'Media loaded: ${media.title} (ID: ${media.id}), '
+          'AutoPlay: $autoPlay',
+        );
+      } else {
+        throw Exception('Media with ID $mediaId not found');
       }
     } catch (e) {
       debugPrint('Error loading media: $e');
@@ -483,59 +543,70 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   Future<void> loadMedia(String mediaId, {bool autoPlay = true}) async {
-    // 检查是否是不同的音频
-    final isDifferentMedia = _currentMedia?.id != mediaId;
+    // 检查是否是相同的素材
+    final isSameMedia = _currentMedia?.id == mediaId;
 
-    if (isDifferentMedia) {
-      debugPrint('切换到不同音频: $mediaId');
+    if (isSameMedia) {
+      debugPrint(
+        '加载相同素材，保持当前状态: ${_currentMedia!.title} at ${_currentPosition}s',
+      );
 
-      // 先加载媒体信息，准备切换
-      await _loadMediaById(mediaId, autoPlay: false);
-
-      // 使用增强版会话管理器智能切换媒体
-      // 这将保存当前进度并继续累计到当天的统计中
-      if (_currentMedia != null) {
-        try {
-          final sessionType =
-              EnhancedMeditationSessionManager.getSessionTypeFromCategory(
-                _currentMedia!.category.name,
-              );
-
-          List<String> soundEffects = [];
-          try {
-            soundEffects = _soundEffectsPlayer.currentVolumes.entries
-                .where((entry) => entry.value > 0.0)
-                .map((entry) => entry.key)
-                .toList();
-          } catch (e) {
-            debugPrint('Error getting active sound effects: $e');
-            soundEffects = [];
-          }
-
-          await EnhancedMeditationSessionManager.switchToMedia(
-            newMediaItem: _currentMedia!,
-            sessionType: sessionType,
-            soundEffects: soundEffects,
-          );
-
-          debugPrint(
-            'Successfully switched to new media with enhanced session manager',
-          );
-        } catch (e) {
-          debugPrint('Error switching media with enhanced session manager: $e');
-          // 回退到传统方式
-          if (MeditationSessionManager.hasActiveSession) {
-            await MeditationSessionManager.stopSession();
-          }
-        }
-      }
-
-      if (autoPlay) {
+      // 对于相同素材，只需要处理autoPlay逻辑，不重新加载
+      if (autoPlay && !_isPlaying) {
         await play();
       }
-    } else {
-      debugPrint('播放相同音频，保持当前状态: ${_currentPosition}s');
-      await _loadMediaById(mediaId, autoPlay: autoPlay);
+
+      // 确保UI状态正确
+      notifyListeners();
+      return;
+    }
+
+    // 不同素材，需要切换
+    debugPrint('切换到不同音频: $mediaId');
+
+    // 先加载媒体信息，准备切换
+    await _loadMediaById(mediaId, autoPlay: false);
+
+    // 使用增强版会话管理器智能切换媒体
+    // 这将保存当前进度并继续累计到当天的统计中
+    if (_currentMedia != null) {
+      try {
+        final sessionType =
+            EnhancedMeditationSessionManager.getSessionTypeFromCategory(
+              _currentMedia!.category.name,
+            );
+
+        List<String> soundEffects = [];
+        try {
+          soundEffects = _soundEffectsPlayer.currentVolumes.entries
+              .where((entry) => entry.value > 0.0)
+              .map((entry) => entry.key)
+              .toList();
+        } catch (e) {
+          debugPrint('Error getting active sound effects: $e');
+          soundEffects = [];
+        }
+
+        await EnhancedMeditationSessionManager.switchToMedia(
+          newMediaItem: _currentMedia!,
+          sessionType: sessionType,
+          soundEffects: soundEffects,
+        );
+
+        debugPrint(
+          'Successfully switched to new media with enhanced session manager',
+        );
+      } catch (e) {
+        debugPrint('Error switching media with enhanced session manager: $e');
+        // 回退到传统方式
+        if (MeditationSessionManager.hasActiveSession) {
+          await MeditationSessionManager.stopSession();
+        }
+      }
+    }
+
+    if (autoPlay) {
+      await play();
     }
   }
 

@@ -17,29 +17,46 @@ class DatabaseHelper {
   static int _initializationAttempts = 0;
 
   static Future<Database> get database async {
+    // 增强的数据库连接验证
     if (_database != null && _database!.isOpen) {
-      // 验证数据库连接是否仍然有效
       try {
+        // 执行更全面的连接测试
         await _database!.rawQuery('SELECT 1');
+        await _validateDatabaseIntegrity(_database!);
         return _database!;
       } catch (e) {
-        debugPrint('Database connection lost, reinitializing: $e');
+        debugPrint(
+          'Database connection or integrity check failed, reinitializing: $e',
+        );
+        try {
+          await _database!.close();
+        } catch (_) {}
         _database = null;
       }
     }
 
-    // 防止并发初始化
+    // 防止并发初始化，增加超时机制
     if (_isInitializing) {
-      // 等待当前初始化完成
-      while (_isInitializing) {
+      final maxWaitTime = DateTime.now().add(const Duration(seconds: 30));
+      while (_isInitializing && DateTime.now().isBefore(maxWaitTime)) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
+
+      if (_isInitializing) {
+        debugPrint('Database initialization timeout, forcing restart');
+        _isInitializing = false;
+      }
+
       if (_database != null && _database!.isOpen) {
         try {
           await _database!.rawQuery('SELECT 1');
+          await _validateDatabaseIntegrity(_database!);
           return _database!;
         } catch (e) {
           debugPrint('Database connection lost after initialization wait: $e');
+          try {
+            await _database!.close();
+          } catch (_) {}
           _database = null;
         }
       }
@@ -391,6 +408,29 @@ class DatabaseHelper {
     }
   }
 
+  /// 快速验证数据库完整性（用于连接检查）
+  static Future<void> _validateDatabaseIntegrity(Database db) async {
+    try {
+      // 执行快速完整性检查
+      await db.rawQuery('SELECT 1');
+
+      // 检查表是否存在（不查询内容）
+      final result = await db.rawQuery(
+        "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name IN (?, ?, ?)",
+        [_mediaItemsTable, _meditationSessionsTable, _userPreferencesTable],
+      );
+
+      final tableCount = result.first['count'] as int;
+      if (tableCount != 3) {
+        throw Exception(
+          'Database schema integrity check failed: missing tables',
+        );
+      }
+    } catch (e) {
+      throw Exception('Database integrity validation failed: $e');
+    }
+  }
+
   static Future<void> _createTables(Database db, int version) async {
     try {
       debugPrint('Creating database tables...');
@@ -530,6 +570,87 @@ class DatabaseHelper {
     // 重新初始化
     await database;
     debugPrint('Database reinitialization completed');
+  }
+
+  /// 创建数据库备份
+  static Future<bool> createBackup() async {
+    try {
+      final db = await database;
+      final dbPath = db.path;
+
+      if (kIsWeb) {
+        debugPrint('Backup not supported on web platform');
+        return false;
+      }
+
+      final dbFile = File(dbPath);
+      if (!await dbFile.exists()) {
+        debugPrint('Database file does not exist, cannot create backup');
+        return false;
+      }
+
+      final backupPath =
+          '$dbPath.backup.${DateTime.now().millisecondsSinceEpoch}';
+      await dbFile.copy(backupPath);
+
+      debugPrint('Database backup created: $backupPath');
+      return true;
+    } catch (e) {
+      debugPrint('Failed to create database backup: $e');
+      return false;
+    }
+  }
+
+  /// 尝试从备份恢复数据库
+  static Future<bool> restoreFromBackup() async {
+    try {
+      if (kIsWeb) {
+        debugPrint('Backup restore not supported on web platform');
+        return false;
+      }
+
+      final db = await database;
+      final dbPath = db.path;
+      final dbDir = Directory(dirname(dbPath));
+
+      // 查找最新的备份文件
+      final backupFiles = await dbDir
+          .list()
+          .where((entity) => entity.path.contains('.backup.'))
+          .cast<File>()
+          .toList();
+
+      if (backupFiles.isEmpty) {
+        debugPrint('No backup files found');
+        return false;
+      }
+
+      // 按修改时间排序，选择最新的备份
+      backupFiles.sort((a, b) {
+        final aStat = a.statSync();
+        final bStat = b.statSync();
+        return bStat.modified.compareTo(aStat.modified);
+      });
+
+      final latestBackup = backupFiles.first;
+      debugPrint('Restoring from backup: ${latestBackup.path}');
+
+      // 关闭当前数据库连接
+      await _database!.close();
+      _database = null;
+
+      // 用备份文件替换当前数据库文件
+      await latestBackup.copy(dbPath);
+
+      // 重新初始化数据库
+      await database;
+
+      debugPrint('Database restored from backup successfully');
+      return true;
+    } catch (e) {
+      debugPrint('Failed to restore database from backup: $e');
+      return false;
+    }
   }
 
   /// 执行数据库操作并在失败时重试

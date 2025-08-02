@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../domain/entities/media_item.dart';
 import '../../domain/usecases/media_usecases.dart';
 import '../../data/datasources/media_local_datasource.dart';
+import '../../../../core/database/database_helper.dart';
 import 'media_event.dart';
 import 'media_state.dart';
 
@@ -48,15 +49,38 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     LoadMediaItems event,
     Emitter<MediaState> emit,
   ) async {
-    try {
-      emit(MediaLoading());
-      final mediaItems = await _getMediaItemsUseCase();
-      emit(MediaLoaded(mediaItems));
-    } catch (e) {
-      final errorMessage = _getErrorMessage(e, '加载媒体项目');
-      emit(MediaError(errorMessage));
-      if (kDebugMode) {
-        print('Error loading media items: $e');
+    const maxRetries = 3;
+    int retryCount = 0;
+
+    while (retryCount < maxRetries) {
+      try {
+        emit(MediaLoading());
+
+        // 在加载前验证数据库连接
+        await _validateDatabaseConnection();
+
+        final mediaItems = await _getMediaItemsUseCase();
+        emit(MediaLoaded(mediaItems));
+        return;
+      } catch (e) {
+        retryCount++;
+        debugPrint('Media loading attempt $retryCount failed: $e');
+
+        if (retryCount >= maxRetries) {
+          final errorMessage = _getErrorMessage(e, '加载媒体项目');
+          emit(MediaError(errorMessage));
+          if (kDebugMode) {
+            print('Error loading media items after $maxRetries attempts: $e');
+          }
+        } else {
+          // 等待后重试，逐渐增加延迟
+          await Future.delayed(Duration(milliseconds: 300 * retryCount));
+
+          // 尝试恢复数据库连接
+          if (_isDatabaseError(e)) {
+            await _attemptDatabaseRecovery();
+          }
+        }
       }
     }
   }
@@ -305,7 +329,42 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     }
   }
 
-  /// 获取用户友好的错误信息
+  /// 验证数据库连接
+  Future<void> _validateDatabaseConnection() async {
+    try {
+      final db = await DatabaseHelper.database;
+      await db.rawQuery('SELECT 1');
+    } catch (e) {
+      debugPrint('Database connection validation failed: $e');
+      throw Exception('数据库连接失败：$e');
+    }
+  }
+
+  /// 判断是否为数据库错误
+  bool _isDatabaseError(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    return errorString.contains('database') ||
+        errorString.contains('sqlite') ||
+        errorString.contains('connection') ||
+        errorString.contains('locked') ||
+        errorString.contains('closed');
+  }
+
+  /// 尝试数据库恢复
+  Future<void> _attemptDatabaseRecovery() async {
+    try {
+      debugPrint('Attempting database recovery in MediaBloc...');
+      await DatabaseHelper.forceReinitialize();
+
+      // 验证恢复结果
+      await _validateDatabaseConnection();
+      debugPrint('Database recovery successful in MediaBloc');
+    } catch (e) {
+      debugPrint('Database recovery failed in MediaBloc: $e');
+      rethrow;
+    }
+  }
+
   String _getErrorMessage(dynamic error, String operation) {
     if (error is ArgumentError) {
       return '输入参数错误：${error.message}';

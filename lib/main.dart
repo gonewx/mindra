@@ -16,8 +16,10 @@ import 'core/database/database_health_checker.dart';
 import 'core/database/database_connection_manager.dart';
 import 'core/services/reminder_scheduler_service.dart';
 import 'core/localization/app_localizations.dart';
-import 'core/services/app_lifecycle_manager.dart';
+import 'core/services/app_data_validator.dart';
 import 'features/player/services/global_player_service.dart';
+
+import 'core/services/app_lifecycle_manager.dart';
 
 void main() async {
   // 保持原生启动画面
@@ -98,11 +100,22 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
   /// 处理应用恢复
   void _handleAppResumed() async {
     try {
+      debugPrint('App resumed - performing comprehensive data validation...');
+
+      // 获取连接状态信息
+      final connectionStatus = DatabaseConnectionManager.getConnectionStatus();
+      debugPrint('Connection status: $connectionStatus');
+
       // 检查数据库连接状态
       final isConnected = await DatabaseConnectionManager.checkConnection();
-      if (!isConnected) {
-        debugPrint('Database connection lost, attempting recovery...');
-        await DatabaseHelper.forceReinitialize();
+      if (!isConnected || !DatabaseConnectionManager.isHealthy) {
+        debugPrint('Database connection unhealthy, attempting recovery...');
+
+        // 尝试数据库恢复
+        await _attemptDatabaseRecovery();
+      } else {
+        // 执行数据完整性验证
+        await _validateDataIntegrity();
       }
 
       // 重新启动连接监控
@@ -111,6 +124,72 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
       }
     } catch (e) {
       debugPrint('Error handling app resume: $e');
+      // 如果恢复失败，尝试强制重新初始化
+      await _forceAppReinitialization();
+    }
+  }
+
+  /// 尝试数据库恢复
+  Future<void> _attemptDatabaseRecovery() async {
+    try {
+      debugPrint('Attempting database recovery...');
+
+      // 先尝试强制重新初始化
+      await DatabaseHelper.forceReinitialize();
+
+      // 验证恢复结果
+      final db = await DatabaseHelper.database;
+      await db.rawQuery('SELECT COUNT(*) FROM media_items');
+
+      debugPrint('Database recovery successful');
+    } catch (e) {
+      debugPrint('Database recovery failed, trying backup restore: $e');
+
+      // 尝试从备份恢复
+      final restoreSuccess = await DatabaseHelper.restoreFromBackup();
+      if (!restoreSuccess) {
+        debugPrint(
+          'Backup restore also failed, database may need manual intervention',
+        );
+        throw Exception('Database recovery completely failed');
+      }
+    }
+  }
+
+  /// 验证数据完整性
+  Future<void> _validateDataIntegrity() async {
+    try {
+      debugPrint('Validating data integrity...');
+
+      final db = await DatabaseHelper.database;
+
+      // 检查表是否存在且可访问
+      await db.rawQuery('SELECT COUNT(*) FROM media_items');
+      await db.rawQuery('SELECT COUNT(*) FROM meditation_sessions');
+      await db.rawQuery('SELECT COUNT(*) FROM user_preferences');
+
+      debugPrint('Data integrity validation passed');
+    } catch (e) {
+      debugPrint('Data integrity validation failed: $e');
+      throw Exception('Data integrity validation failed: $e');
+    }
+  }
+
+  /// 强制应用重新初始化
+  Future<void> _forceAppReinitialization() async {
+    try {
+      debugPrint('Forcing complete app reinitialization...');
+
+      // 停止所有监控
+      DatabaseConnectionManager.stopConnectionMonitoring();
+
+      // 重新初始化数据库服务
+      await _initializeDatabaseServices();
+
+      debugPrint('App reinitialization completed');
+    } catch (e) {
+      debugPrint('App reinitialization failed: $e');
+      // 这是最后的手段，如果还失败就让用户手动重启应用
     }
   }
 
@@ -223,6 +302,9 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
             'Database services initialized successfully on attempt $attempt',
           );
 
+          // 执行应用数据验证
+          await _performAppDataValidation();
+
           // 执行数据库健康检查（后台异步执行）
           _performDatabaseHealthCheck();
 
@@ -312,7 +394,46 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
     }
   }
 
-  /// 执行数据库健康检查（后台异步执行）
+  /// 执行应用数据验证
+  Future<void> _performAppDataValidation() async {
+    try {
+      debugPrint('Starting application data validation...');
+
+      final report = await AppDataValidator.validateApplicationData();
+
+      if (!report.isValid) {
+        debugPrint(
+          'Data validation found ${report.issues.length} issues, attempting auto-fix...',
+        );
+
+        final fixedIssues = await AppDataValidator.autoFixIssues(report);
+
+        if (fixedIssues.isNotEmpty) {
+          debugPrint('Successfully fixed ${fixedIssues.length} data issues:');
+          for (final fix in fixedIssues) {
+            debugPrint('  - $fix');
+          }
+
+          // 再次验证修复结果
+          final revalidationReport =
+              await AppDataValidator.validateApplicationData();
+          if (revalidationReport.isValid) {
+            debugPrint('Data validation passed after auto-fix');
+          } else {
+            debugPrint(
+              'Some issues remain after auto-fix, manual intervention may be required',
+            );
+          }
+        }
+      } else {
+        debugPrint('Application data validation passed - all systems healthy');
+      }
+    } catch (e) {
+      debugPrint('Application data validation failed: $e');
+      // 验证失败不应该阻止应用启动，但需要记录
+    }
+  }
+
   void _performDatabaseHealthCheck() {
     // 在后台异步执行健康检查，不阻塞UI
     Future.microtask(() async {
