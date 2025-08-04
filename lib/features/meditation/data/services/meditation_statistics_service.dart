@@ -29,7 +29,7 @@ class MeditationStatisticsService {
       final weekStart = now.subtract(Duration(days: now.weekday - 1));
       final weekEnd = weekStart.add(const Duration(days: 6));
 
-      // 计算连续天数
+      // 计算历史最长连续天数
       final streakDays = _calculateStreakDays(sessions);
 
       // 计算本周时长
@@ -88,11 +88,10 @@ class MeditationStatisticsService {
     }
   }
 
-  /// 计算连续天数
+  /// 计算历史最长连续天数
   static int _calculateStreakDays(List<MeditationSession> sessions) {
     if (sessions.isEmpty) return 0;
 
-    final now = DateTime.now();
     final completedSessions = sessions
         .where((session) => session.isCompleted)
         .toList();
@@ -106,21 +105,31 @@ class MeditationStatisticsService {
       sessionsByDate[dateKey]!.add(session);
     }
 
-    // 计算连续天数
-    int streakDays = 0;
-    var currentDate = now;
+    // 获取所有有冥想的日期并排序
+    final meditationDates = sessionsByDate.keys.toList()..sort();
 
-    while (true) {
-      final dateKey = _getDateKey(currentDate);
-      if (sessionsByDate.containsKey(dateKey)) {
-        streakDays++;
-        currentDate = currentDate.subtract(const Duration(days: 1));
+    if (meditationDates.isEmpty) return 0;
+
+    // 计算最长连续天数
+    int maxStreakDays = 1; // 至少有一天
+    int currentStreakDays = 1;
+
+    for (int i = 1; i < meditationDates.length; i++) {
+      final currentDate = _parseDateKey(meditationDates[i]);
+      final previousDate = _parseDateKey(meditationDates[i - 1]);
+
+      // 检查是否是连续的日期（相差1天）
+      if (currentDate.difference(previousDate).inDays == 1) {
+        currentStreakDays++;
+        maxStreakDays = maxStreakDays > currentStreakDays
+            ? maxStreakDays
+            : currentStreakDays;
       } else {
-        break;
+        currentStreakDays = 1; // 重新开始计算连续天数
       }
     }
 
-    return streakDays;
+    return maxStreakDays;
   }
 
   /// 计算本周时长
@@ -272,6 +281,16 @@ class MeditationStatisticsService {
   /// 获取日期键
   static String _getDateKey(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  /// 解析日期键
+  static DateTime _parseDateKey(String dateKey) {
+    final parts = dateKey.split('-');
+    return DateTime(
+      int.parse(parts[0]),
+      int.parse(parts[1]),
+      int.parse(parts[2]),
+    );
   }
 
   /// 获取空统计数据

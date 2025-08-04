@@ -27,7 +27,7 @@ class EnhancedMeditationStatisticsService {
       final weekStart = _getWeekStart(now);
       final weekEnd = weekStart.add(const Duration(days: 6));
 
-      // 连续天数 - 基于每日有效冥想时间（>=1分钟）
+      // 历史最长连续天数 - 基于每日有效冥想时间（>=1分钟）
       final streakDays = _calculateStreakDays(mergedDailySessions);
 
       // 本周时长 - 累计所有有效播放时间
@@ -169,34 +169,38 @@ class EnhancedMeditationStatisticsService {
     return dailySummaries;
   }
 
-  /// 计算连续冥想天数 - 基于每日有效冥想时间
+  /// 计算历史最长连续冥想天数 - 基于每日有效冥想时间
   static int _calculateStreakDays(List<DailyMeditationSummary> dailySummaries) {
     if (dailySummaries.isEmpty) return 0;
 
-    final today = DateTime.now();
-    var currentDate = DateTime(today.year, today.month, today.day);
-    var streakDays = 0;
+    // 过滤出有效冥想日并按日期排序
+    final validDays =
+        dailySummaries.where((summary) => summary.hasValidMeditation).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
 
-    // 创建日期到摘要的映射
-    final summaryMap = <String, DailyMeditationSummary>{};
-    for (final summary in dailySummaries) {
-      summaryMap[_getDateKey(summary.date)] = summary;
-    }
+    if (validDays.isEmpty) return 0;
+    if (validDays.length == 1) return 1;
 
-    // 从今天开始向前计算连续天数
-    while (true) {
-      final dateKey = _getDateKey(currentDate);
-      final summary = summaryMap[dateKey];
+    // 计算最长连续天数
+    int maxStreakDays = 1; // 至少有一天
+    int currentStreakDays = 1;
 
-      if (summary != null && summary.hasValidMeditation) {
-        streakDays++;
-        currentDate = currentDate.subtract(const Duration(days: 1));
+    for (int i = 1; i < validDays.length; i++) {
+      final currentDate = validDays[i].date;
+      final previousDate = validDays[i - 1].date;
+
+      // 检查是否是连续的日期（相差1天）
+      if (currentDate.difference(previousDate).inDays == 1) {
+        currentStreakDays++;
+        maxStreakDays = maxStreakDays > currentStreakDays
+            ? maxStreakDays
+            : currentStreakDays;
       } else {
-        break;
+        currentStreakDays = 1; // 重新开始计算连续天数
       }
     }
 
-    return streakDays;
+    return maxStreakDays;
   }
 
   /// 计算本周总时长 - 包含所有有效播放时间
