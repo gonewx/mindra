@@ -79,7 +79,7 @@ class MindraAudioPlayer {
             ),
             iOS: AudioContextIOS(
               category: AVAudioSessionCategory.playback,
-              options: {AVAudioSessionOptions.defaultToSpeaker},
+              options: {}, // 移除 defaultToSpeaker 选项
             ),
           );
           await _audioPlayer!.setAudioContext(fallbackContext);
@@ -289,7 +289,7 @@ class MindraAudioPlayer {
       return;
     }
 
-    debugPrint('Play called');
+    debugPrint('Play called, current state: $_currentState');
 
     try {
       // 只有在真正需要加载时才显示缓冲状态
@@ -298,17 +298,37 @@ class MindraAudioPlayer {
         _playerStateController.add(MindraPlayerState.buffering);
       }
 
-      // 重新配置音频上下文以确保最新的混音设置
-      await _configureAudioContextSafely();
+      // 根据 audioplayers 官方文档，对于 completed 状态需要特殊处理
+      if (_currentState == MindraPlayerState.completed) {
+        debugPrint(
+          'Handling completed state - using seek then resume approach',
+        );
+        try {
+          // 根据官方文档，当 ReleaseMode.stop 时，音频源仍然可用
+          // 但 resume() 在 completed 状态下不会重新开始播放
+          // 需要先 seek 到开头，然后 resume
+          await _audioPlayer!.seek(Duration.zero);
+          debugPrint('Seeked to beginning for completed state');
 
-      // 检查播放器是否仍然有效
-      if (_audioPlayer == null) {
-        debugPrint('Audio player became null during play operation');
-        return;
+          // 等待一小段时间确保 seek 操作完成
+          await Future.delayed(const Duration(milliseconds: 50));
+
+          // 然后 resume 从开头开始播放
+          await _audioPlayer!.resume();
+          debugPrint('Resume() call completed for completed state');
+        } catch (e) {
+          debugPrint('Error in completed state handling: $e');
+          rethrow;
+        }
+      } else {
+        // 对于其他状态，直接调用 resume()
+        debugPrint('Calling resume() for current state: $_currentState');
+        await _audioPlayer!.resume();
+        debugPrint('Resume() call completed');
       }
 
-      await _audioPlayer!.resume();
       _audioFocusManager.notifyMainAudioStarted();
+      debugPrint('Audio focus notified, play operation completed successfully');
     } catch (e) {
       debugPrint('Error during play: $e');
       _currentState = MindraPlayerState.error;
@@ -364,8 +384,11 @@ class MindraAudioPlayer {
       }
 
       await _audioPlayer!.seek(position);
+      debugPrint('Seek operation completed successfully');
     } catch (e) {
       debugPrint('Error during seek: $e');
+      // 重新抛出错误，让调用者知道 seek 失败了
+      rethrow;
     }
   }
 
@@ -378,6 +401,19 @@ class MindraAudioPlayer {
       await _audioPlayer!.setVolume(volume);
     } catch (e) {
       debugPrint('Error setting volume: $e');
+    }
+  }
+
+  Future<void> setReleaseMode(ReleaseMode releaseMode) async {
+    if (_audioPlayer == null) {
+      debugPrint('Cannot set release mode: Audio player not initialized');
+      return;
+    }
+    try {
+      await _audioPlayer!.setReleaseMode(releaseMode);
+      debugPrint('Release mode set to: $releaseMode');
+    } catch (e) {
+      debugPrint('Error setting release mode: $e');
     }
   }
 

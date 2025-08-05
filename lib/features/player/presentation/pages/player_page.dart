@@ -401,9 +401,15 @@ class _PlayerPageState extends State<PlayerPage> {
             isPlaying: _isPlaying,
             playerState: _playerService.playerState,
             onPlayPause: () async {
+              debugPrint(
+                'PlayPause button pressed: isPlaying=$_isPlaying, playerState=${_playerService.playerState}',
+              );
+
               if (_isPlaying) {
+                debugPrint('Currently playing - pausing');
                 await _playerService.pause();
               } else {
+                debugPrint('Currently not playing - starting playback');
                 await _playerService.play();
               }
             },

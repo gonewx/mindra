@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import '../../../core/audio/audio_player.dart';
 import '../../../features/media/domain/entities/media_item.dart';
 import '../../../features/meditation/data/services/meditation_session_manager.dart';
@@ -175,6 +176,9 @@ class GlobalPlayerService extends ChangeNotifier {
         );
         _audioPlayer = MindraAudioPlayer();
         await Future.delayed(const Duration(milliseconds: 100));
+
+        // 设置 ReleaseMode 为 stop，避免音频源在播放完成后被释放
+        await _audioPlayer.setReleaseMode(ReleaseMode.stop);
         debugPrint('Audio player initialized successfully on attempt $attempt');
         return;
       } catch (e) {
@@ -288,8 +292,14 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   void _handlePlayerStateChange(MindraPlayerState state) {
+    debugPrint('Player state changed to: $state');
+
     switch (state) {
       case MindraPlayerState.completed:
+        // 确保UI状态正确更新
+        _isPlaying = false;
+        _playerState = MindraPlayerState.completed;
+
         // 检查是否需要循环播放
         if (_repeatMode == RepeatMode.one) {
           // 单曲循环：不结束会话，直接重新开始
@@ -303,25 +313,50 @@ class GlobalPlayerService extends ChangeNotifier {
           _clearLastPlayedRecord();
           _handleTrackCompletion();
         }
+
+        notifyListeners();
         break;
       case MindraPlayerState.playing:
+        _isPlaying = true;
+        _playerState = MindraPlayerState.playing;
         if (EnhancedMeditationSessionManager.hasActiveSession) {
           EnhancedMeditationSessionManager.resumeSession();
         }
         if (MeditationSessionManager.hasActiveSession) {
           MeditationSessionManager.resumeSession();
         }
+        notifyListeners();
         break;
       case MindraPlayerState.paused:
-      case MindraPlayerState.stopped:
+        _isPlaying = false;
+        _playerState = MindraPlayerState.paused;
         if (EnhancedMeditationSessionManager.hasActiveSession) {
           EnhancedMeditationSessionManager.pauseSession();
         }
         if (MeditationSessionManager.hasActiveSession) {
           MeditationSessionManager.pauseSession();
         }
+        notifyListeners();
+        break;
+      case MindraPlayerState.stopped:
+        _isPlaying = false;
+        _playerState = MindraPlayerState.stopped;
+        if (EnhancedMeditationSessionManager.hasActiveSession) {
+          EnhancedMeditationSessionManager.pauseSession();
+        }
+        if (MeditationSessionManager.hasActiveSession) {
+          MeditationSessionManager.pauseSession();
+        }
+        notifyListeners();
+        break;
+      case MindraPlayerState.loading:
+      case MindraPlayerState.buffering:
+        _playerState = state;
+        notifyListeners();
         break;
       default:
+        _playerState = state;
+        notifyListeners();
         break;
     }
   }
@@ -355,8 +390,53 @@ class GlobalPlayerService extends ChangeNotifier {
         'Current player state before restart: ${_audioPlayer.currentState}',
       );
 
-      // 最可靠的方法：重新加载音频文件
-      debugPrint('Reloading audio file for guaranteed restart');
+      // 简化的重启逻辑：直接seek到开头并播放
+      debugPrint('Seeking to beginning and restarting playback');
+
+      // 立即更新状态，避免UI状态不一致
+      _playerState = MindraPlayerState.loading;
+      notifyListeners();
+
+      // Seek到开头
+      await _audioPlayer.seek(Duration.zero);
+      _currentPosition = 0.0;
+
+      // 等待一下确保seek完成
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // 开始播放
+      await _audioPlayer.play();
+      debugPrint('Play command sent after seek to beginning');
+
+      // 等待播放状态更新
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      if (_audioPlayer.currentState == MindraPlayerState.playing) {
+        debugPrint('Track restarted successfully (seek method)');
+        _playerState = MindraPlayerState.playing;
+        _isPlaying = true;
+      } else {
+        debugPrint(
+          'Warning: Player not playing after restart, retrying with file reload',
+        );
+        // 如果简单重启失败，回退到重新加载文件的方法
+        await _restartWithFileReload();
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error restarting track: $e');
+      // 发生错误时，尝试文件重新加载的方法
+      await _restartWithFileReload();
+    }
+  }
+
+  /// 通过重新加载文件来重启播放（备用方法）
+  Future<void> _restartWithFileReload() async {
+    if (_currentMedia == null) return;
+
+    try {
+      debugPrint('Using file reload method as fallback');
 
       // 先停止当前播放
       await _audioPlayer.stop();
@@ -384,31 +464,22 @@ class GlobalPlayerService extends ChangeNotifier {
 
       if (_audioPlayer.currentState == MindraPlayerState.playing) {
         debugPrint('Track restarted successfully (file reload method)');
+        _playerState = MindraPlayerState.playing;
+        _isPlaying = true;
       } else {
         debugPrint('Warning: Player still not playing after file reload');
+        // 最后尝试：重置状态让用户手动重新播放
+        _playerState = MindraPlayerState.stopped;
+        _isPlaying = false;
       }
+
+      notifyListeners();
     } catch (e) {
-      debugPrint('Error restarting track with file reload: $e');
-
-      // 最后的尝试：等待更长时间再重试
-      try {
-        debugPrint('Final retry with longer delays');
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        if (_currentMedia!.filePath.startsWith('http')) {
-          await _audioPlayer.setUrl(_currentMedia!.filePath);
-        } else {
-          await _audioPlayer.setFilePath(_currentMedia!.filePath);
-        }
-
-        await Future.delayed(const Duration(milliseconds: 300));
-        await _audioPlayer.play();
-
-        debugPrint('Final retry completed');
-      } catch (finalError) {
-        debugPrint('All restart attempts failed: $finalError');
-        notifyListeners();
-      }
+      debugPrint('File reload method also failed: $e');
+      // 重置状态让用户手动重新播放
+      _playerState = MindraPlayerState.stopped;
+      _isPlaying = false;
+      notifyListeners();
     }
   }
 
@@ -803,18 +874,29 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   Future<void> play() async {
-    await _audioPlayer.play();
+    debugPrint(
+      'GlobalPlayerService.play() called, current state: $_playerState',
+    );
 
-    if (_currentMedia != null) {
-      try {
-        await _mediaDataSource.updatePlayCount(_currentMedia!.id);
-        debugPrint('Updated play count for: ${_currentMedia!.title}');
-      } catch (e) {
-        debugPrint('Error updating play count: $e');
+    try {
+      // 根据 audioplayers 官方文档，直接调用 play() 方法
+      // 库会自动处理所有状态转换，包括 completed 状态
+      await _audioPlayer.play();
+
+      if (_currentMedia != null) {
+        try {
+          await _mediaDataSource.updatePlayCount(_currentMedia!.id);
+          debugPrint('Updated play count for: ${_currentMedia!.title}');
+        } catch (e) {
+          debugPrint('Error updating play count: $e');
+        }
       }
-    }
 
-    await _restoreSoundEffects();
+      await _restoreSoundEffects();
+    } catch (e) {
+      debugPrint('Error in play() method: $e');
+      rethrow;
+    }
   }
 
   Future<void> pause() async {
@@ -865,26 +947,68 @@ class GlobalPlayerService extends ChangeNotifier {
 
   Future<void> playNext() async {
     final playlist = _currentPlaylist;
-    if (playlist.isEmpty) return;
+    if (playlist.isEmpty) {
+      debugPrint('playNext called but playlist is empty');
+      return;
+    }
 
     // 对于全部循环模式，总是自动播放下一首
     final shouldAutoPlay = _repeatMode == RepeatMode.all ? true : _isPlaying;
+    final oldIndex = _currentIndex;
+
     debugPrint(
-      'playNext called: _isPlaying=$_isPlaying, shouldAutoPlay=$shouldAutoPlay, currentIndex=$_currentIndex',
+      'playNext called: _isPlaying=$_isPlaying, shouldAutoPlay=$shouldAutoPlay, '
+      'currentIndex=$_currentIndex, playlistLength=${playlist.length}',
     );
 
+    // 计算下一个索引
     if (_currentIndex < playlist.length - 1) {
       _currentIndex++;
     } else {
+      // 到达播放列表末尾，重置到开头
       _currentIndex = 0;
+      debugPrint('Reached end of playlist, cycling back to start');
     }
 
     debugPrint(
-      'Moving to next index: $_currentIndex, shouldAutoPlay=$shouldAutoPlay',
+      'Moving from index $oldIndex to $_currentIndex, shouldAutoPlay=$shouldAutoPlay',
     );
 
-    // 使用增强版会话管理器切换媒体，避免数据丢失
-    await _switchToMediaAtIndex(_currentIndex, shouldAutoPlay: shouldAutoPlay);
+    // 确保新索引有效
+    if (_currentIndex < 0 || _currentIndex >= playlist.length) {
+      debugPrint(
+        'Invalid index after calculation: $_currentIndex, resetting to 0',
+      );
+      _currentIndex = 0;
+    }
+
+    try {
+      // 使用增强版会话管理器切换媒体，避免数据丢失
+      await _switchToMediaAtIndex(
+        _currentIndex,
+        shouldAutoPlay: shouldAutoPlay,
+      );
+      debugPrint('Successfully switched to next track at index $_currentIndex');
+    } catch (e) {
+      debugPrint('Error switching to next track: $e');
+      // 发生错误时，恢复之前的索引
+      _currentIndex = oldIndex;
+      debugPrint('Reverted to previous index due to error: $_currentIndex');
+
+      // 尝试重新加载当前媲体项目的列表
+      try {
+        await _refreshMediaList();
+        // 重新尝试切换
+        if (_currentIndex < _currentPlaylist.length) {
+          await _switchToMediaAtIndex(
+            _currentIndex,
+            shouldAutoPlay: shouldAutoPlay,
+          );
+        }
+      } catch (refreshError) {
+        debugPrint('Error refreshing media list: $refreshError');
+      }
+    }
   }
 
   Future<void> playPrevious() async {
@@ -1006,6 +1130,41 @@ class GlobalPlayerService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error in fallback loading media at index $index: $e');
       rethrow;
+    }
+  }
+
+  /// 刷新媒体列表，确保数据最新
+  Future<void> _refreshMediaList() async {
+    try {
+      debugPrint('Refreshing media list...');
+      final freshMediaItems = await _mediaDataSource.getMediaItems();
+
+      if (freshMediaItems.isNotEmpty) {
+        _mediaItems = freshMediaItems;
+        debugPrint('Media list refreshed: ${_mediaItems.length} items');
+
+        // 如果在随机模式下，重新洗牌
+        if (_isShuffled) {
+          _shufflePlaylist();
+        }
+
+        // 确保当前索引仍然有效
+        if (_currentMedia != null) {
+          final currentPlaylist = _currentPlaylist;
+          _currentIndex = currentPlaylist.indexWhere(
+            (item) => item.id == _currentMedia!.id,
+          );
+
+          if (_currentIndex == -1) {
+            debugPrint(
+              'Current media not found in refreshed list, resetting to 0',
+            );
+            _currentIndex = 0;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error refreshing media list: $e');
     }
   }
 

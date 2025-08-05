@@ -284,9 +284,14 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
         },
       );
     } else {
-      // 显示正常的播放/暂停图标
+      // 对于completed状态，显示播放图标而不是暂停图标
+      final shouldShowPlayIcon =
+          !widget.isPlaying ||
+          widget.playerState == MindraPlayerState.completed ||
+          widget.playerState == MindraPlayerState.stopped;
+
       return Icon(
-        widget.isPlaying ? Icons.pause : Icons.play_arrow,
+        shouldShowPlayIcon ? Icons.play_arrow : Icons.pause,
         color: Colors.white,
         size: 36,
       );
