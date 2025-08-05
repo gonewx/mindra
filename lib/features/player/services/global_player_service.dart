@@ -10,6 +10,7 @@ import '../../media/domain/usecases/media_usecases.dart';
 import '../../../core/di/injection_container.dart';
 import '../presentation/widgets/player_controls.dart';
 import 'sound_effects_player.dart';
+import 'audio_focus_manager.dart';
 import '../../../core/database/database_helper.dart';
 import '../../../core/database/web_storage_helper.dart';
 
@@ -50,6 +51,9 @@ class GlobalPlayerService extends ChangeNotifier {
   RepeatMode _repeatMode = RepeatMode.none;
   Timer? _sleepTimer;
   int _sleepTimerMinutes = 0;
+
+  // 音频中断处理状态
+  bool _wasUserInitiatedPause = false;
 
   // 添加保存上次播放媒体的常量
   static const String _lastPlayedMediaIdKey = 'last_played_media_id';
@@ -147,6 +151,15 @@ class GlobalPlayerService extends ChangeNotifier {
       // 设置音频播放器监听器
       await _setupAudioPlayer();
 
+      // 播放状态监控已禁用以避免崩溃
+      debugPrint('Playback monitoring disabled for stability');
+
+      // 配置音频上下文以支持中断检测
+      await _configureAudioContext();
+
+      // 设置音频中断回调
+      _setupAudioInterruptionHandling();
+
       // 初始化音效播放器
       await _initializeSoundEffectsPlayer();
 
@@ -195,6 +208,84 @@ class GlobalPlayerService extends ChangeNotifier {
     }
   }
 
+  /// 配置音频上下文以支持中断检测
+  Future<void> _configureAudioContext() async {
+    try {
+      debugPrint('Configuring audio context for interruption support...');
+
+      // 获取支持中断的音频上下文
+      final audioContext = AudioFocusManager().getMainAudioContext();
+
+      // 同时设置全局和实例级别的音频上下文
+      await AudioPlayer.global.setAudioContext(audioContext);
+      debugPrint('Global audio context configured for interruption support');
+
+      // 等待一下确保MindraAudioPlayer初始化完成
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // 注意：MindraAudioPlayer会在自己的初始化过程中设置音频上下文
+      // 这里我们确保全局设置是正确的
+    } catch (e) {
+      debugPrint('Error configuring audio context: $e');
+      // 不抛出异常，让初始化继续
+    }
+  }
+
+  // 定时器监控已移除以避免崩溃
+
+  /// 设置音频中断处理
+  void _setupAudioInterruptionHandling() {
+    try {
+      AudioFocusManager().setAudioInterruptionCallback((bool isInterrupted) {
+        debugPrint(
+          'Audio interruption callback triggered: isInterrupted=$isInterrupted',
+        );
+
+        // 安全检查：确保服务仍然初始化
+        if (!_isInitialized) {
+          debugPrint(
+            'Service not initialized, ignoring audio interruption callback',
+          );
+          return;
+        }
+
+        if (isInterrupted) {
+          // 音频被其他应用中断，暂停播放
+          debugPrint(
+            'Audio interrupted by other app, pausing playback immediately',
+          );
+
+          // 立即更新状态，不等待异步操作
+          _isPlaying = false;
+          _playerState = MindraPlayerState.paused;
+          notifyListeners();
+          debugPrint('UI state updated immediately for interruption');
+
+          // 然后执行异步暂停操作
+          Future.microtask(() async {
+            try {
+              await _pauseForSystemInterruption();
+              debugPrint('System interruption pause completed');
+            } catch (e) {
+              debugPrint('Error in async pause during interruption: $e');
+            }
+          });
+        } else {
+          // 音频中断结束，可以考虑恢复播放
+          debugPrint(
+            'Audio interruption ended - keeping paused state for user control',
+          );
+          // 这里可以根据应用的策略决定是否自动恢复播放
+          // 目前我们不自动恢复，让用户手动控制
+        }
+      });
+
+      debugPrint('Audio interruption handling setup completed');
+    } catch (e) {
+      debugPrint('Error setting up audio interruption handling: $e');
+    }
+  }
+
   Future<void> _initializeSoundEffectsPlayer() async {
     try {
       debugPrint('Initializing sound effects player...');
@@ -213,8 +304,37 @@ class GlobalPlayerService extends ChangeNotifier {
   Future<void> _setupAudioPlayer() async {
     // Listen to playing state changes
     _playingSubscription = _audioPlayer.playingStream.listen((isPlaying) {
-      _isPlaying = isPlaying;
-      notifyListeners();
+      debugPrint(
+        '🎵 Playing state changed: $isPlaying (previous: $_isPlaying, wasUserInitiated: $_wasUserInitiatedPause)',
+      );
+
+      // 检测音频中断：如果从播放变为暂停，且不是用户主动操作
+      if (_isPlaying && !isPlaying && !_wasUserInitiatedPause) {
+        debugPrint(
+          '🔴 AUDIO INTERRUPTION DETECTED via playingStream: from playing to not playing',
+        );
+
+        // 立即更新状态
+        _isPlaying = false;
+        _playerState = MindraPlayerState.paused;
+
+        // 通知音频焦点管理器和触发中断回调
+        debugPrint(
+          '🔴 Calling AudioFocusManager().notifyAudioInterrupted() from playingStream',
+        );
+        AudioFocusManager().notifyAudioInterrupted();
+
+        // 立即通知UI更新
+        notifyListeners();
+
+        debugPrint(
+          '🔴 Audio interruption via playingStream completed - UI should show play button',
+        );
+      } else {
+        _isPlaying = isPlaying;
+        notifyListeners();
+      }
+
       _handlePlayingStateChange(isPlaying);
     });
 
@@ -251,6 +371,10 @@ class GlobalPlayerService extends ChangeNotifier {
 
     // Listen to player state changes with enhanced handling
     _playerStateSubscription = _audioPlayer.playerStateStream.listen((state) {
+      debugPrint(
+        '🎵 Player state stream changed: $state (previous: $_playerState, wasUserInitiated: $_wasUserInitiatedPause)',
+      );
+
       _playerState = state;
       _isLoading =
           (state == MindraPlayerState.loading ||
@@ -292,7 +416,34 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   void _handlePlayerStateChange(MindraPlayerState state) {
-    debugPrint('Player state changed to: $state');
+    debugPrint(
+      'Player state changed from $_playerState to $state (wasUserInitiatedPause: $_wasUserInitiatedPause)',
+    );
+
+    // 检测音频中断：如果从播放状态突然变为暂停，且不是用户主动操作
+    if (_playerState == MindraPlayerState.playing &&
+        state == MindraPlayerState.paused &&
+        !_wasUserInitiatedPause) {
+      debugPrint(
+        '🔴 AUDIO INTERRUPTION DETECTED: from playing to paused without user action',
+      );
+
+      // 立即更新状态
+      _isPlaying = false;
+      _playerState = MindraPlayerState.paused;
+
+      // 通知音频焦点管理器和触发中断回调
+      debugPrint('🔴 Calling AudioFocusManager().notifyAudioInterrupted()');
+      AudioFocusManager().notifyAudioInterrupted();
+
+      // 立即通知UI更新
+      notifyListeners();
+
+      debugPrint(
+        '🔴 Audio interruption processing completed - UI should show play button',
+      );
+      return; // 提前返回，避免重复处理
+    }
 
     switch (state) {
       case MindraPlayerState.completed:
@@ -319,6 +470,11 @@ class GlobalPlayerService extends ChangeNotifier {
       case MindraPlayerState.playing:
         _isPlaying = true;
         _playerState = MindraPlayerState.playing;
+        _wasUserInitiatedPause = false; // 重置用户暂停标记
+
+        // 通知音频焦点管理器音频开始播放
+        AudioFocusManager().notifyMainAudioStarted();
+
         if (EnhancedMeditationSessionManager.hasActiveSession) {
           EnhancedMeditationSessionManager.resumeSession();
         }
@@ -330,6 +486,12 @@ class GlobalPlayerService extends ChangeNotifier {
       case MindraPlayerState.paused:
         _isPlaying = false;
         _playerState = MindraPlayerState.paused;
+
+        // 如果不是用户主动暂停，则通知音频焦点管理器音频停止
+        if (!_wasUserInitiatedPause) {
+          AudioFocusManager().notifyMainAudioStopped();
+        }
+
         if (EnhancedMeditationSessionManager.hasActiveSession) {
           EnhancedMeditationSessionManager.pauseSession();
         }
@@ -341,6 +503,11 @@ class GlobalPlayerService extends ChangeNotifier {
       case MindraPlayerState.stopped:
         _isPlaying = false;
         _playerState = MindraPlayerState.stopped;
+        _wasUserInitiatedPause = false; // 重置用户暂停标记
+
+        // 通知音频焦点管理器音频停止
+        AudioFocusManager().notifyMainAudioStopped();
+
         if (EnhancedMeditationSessionManager.hasActiveSession) {
           EnhancedMeditationSessionManager.pauseSession();
         }
@@ -878,7 +1045,15 @@ class GlobalPlayerService extends ChangeNotifier {
       'GlobalPlayerService.play() called, current state: $_playerState',
     );
 
+    // 安全检查：确保音频播放器已初始化
+    if (!_isInitialized) {
+      debugPrint('Audio player not initialized, cannot play');
+      throw Exception('Audio player not initialized');
+    }
+
     try {
+      _wasUserInitiatedPause = false; // 重置用户暂停标记
+
       // 根据 audioplayers 官方文档，直接调用 play() 方法
       // 库会自动处理所有状态转换，包括 completed 状态
       await _audioPlayer.play();
@@ -893,6 +1068,9 @@ class GlobalPlayerService extends ChangeNotifier {
       }
 
       await _restoreSoundEffects();
+
+      // 通知音频焦点管理器音频开始
+      AudioFocusManager().notifyMainAudioStarted();
     } catch (e) {
       debugPrint('Error in play() method: $e');
       rethrow;
@@ -900,15 +1078,82 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   Future<void> pause() async {
-    await _audioPlayer.pause();
-    await _saveLastPlayedPosition();
+    // 安全检查：确保音频播放器已初始化
+    if (!_isInitialized) {
+      debugPrint('Audio player not initialized, cannot pause');
+      return;
+    }
+
+    try {
+      _wasUserInitiatedPause = true; // 标记为用户主动暂停
+      await _audioPlayer.pause();
+      await _saveLastPlayedPosition();
+      await _pauseSoundEffects();
+
+      // 通知音频焦点管理器音频停止
+      AudioFocusManager().notifyMainAudioStopped();
+    } catch (e) {
+      debugPrint('Error in pause() method: $e');
+      // 即使暂停失败，也要更新状态
+      _isPlaying = false;
+      _playerState = MindraPlayerState.paused;
+      notifyListeners();
+    }
+  }
+
+  /// 专门用于系统中断的暂停方法，不设置用户主动暂停标记
+  Future<void> _pauseForSystemInterruption() async {
+    debugPrint(
+      '_pauseForSystemInterruption called - pausing due to system interruption',
+    );
+
+    // 安全检查：确保音频播放器未被释放
+    if (!_isInitialized) {
+      debugPrint(
+        'Audio player not initialized, skipping system interruption pause',
+      );
+      return;
+    }
+
+    try {
+      // 注意：不设置_wasUserInitiatedPause，保持原有状态
+      await _audioPlayer.pause();
+      await _saveLastPlayedPosition();
+
+      // 强制更新UI状态，确保播放按钮显示为"播放"
+      _isPlaying = false;
+      _playerState = MindraPlayerState.paused;
+
+      // 立即通知UI更新
+      notifyListeners();
+
+      debugPrint(
+        'System interruption pause completed - UI should show play button',
+      );
+    } catch (e) {
+      debugPrint('Error during system interruption pause: $e');
+      // 即使暂停失败，也要更新UI状态
+      _isPlaying = false;
+      _playerState = MindraPlayerState.paused;
+      notifyListeners();
+    }
     await _pauseSoundEffects();
+
+    // 通知音频焦点管理器音频停止
+    AudioFocusManager().notifyMainAudioStopped();
+
+    // 手动触发UI更新，确保播放按钮状态正确
+    notifyListeners();
   }
 
   Future<void> stop() async {
+    _wasUserInitiatedPause = true; // 标记为用户主动停止
     await _audioPlayer.stop();
     await _saveLastPlayedPosition();
     await _pauseSoundEffects();
+
+    // 通知音频焦点管理器音频停止
+    AudioFocusManager().notifyMainAudioStopped();
 
     // 停止所有活跃的会话
     if (EnhancedMeditationSessionManager.hasActiveSession) {
@@ -1258,6 +1503,11 @@ class GlobalPlayerService extends ChangeNotifier {
   Future<void> pauseForBackground() async {
     // 保存当前会话状态到数据库，防止数据丢失
     try {
+      debugPrint('🔍 Saving state before going to background...');
+      debugPrint(
+        '🔍 Current state: _isPlaying=$_isPlaying, _playerState=$_playerState, wasUserInitiated=$_wasUserInitiatedPause',
+      );
+
       await EnhancedMeditationSessionManager.forceSaveCurrentState();
       await MeditationSessionManager.forceSaveCurrentState();
       await _saveLastPlayedPosition();
@@ -1276,8 +1526,57 @@ class GlobalPlayerService extends ChangeNotifier {
       } else if (MeditationSessionManager.hasActiveSession) {
         debugPrint('Resumed from background with active traditional session');
       }
+
+      // 检查音频状态是否与预期一致
+      await _checkAudioStateAfterResume();
+
+      // 重要：不要自动恢复播放，让用户手动控制
+      // 如果音频因为中断而暂停，应该保持暂停状态
+      debugPrint('Background resume completed - audio state preserved');
     } catch (e) {
       debugPrint('Error resuming from background: $e');
+    }
+  }
+
+  /// 从后台恢复后检查音频状态
+  Future<void> _checkAudioStateAfterResume() async {
+    try {
+      debugPrint('🔍 Checking audio state after background resume...');
+      debugPrint(
+        '🔍 Expected: _isPlaying=$_isPlaying, _playerState=$_playerState',
+      );
+
+      // 等待一下让状态稳定
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // 基于你的观察：音频确实暂停了，但audioplayers可能没有正确报告状态
+      // 我们采用一个更直接的方法：如果我们之前在播放，现在从后台恢复，
+      // 且检测到音频焦点丢失，就强制更新UI状态
+
+      if (_isPlaying && !_wasUserInitiatedPause) {
+        debugPrint(
+          '🔴 FORCING UI STATE UPDATE: Audio was likely interrupted while in background',
+        );
+        debugPrint(
+          '🔴 Based on observation: audio stops but UI state doesn\'t update',
+        );
+
+        // 强制更新状态，不依赖audioplayers的状态报告
+        _isPlaying = false;
+        _playerState = MindraPlayerState.paused;
+
+        // 触发中断处理
+        AudioFocusManager().notifyAudioInterrupted();
+        notifyListeners();
+
+        debugPrint(
+          '🔴 UI state forcibly updated - button should now show play state',
+        );
+      } else {
+        debugPrint('🔍 No forced update needed (user paused or not playing)');
+      }
+    } catch (e) {
+      debugPrint('Error checking audio state after resume: $e');
     }
   }
 
@@ -1310,6 +1609,18 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   Future<void> _disposeInternal() async {
+    // 首先标记为未初始化，防止其他操作访问
+    _isInitialized = false;
+
+    // 清理音频回调
+    try {
+      AudioFocusManager().setAudioInterruptionCallback(null);
+      AudioFocusManager().setMainAudioStateCallback(null);
+      debugPrint('Audio callbacks cleared');
+    } catch (e) {
+      debugPrint('Error clearing audio callbacks: $e');
+    }
+
     _sleepTimer?.cancel();
     await _playingSubscription?.cancel();
     await _positionSubscription?.cancel();
@@ -1334,9 +1645,20 @@ class GlobalPlayerService extends ChangeNotifier {
       await MeditationSessionManager.stopSession();
     }
 
-    await _audioPlayer.dispose();
-    await _soundEffectsPlayer.dispose();
-    _isInitialized = false;
+    // 安全释放音频播放器
+    try {
+      await _audioPlayer.dispose();
+      debugPrint('Audio player disposed successfully');
+    } catch (e) {
+      debugPrint('Error disposing audio player: $e');
+    }
+
+    try {
+      await _soundEffectsPlayer.dispose();
+      debugPrint('Sound effects player disposed successfully');
+    } catch (e) {
+      debugPrint('Error disposing sound effects player: $e');
+    }
   }
 
   Future<void> shutdown() async {

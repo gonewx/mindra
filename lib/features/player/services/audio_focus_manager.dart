@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-/// 音频焦点管理器 - 协调主音频和背景音效的播放
+/// 音频焦点管理器 - 协调主音频和背景音效的播放，并处理其他应用的音频中断
 class AudioFocusManager {
   static final AudioFocusManager _instance = AudioFocusManager._internal();
   factory AudioFocusManager() => _instance;
@@ -9,17 +9,25 @@ class AudioFocusManager {
 
   bool _isMainAudioPlaying = false;
   bool _isSoundEffectsEnabled = false;
+  bool _wasInterruptedByOtherApp = false; // 标记是否被其他应用中断
 
   // 回调函数，用于通知背景音效播放状态变化
   Function(bool)? _onMainAudioStateChanged;
 
-  /// 配置主音频播放器的音频上下文
+  // 回调函数，用于通知音频中断状态变化
+  Function(bool)? _onAudioInterruptionChanged;
+
+  /// 配置主音频播放器的音频上下文 - 请求完整音频焦点以处理中断
   AudioContext getMainAudioContext() {
+    debugPrint(
+      'Creating main audio context with AndroidAudioFocus.gain for interruption support',
+    );
+
     return AudioContext(
       iOS: AudioContextIOS(
         category: AVAudioSessionCategory.playback,
         options: {
-          AVAudioSessionOptions.mixWithOthers, // 允许与其他音频混合
+          // 移除 mixWithOthers，让我们的音频能够被其他应用中断
           AVAudioSessionOptions.defaultToSpeaker, // 默认使用扬声器
         },
       ),
@@ -28,8 +36,8 @@ class AudioFocusManager {
         stayAwake: true,
         contentType: AndroidContentType.music,
         usageType: AndroidUsageType.media,
-        // 使用更保守的音频焦点设置
-        audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+        // 关键：使用 gain 来请求完整音频焦点，这样当其他应用播放时我们会被中断
+        audioFocus: AndroidAudioFocus.gain,
       ),
     );
   }
@@ -55,14 +63,20 @@ class AudioFocusManager {
   }
 
   /// 设置主音频状态变化回调
-  void setMainAudioStateCallback(Function(bool) callback) {
+  void setMainAudioStateCallback(Function(bool)? callback) {
     _onMainAudioStateChanged = callback;
+  }
+
+  /// 设置音频中断状态变化回调
+  void setAudioInterruptionCallback(Function(bool)? callback) {
+    _onAudioInterruptionChanged = callback;
   }
 
   /// 通知主音频开始播放
   void notifyMainAudioStarted() {
     if (!_isMainAudioPlaying) {
       _isMainAudioPlaying = true;
+      _wasInterruptedByOtherApp = false; // 重置中断标记
       debugPrint('AudioFocusManager: Main audio started');
       _onMainAudioStateChanged?.call(true);
     }
@@ -74,6 +88,35 @@ class AudioFocusManager {
       _isMainAudioPlaying = false;
       debugPrint('AudioFocusManager: Main audio stopped');
       _onMainAudioStateChanged?.call(false);
+    }
+  }
+
+  /// 通知音频被其他应用中断
+  void notifyAudioInterrupted() {
+    debugPrint('🔴 AudioFocusManager.notifyAudioInterrupted() called');
+    debugPrint(
+      '🔴 Current state: _isMainAudioPlaying=$_isMainAudioPlaying, _wasInterruptedByOtherApp=$_wasInterruptedByOtherApp',
+    );
+    debugPrint('🔴 Callback exists: ${_onAudioInterruptionChanged != null}');
+
+    if (_isMainAudioPlaying && !_wasInterruptedByOtherApp) {
+      _wasInterruptedByOtherApp = true;
+      debugPrint(
+        '🔴 AudioFocusManager: Audio interrupted by other app - triggering callback',
+      );
+      _onAudioInterruptionChanged?.call(true);
+      debugPrint('🔴 Audio interruption callback triggered');
+    } else {
+      debugPrint('🔴 Audio interruption not triggered - conditions not met');
+    }
+  }
+
+  /// 通知音频中断恢复
+  void notifyAudioInterruptionEnded() {
+    if (_wasInterruptedByOtherApp) {
+      _wasInterruptedByOtherApp = false;
+      debugPrint('AudioFocusManager: Audio interruption ended');
+      _onAudioInterruptionChanged?.call(false);
     }
   }
 
@@ -97,11 +140,15 @@ class AudioFocusManager {
     return true;
   }
 
+  /// 检查是否被其他应用中断
+  bool get wasInterruptedByOtherApp => _wasInterruptedByOtherApp;
+
   /// 获取当前状态信息
   Map<String, dynamic> getStatus() {
     return {
       'isMainAudioPlaying': _isMainAudioPlaying,
       'isSoundEffectsEnabled': _isSoundEffectsEnabled,
+      'wasInterruptedByOtherApp': _wasInterruptedByOtherApp,
       'canPlaySoundEffects': canPlaySoundEffects(),
       'canPreviewSoundEffects': canPreviewSoundEffects(),
     };

@@ -68,18 +68,18 @@ class MindraAudioPlayer {
       // 如果配置失败，尝试使用默认上下文
       try {
         if (_audioPlayer != null) {
-          // 使用简化的音频上下文配置
+          // 使用简化的音频上下文配置，但仍然请求音频焦点以支持中断
           final fallbackContext = AudioContext(
             android: AudioContextAndroid(
               isSpeakerphoneOn: false,
               stayAwake: true,
               contentType: AndroidContentType.music,
               usageType: AndroidUsageType.media,
-              audioFocus: AndroidAudioFocus.none, // 不请求音频焦点，避免冲突
+              audioFocus: AndroidAudioFocus.gain, // 请求完整音频焦点以支持中断
             ),
             iOS: AudioContextIOS(
               category: AVAudioSessionCategory.playback,
-              options: {}, // 移除 defaultToSpeaker 选项
+              options: {AVAudioSessionOptions.defaultToSpeaker}, // 保留扬声器选项
             ),
           );
           await _audioPlayer!.setAudioContext(fallbackContext);
