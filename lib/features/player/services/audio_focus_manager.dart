@@ -17,15 +17,15 @@ class AudioFocusManager {
   // 回调函数，用于通知音频中断状态变化
   Function(bool)? _onAudioInterruptionChanged;
 
-  /// 配置主音频播放器的音频上下文 - 请求完整音频焦点以处理中断
+  /// 配置主音频播放器的音频上下文 - 请求完整音频焦点以处理中断并支持后台播放
   AudioContext getMainAudioContext() {
     debugPrint(
-      'Creating main audio context with AndroidAudioFocus.gain for interruption support',
+      'Creating main audio context with AndroidAudioFocus.gain for interruption support and background playback',
     );
 
     return AudioContext(
       iOS: AudioContextIOS(
-        category: AVAudioSessionCategory.playback,
+        category: AVAudioSessionCategory.playback, // 支持后台播放的类别
         options: {
           // 移除 mixWithOthers，让我们的音频能够被其他应用中断
           AVAudioSessionOptions.defaultToSpeaker, // 默认使用扬声器
@@ -33,7 +33,7 @@ class AudioFocusManager {
       ),
       android: AudioContextAndroid(
         isSpeakerphoneOn: false,
-        stayAwake: true,
+        stayAwake: true, // 关键：保持设备唤醒，支持后台播放
         contentType: AndroidContentType.music,
         usageType: AndroidUsageType.media,
         // 关键：使用 gain 来请求完整音频焦点，这样当其他应用播放时我们会被中断
@@ -99,15 +99,21 @@ class AudioFocusManager {
     );
     debugPrint('🔴 Callback exists: ${_onAudioInterruptionChanged != null}');
 
-    if (_isMainAudioPlaying && !_wasInterruptedByOtherApp) {
+    // 更主动的中断处理：无论当前状态如何，都标记为中断并触发回调
+    if (!_wasInterruptedByOtherApp) {
       _wasInterruptedByOtherApp = true;
+      _isMainAudioPlaying = false; // 确保标记为未播放
+
       debugPrint(
-        '🔴 AudioFocusManager: Audio interrupted by other app - triggering callback',
+        '🔴 AudioFocusManager: Audio interrupted - immediately triggering callback',
       );
+
+      // 立即触发中断回调
       _onAudioInterruptionChanged?.call(true);
-      debugPrint('🔴 Audio interruption callback triggered');
+
+      debugPrint('🔴 Audio interruption callback triggered successfully');
     } else {
-      debugPrint('🔴 Audio interruption not triggered - conditions not met');
+      debugPrint('🔴 Audio interruption already marked - skipping duplicate');
     }
   }
 

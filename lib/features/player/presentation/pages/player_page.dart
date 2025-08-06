@@ -123,6 +123,10 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _onPlayerServiceChanged() {
     if (mounted) {
+      // debugPrint(
+      //   '🎨 PlayerPage: Service state changed - isPlaying=${_playerService.isPlaying}, '
+      //   'playerState=${_playerService.playerState}',
+      // );
       setState(() {}); // Trigger rebuild when player service state changes
     }
   }
