@@ -60,6 +60,13 @@ class GlobalPlayerService extends ChangeNotifier {
   bool _isInBackground = false;
   bool _audioInterruptedWhileInBackground = false; // 标记音频是否在后台被中断
 
+  // 后台完成兜底监控（仅用于 RepeatMode.all）
+  Timer? _backgroundCompletionTimer;
+  bool _backgroundAutoAdvanceTriggered = false;
+  double _backgroundLastKnownPosSeconds = 0.0;
+  // 内部切歌标记：用于抑制“被中断”误判
+  bool _isInternalTrackSwitch = false;
+
   // 添加保存上次播放媒体的常量
   static const String _lastPlayedMediaIdKey = 'last_played_media_id';
   static const String _lastPlayedPositionKey = 'last_played_position';
@@ -258,6 +265,12 @@ class GlobalPlayerService extends ChangeNotifier {
           return;
         }
 
+        // 内部切歌流程中产生的 stop 触发，不视为外部中断
+        if (_isInternalTrackSwitch) {
+          debugPrint('Interruption ignored due to internal track switch');
+          return;
+        }
+
         if (isInterrupted) {
           // 音频被其他应用中断，暂停播放
           debugPrint(
@@ -314,7 +327,10 @@ class GlobalPlayerService extends ChangeNotifier {
       );
 
       // 检测音频中断：如果从播放变为暂停，且不是用户主动操作
-      if (_isPlaying && !isPlaying && !_wasUserInitiatedPause) {
+      if (_isPlaying &&
+          !isPlaying &&
+          !_wasUserInitiatedPause &&
+          !_isInternalTrackSwitch) {
         debugPrint(
           '🔴 AUDIO INTERRUPTION DETECTED via playingStream: from playing to not playing',
         );
@@ -436,7 +452,8 @@ class GlobalPlayerService extends ChangeNotifier {
     // 检测音频中断：如果从播放状态突然变为暂停，且不是用户主动操作
     if (_playerState == MindraPlayerState.playing &&
         state == MindraPlayerState.paused &&
-        !_wasUserInitiatedPause) {
+        !_wasUserInitiatedPause &&
+        !_isInternalTrackSwitch) {
       debugPrint(
         '🔴 AUDIO INTERRUPTION DETECTED via playerStateStream: from playing to paused without user action',
       );
@@ -628,9 +645,18 @@ class GlobalPlayerService extends ChangeNotifier {
     try {
       debugPrint('Using file reload method as fallback');
 
-      // 先停止当前播放
-      await _audioPlayer.stop();
-      debugPrint('Stopped current playback');
+      // 更稳妥：仅在播放中先暂停，避免 Android MEDIAPLAYER state 错误 (-38)
+      try {
+        _isInternalTrackSwitch = true;
+        if (_playerState == MindraPlayerState.playing) {
+          await _audioPlayer.pause();
+          debugPrint('Paused current playback (fallback reload)');
+        } else {
+          debugPrint('Skip pause in fallback: state=$_playerState');
+        }
+      } catch (e) {
+        debugPrint('Fallback pause failed (ignored): $e');
+      }
 
       // 等待停止完成
       await Future.delayed(const Duration(milliseconds: 200));
@@ -957,11 +983,15 @@ class GlobalPlayerService extends ChangeNotifier {
     try {
       // 先停止当前音频播放，确保播放状态正确重置
       try {
-        await _audioPlayer.stop();
-        debugPrint('Stopped current audio before loading new file');
+        _isInternalTrackSwitch = true;
+        if (_playerState == MindraPlayerState.playing) {
+          await _audioPlayer.pause();
+          debugPrint('Paused current audio before loading new file');
+        } else {
+          debugPrint('Skip stop/pause: current state is $_playerState');
+        }
       } catch (e) {
-        debugPrint('Could not stop current audio: $e');
-        // 继续执行，不阻塞新音频的加载
+        debugPrint('Could not pause current audio (will continue): $e');
       }
 
       final isNetworkUrl =
@@ -1040,6 +1070,11 @@ class GlobalPlayerService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error loading audio file: $e');
       rethrow;
+    } finally {
+      // 小延时后清除内部切歌标记，避免误判为外部中断
+      Future.delayed(const Duration(milliseconds: 600), () {
+        _isInternalTrackSwitch = false;
+      });
     }
   }
 
@@ -1206,12 +1241,34 @@ class GlobalPlayerService extends ChangeNotifier {
     }
 
     try {
+      _isInternalTrackSwitch = true; // 标记内部切歌，抑制中断误判
       // 使用增强版会话管理器切换媒体，避免数据丢失
       await _switchToMediaAtIndex(
         _currentIndex,
         shouldAutoPlay: shouldAutoPlay,
       );
       debugPrint('Successfully switched to next track at index $_currentIndex');
+
+      // 额外保险：800ms 后校验是否真的在播放，否则强制重启
+      Future.delayed(const Duration(milliseconds: 800), () async {
+        final posDur = await _audioPlayer.getCurrentPosition();
+        final before =
+            posDur?.inMilliseconds ?? (_currentPosition * 1000).toInt();
+        await Future.delayed(const Duration(milliseconds: 500));
+        final posDur2 = await _audioPlayer.getCurrentPosition();
+        final after =
+            posDur2?.inMilliseconds ?? (_currentPosition * 1000).toInt();
+        final progressed = (after - before) > 300; // >0.3s 认为在推进
+        if (!progressed) {
+          try {
+            debugPrint('🔧 Auto-fix: no progress detected, forcing restart');
+            await _audioPlayer.seek(Duration.zero);
+            await _audioPlayer.play();
+          } catch (e) {
+            debugPrint('🔧 Auto-fix failed: $e');
+          }
+        }
+      });
     } catch (e) {
       debugPrint('Error switching to next track: $e');
       // 发生错误时，恢复之前的索引
@@ -1231,6 +1288,11 @@ class GlobalPlayerService extends ChangeNotifier {
       } catch (refreshError) {
         debugPrint('Error refreshing media list: $refreshError');
       }
+    } finally {
+      // 给底层一点时间完成状态切换，再释放标记
+      Future.delayed(const Duration(milliseconds: 800), () {
+        _isInternalTrackSwitch = false;
+      });
     }
   }
 
@@ -1428,6 +1490,28 @@ class GlobalPlayerService extends ChangeNotifier {
         _repeatMode = RepeatMode.none;
         break;
     }
+
+    // 同步底层播放器的 ReleaseMode，以提升后台场景下的可靠性
+    // 单曲循环：使用原生层的 loop，可在后台自动循环而无需依赖 Dart 回调
+    // 其它模式：使用 stop，完成后停止以便我们在 Dart 层做切歌逻辑
+    try {
+      if (_repeatMode == RepeatMode.one) {
+        _audioPlayer.setReleaseMode(ReleaseMode.loop);
+        // 切换到单曲循环时无需后台兜底
+        _stopBackgroundCompletionWatchdog();
+      } else {
+        _audioPlayer.setReleaseMode(ReleaseMode.stop);
+        // 如果进入全部循环并处于后台播放，开启兜底
+        if (_repeatMode == RepeatMode.all && _isInBackground && _isPlaying) {
+          _startBackgroundCompletionWatchdog();
+        } else {
+          _stopBackgroundCompletionWatchdog();
+        }
+      }
+    } catch (_) {
+      // 忽略设置失败以避免影响主流程
+    }
+
     notifyListeners();
   }
 
@@ -1491,6 +1575,9 @@ class GlobalPlayerService extends ChangeNotifier {
       _isInBackground = true;
       _audioInterruptedWhileInBackground = false; // 重置中断标记
 
+      // 启动后台完成兜底监控（仅全部循环模式需要跨曲目自动播放）
+      _startBackgroundCompletionWatchdog();
+
       await EnhancedMeditationSessionManager.forceSaveCurrentState();
       await MeditationSessionManager.forceSaveCurrentState();
       await _saveLastPlayedPosition();
@@ -1509,6 +1596,9 @@ class GlobalPlayerService extends ChangeNotifier {
     try {
       debugPrint('☀️ App resuming from background');
       _isInBackground = false;
+
+      // 停止后台监控
+      _stopBackgroundCompletionWatchdog();
 
       // 验证当前会话是否仍然有效
       if (EnhancedMeditationSessionManager.hasActiveSession) {
@@ -1674,9 +1764,91 @@ class GlobalPlayerService extends ChangeNotifier {
       _isInBackground = false;
       _wasPlayingBeforeBackground = false;
       _audioInterruptedWhileInBackground = false;
+
+      // 保险：确保监控已停止
+      _stopBackgroundCompletionWatchdog();
     } catch (e) {
       debugPrint('Error checking audio state after resume: $e');
     }
+  }
+
+  /// 启动后台完成兜底监控
+  void _startBackgroundCompletionWatchdog() {
+    try {
+      _stopBackgroundCompletionWatchdog();
+
+      // 仅在全部循环模式、且当前确实在播放时监控
+      if (_repeatMode != RepeatMode.all || !_isPlaying) {
+        return;
+      }
+
+      _backgroundAutoAdvanceTriggered = false;
+      _backgroundLastKnownPosSeconds = _currentPosition;
+      // 记录当前媒体ID便于未来扩展（例如跨媒体校验）
+      _backgroundCompletionTimer = Timer.periodic(
+        const Duration(milliseconds: 500),
+        (timer) async {
+          // 前台或模式变更，停止
+          if (!_isInBackground || _repeatMode != RepeatMode.all) {
+            _stopBackgroundCompletionWatchdog();
+            return;
+          }
+
+          // 正在内部切歌期间，跳过检测
+          if (_isInternalTrackSwitch) {
+            return;
+          }
+
+          // 如果已经触发过一次自动切歌，等待状态稳定
+          if (_backgroundAutoAdvanceTriggered) {
+            return;
+          }
+
+          // 优先从底层读取位置与时长，避免前台流在后台不更新
+          final posDur = await _audioPlayer.getCurrentPosition();
+          final dur = await _audioPlayer.getDuration();
+          final pos = (posDur ?? Duration(seconds: _currentPosition.toInt()))
+              .inSeconds
+              .toDouble();
+          final total = (dur ?? Duration(seconds: _totalDuration.toInt()))
+              .inSeconds
+              .toDouble();
+
+          if (total > 0 && pos >= 0) {
+            final remaining = total - pos;
+            final isNearEnd = remaining <= 1.0;
+            final resetToZeroAfterEnd =
+                (pos <= 0.2 && _backgroundLastKnownPosSeconds >= total - 1.0);
+            if (isNearEnd || resetToZeroAfterEnd) {
+              _backgroundAutoAdvanceTriggered = true;
+              debugPrint('⏭️ Background watchdog advancing to next track');
+              try {
+                await playNext();
+              } finally {
+                // 重置标记，允许后续再次触发
+                _backgroundAutoAdvanceTriggered = false;
+                _backgroundLastKnownPosSeconds = 0.0;
+                // 保持媒体ID记录留作扩展
+              }
+            }
+          }
+          // 更新上一次位置与媒体ID
+          _backgroundLastKnownPosSeconds = pos;
+          // 保持媒体ID记录留作扩展
+        },
+      );
+    } catch (e) {
+      debugPrint('Failed to start background watchdog: $e');
+    }
+  }
+
+  /// 停止后台完成兜底监控
+  void _stopBackgroundCompletionWatchdog() {
+    try {
+      _backgroundCompletionTimer?.cancel();
+      _backgroundCompletionTimer = null;
+      _backgroundAutoAdvanceTriggered = false;
+    } catch (_) {}
   }
 
   /// 处理应用即将终止的情况
@@ -1710,6 +1882,9 @@ class GlobalPlayerService extends ChangeNotifier {
   Future<void> _disposeInternal() async {
     // 首先标记为未初始化，防止其他操作访问
     _isInitialized = false;
+
+    // 停止后台完成兜底监控
+    _stopBackgroundCompletionWatchdog();
 
     // 清理音频回调
     try {

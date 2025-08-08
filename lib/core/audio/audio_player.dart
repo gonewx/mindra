@@ -435,6 +435,17 @@ class MindraAudioPlayer {
     return _audioPlayer!.getDuration();
   }
 
+  /// 获取当前播放位置
+  Future<Duration?> getCurrentPosition() async {
+    if (_audioPlayer == null) return null;
+    try {
+      return await _audioPlayer!.getCurrentPosition();
+    } catch (e) {
+      debugPrint('Error getting current position: $e');
+      return null;
+    }
+  }
+
   /// 获取媒体文件时长而不加载
   static Future<Duration?> getMediaDuration(String path) async {
     try {
