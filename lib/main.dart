@@ -4,6 +4,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:audio_service/audio_service.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'dart:async';
@@ -18,13 +19,49 @@ import 'core/services/reminder_scheduler_service.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/services/app_data_validator.dart';
 import 'features/player/services/global_player_service.dart';
+import 'features/player/services/audio_handler.dart';
 
 import 'core/services/app_lifecycle_manager.dart';
+
+// 全局 AudioHandler 实例
+late MindraAudioHandler _audioHandler;
+
+// 提供全局访问 AudioHandler 的方法
+MindraAudioHandler get audioHandler => _audioHandler;
 
 void main() async {
   // 保持原生启动画面
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
+  // 初始化 AudioService 和 AudioHandler
+  try {
+    _audioHandler = await AudioService.init(
+      builder: () => MindraAudioHandler(),
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.mindra.app.channel.audio',
+        androidNotificationChannelName: 'Mindra 冥想音频播放',
+        androidNotificationOngoing:
+            false, // 改为false以兼容androidStopForegroundOnPause
+        androidNotificationIcon: 'drawable/ic_notification',
+        notificationColor: Color(0xFF6366F1), // 设置通知颜色，系统会用此颜色tint图标
+        androidShowNotificationBadge: true,
+        androidStopForegroundOnPause: false, // 保持前台服务
+        // 预加载资源配置
+        preloadArtwork: false,
+        artDownscaleWidth: 256,
+        artDownscaleHeight: 256,
+        // 快进快退间隔
+        fastForwardInterval: Duration(seconds: 10),
+        rewindInterval: Duration(seconds: 10),
+      ),
+    );
+    debugPrint('AudioService initialized successfully');
+  } catch (e) {
+    debugPrint('Failed to initialize AudioService: $e');
+    // 创建一个默认实例以防止崩溃
+    _audioHandler = MindraAudioHandler();
+  }
 
   // 启动应用
   runApp(const MindraApp());
@@ -527,6 +564,12 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
       // 预热音频服务 - 在后台开始初始化但不等待完成
       // 这样可以减少用户首次打开播放器时的等待时间
       await globalPlayerService.initialize();
+
+      // 设置 AudioHandler 回调
+      audioHandler.setSystemControlCallback(
+        globalPlayerService.handleSystemMediaControl,
+      );
+      debugPrint('AudioHandler callback set');
 
       // 初始化应用生命周期管理器
       _lifecycleManager = AppLifecycleManager.instance;

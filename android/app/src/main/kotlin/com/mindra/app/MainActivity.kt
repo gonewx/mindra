@@ -1,11 +1,11 @@
 package com.mindra.app
 
 import android.os.Bundle
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 import android.graphics.Color
 import android.view.WindowManager
 
-class MainActivity : FlutterActivity() {
+class MainActivity : AudioServiceActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // 设置窗口背景色，确保在Flutter加载前就显示 - 使用应用主色调
         window.decorView.setBackgroundColor(Color.parseColor("#2E3B82"))

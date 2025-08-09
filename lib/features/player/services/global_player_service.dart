@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:audio_service/audio_service.dart' as audio_service;
 import '../../../core/audio/audio_player.dart';
 import '../../../features/media/domain/entities/media_item.dart';
 import '../../../features/meditation/data/services/meditation_session_manager.dart';
@@ -13,6 +14,7 @@ import 'sound_effects_player.dart';
 import 'audio_focus_manager.dart';
 import '../../../core/database/database_helper.dart';
 import '../../../core/database/web_storage_helper.dart';
+import '../../../main.dart' show audioHandler;
 
 class GlobalPlayerService extends ChangeNotifier {
   late final MindraAudioPlayer _audioPlayer;
@@ -373,6 +375,24 @@ class GlobalPlayerService extends ChangeNotifier {
       final positionDiff = (newPosition - _currentPosition).abs();
 
       _currentPosition = newPosition;
+
+      // 减少 AudioHandler 同步频率，只在位置有明显变化时同步
+      if (positionDiff > 1.0) {
+        // 只有当位置变化超过1秒时才同步
+        try {
+          audioHandler.updatePlaybackState(
+            isPlaying: _isPlaying,
+            position: position,
+            duration: Duration(seconds: _totalDuration.toInt()),
+            processingState: _mapPlayerStateToAudioProcessingState(
+              _playerState,
+            ),
+          );
+        } catch (e) {
+          debugPrint('Error syncing position to AudioHandler: $e');
+        }
+      }
+
       notifyListeners();
 
       // 更新会话进度，让两个管理器都处理实时更新
@@ -390,7 +410,25 @@ class GlobalPlayerService extends ChangeNotifier {
     // Listen to duration changes
     _durationSubscription = _audioPlayer.durationStream.listen((duration) {
       if (duration != null) {
+        final previousDuration = _totalDuration;
         _totalDuration = duration.inSeconds.toDouble();
+
+        // 只在时长真正变化时同步到 AudioHandler
+        if ((previousDuration - _totalDuration).abs() > 1.0) {
+          try {
+            audioHandler.updatePlaybackState(
+              isPlaying: _isPlaying,
+              position: Duration(seconds: _currentPosition.toInt()),
+              duration: duration,
+              processingState: _mapPlayerStateToAudioProcessingState(
+                _playerState,
+              ),
+            );
+          } catch (e) {
+            debugPrint('Error syncing duration to AudioHandler: $e');
+          }
+        }
+
         notifyListeners();
 
         // 检查并更新媒体项的时长数据
@@ -404,10 +442,26 @@ class GlobalPlayerService extends ChangeNotifier {
         '🎵 Player state stream changed: $state (previous: $_playerState, wasUserInitiated: $_wasUserInitiatedPause)',
       );
 
+      final previousState = _playerState;
       _playerState = state;
       _isLoading =
           (state == MindraPlayerState.loading ||
           state == MindraPlayerState.buffering);
+
+      // 只在状态真正变化时同步到 AudioHandler
+      if (previousState != state) {
+        try {
+          audioHandler.updatePlaybackState(
+            isPlaying: _isPlaying,
+            position: Duration(seconds: _currentPosition.toInt()),
+            duration: Duration(seconds: _totalDuration.toInt()),
+            processingState: _mapPlayerStateToAudioProcessingState(state),
+          );
+        } catch (e) {
+          debugPrint('Error syncing player state to AudioHandler: $e');
+        }
+      }
+
       notifyListeners();
       _handlePlayerStateChange(state);
     });
@@ -422,6 +476,20 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   void _handlePlayingStateChange(bool isPlaying) {
+    // 同步状态到 AudioHandler（只在状态变化时）
+    if (_isPlaying != isPlaying) {
+      try {
+        audioHandler.updatePlaybackState(
+          isPlaying: isPlaying,
+          position: Duration(seconds: _currentPosition.toInt()),
+          duration: Duration(seconds: _totalDuration.toInt()),
+          processingState: _mapPlayerStateToAudioProcessingState(_playerState),
+        );
+      } catch (e) {
+        debugPrint('Error syncing state to AudioHandler: $e');
+      }
+    }
+
     if (isPlaying) {
       // 优先使用增强版会话管理器
       if (!EnhancedMeditationSessionManager.hasActiveSession &&
@@ -441,6 +509,28 @@ class GlobalPlayerService extends ChangeNotifier {
       if (MeditationSessionManager.hasActiveSession) {
         MeditationSessionManager.pauseSession();
       }
+    }
+  }
+
+  /// 将 MindraPlayerState 映射到 AudioProcessingState
+  audio_service.AudioProcessingState _mapPlayerStateToAudioProcessingState(
+    MindraPlayerState state,
+  ) {
+    switch (state) {
+      case MindraPlayerState.stopped:
+        return audio_service.AudioProcessingState.idle;
+      case MindraPlayerState.loading:
+        return audio_service.AudioProcessingState.loading;
+      case MindraPlayerState.buffering:
+        return audio_service.AudioProcessingState.buffering;
+      case MindraPlayerState.playing:
+      case MindraPlayerState.paused:
+        return audio_service.AudioProcessingState.ready;
+      case MindraPlayerState.completed:
+        return audio_service.AudioProcessingState.completed;
+      case MindraPlayerState.disposed:
+      case MindraPlayerState.error:
+        return audio_service.AudioProcessingState.error;
     }
   }
 
@@ -806,6 +896,14 @@ class GlobalPlayerService extends ChangeNotifier {
         _currentMedia = media;
         _isFavorited = media.isFavorite;
 
+        // 立即更新 AudioHandler，确保系统媒体控制显示正确信息
+        try {
+          await audioHandler.loadAudio(media);
+          debugPrint('AudioHandler updated with new media: ${media.title}');
+        } catch (e) {
+          debugPrint('Failed to update AudioHandler: $e');
+        }
+
         // 通矵UI更新媒体信息（标题、封面等）
         notifyListeners();
 
@@ -908,6 +1006,91 @@ class GlobalPlayerService extends ChangeNotifier {
       debugPrint('Cleared last played position');
     } catch (e) {
       debugPrint('Error clearing last played record: $e');
+    }
+  }
+
+  /// 处理系统媒体控制回调
+  void handleSystemMediaControl(String action) async {
+    debugPrint('Handling system media control: $action');
+
+    try {
+      switch (action) {
+        case 'play':
+          // 避免重复调用 audioHandler，直接调用本地播放器
+          _wasUserInitiatedPause = false;
+          await _audioPlayer.play();
+          debugPrint('System play executed');
+          break;
+        case 'pause':
+          _wasUserInitiatedPause = true;
+          await _audioPlayer.pause();
+          await _saveLastPlayedPosition();
+          await _pauseSoundEffects();
+          AudioFocusManager().notifyMainAudioStopped();
+          debugPrint('System pause executed');
+          break;
+        case 'stop':
+          _wasUserInitiatedPause = true;
+          await _audioPlayer.stop();
+          await _saveLastPlayedPosition();
+          await _pauseSoundEffects();
+          AudioFocusManager().notifyMainAudioStopped();
+          // 停止所有活跃的会话
+          if (EnhancedMeditationSessionManager.hasActiveSession) {
+            await EnhancedMeditationSessionManager.stopSession();
+          }
+          if (MeditationSessionManager.hasActiveSession) {
+            await MeditationSessionManager.stopSession();
+          }
+          debugPrint('System stop executed');
+          break;
+        case 'skipToNext':
+          await playNext();
+          debugPrint('System skip next executed');
+          break;
+        case 'skipToPrevious':
+          await playPrevious();
+          debugPrint('System skip previous executed');
+          break;
+        case 'fastForward':
+          const fastForwardInterval = Duration(seconds: 10);
+          final newPosition =
+              Duration(seconds: _currentPosition.toInt()) + fastForwardInterval;
+          final maxPosition = Duration(seconds: _totalDuration.toInt());
+
+          if (newPosition <= maxPosition) {
+            await seek(newPosition);
+          } else {
+            await seek(maxPosition);
+          }
+          debugPrint('System fast forward executed');
+          break;
+        case 'rewind':
+          const rewindInterval = Duration(seconds: 10);
+          final newPosition =
+              Duration(seconds: _currentPosition.toInt()) - rewindInterval;
+
+          if (newPosition >= Duration.zero) {
+            await seek(newPosition);
+          } else {
+            await seek(Duration.zero);
+          }
+          debugPrint('System rewind executed');
+          break;
+        case 'favorite':
+          await toggleFavorite();
+          debugPrint('System favorite toggle executed');
+          break;
+        default:
+          if (action.startsWith('seek:')) {
+            final seconds = int.tryParse(action.split(':')[1]) ?? 0;
+            await seek(Duration(seconds: seconds));
+            debugPrint('System seek to ${seconds}s executed');
+          }
+          break;
+      }
+    } catch (e) {
+      debugPrint('Error handling system media control [$action]: $e');
     }
   }
 
@@ -1112,6 +1295,14 @@ class GlobalPlayerService extends ChangeNotifier {
     try {
       _wasUserInitiatedPause = false; // 重置用户暂停标记
 
+      // 同时调用 AudioHandler 和本地播放器
+      try {
+        await audioHandler.play();
+        debugPrint('AudioHandler play command sent');
+      } catch (e) {
+        debugPrint('AudioHandler play failed: $e');
+      }
+
       // 根据 audioplayers 官方文档，直接调用 play() 方法
       // 库会自动处理所有状态转换，包括 completed 状态
       await _audioPlayer.play();
@@ -1144,6 +1335,15 @@ class GlobalPlayerService extends ChangeNotifier {
 
     try {
       _wasUserInitiatedPause = true; // 标记为用户主动暂停
+
+      // 同时调用 AudioHandler 和本地播放器
+      try {
+        await audioHandler.pause();
+        debugPrint('AudioHandler pause command sent');
+      } catch (e) {
+        debugPrint('AudioHandler pause failed: $e');
+      }
+
       await _audioPlayer.pause();
       await _saveLastPlayedPosition();
       await _pauseSoundEffects();
@@ -1161,6 +1361,15 @@ class GlobalPlayerService extends ChangeNotifier {
 
   Future<void> stop() async {
     _wasUserInitiatedPause = true; // 标记为用户主动停止
+
+    // 同时调用 AudioHandler 和本地播放器
+    try {
+      await audioHandler.stop();
+      debugPrint('AudioHandler stop command sent');
+    } catch (e) {
+      debugPrint('AudioHandler stop failed: $e');
+    }
+
     await _audioPlayer.stop();
     await _saveLastPlayedPosition();
     await _pauseSoundEffects();
@@ -1347,6 +1556,15 @@ class GlobalPlayerService extends ChangeNotifier {
       // 先更新UI显示的媒体信息
       _currentMedia = media;
       _isFavorited = media.isFavorite;
+
+      // 立即更新 AudioHandler，确保系统媒体控制显示正确信息
+      try {
+        await audioHandler.loadAudio(media);
+        debugPrint('AudioHandler updated with enhanced media: ${media.title}');
+      } catch (e) {
+        debugPrint('Failed to update AudioHandler in enhanced mode: $e');
+      }
+
       notifyListeners();
 
       // 加载音频文件
@@ -1397,6 +1615,14 @@ class GlobalPlayerService extends ChangeNotifier {
     final media = playlist[index];
     _currentMedia = media;
     _isFavorited = media.isFavorite;
+
+    // 立即更新 AudioHandler，确保系统媒体控制显示正确信息
+    try {
+      await audioHandler.loadAudio(media);
+      debugPrint('AudioHandler updated with fallback media: ${media.title}');
+    } catch (e) {
+      debugPrint('Failed to update AudioHandler in fallback mode: $e');
+    }
 
     // 通知UI更新媒体信息（标题、封面等）
     notifyListeners();
@@ -1527,11 +1753,43 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   Future<void> toggleFavorite() async {
-    if (_currentMedia == null) return;
+    if (_currentMedia == null) {
+      debugPrint('toggleFavorite: No current media, skipping');
+      return;
+    }
+
+    final oldFavoriteStatus = _isFavorited;
+    debugPrint(
+      'toggleFavorite: Before - Media: ${_currentMedia!.title}, isFavorited: $oldFavoriteStatus',
+    );
 
     _isFavorited = !_isFavorited;
     _currentMedia = _currentMedia!.copyWith(isFavorite: _isFavorited);
+
+    debugPrint(
+      'toggleFavorite: After state update - isFavorited: $_isFavorited',
+    );
+
+    // 保存到数据库
+    try {
+      await _mediaDataSource.updateMediaItem(_currentMedia!);
+      debugPrint(
+        '✓ Favorite status saved to database: ${_currentMedia!.title} -> $_isFavorited',
+      );
+    } catch (e) {
+      debugPrint('✗ Failed to save favorite status to database: $e');
+      // 如果保存失败，回滚状态
+      _isFavorited = !_isFavorited;
+      _currentMedia = _currentMedia!.copyWith(isFavorite: _isFavorited);
+      debugPrint('Rolled back favorite status to: $_isFavorited');
+    }
+
+    // 更新 AudioHandler 的收藏状态
+    debugPrint('Updating AudioHandler with favorite status: $_isFavorited');
+    audioHandler.updateFavoriteStatus(_isFavorited);
+
     notifyListeners();
+    debugPrint('toggleFavorite: Complete - notifyListeners() called');
   }
 
   void setSleepTimer(int minutes) {
