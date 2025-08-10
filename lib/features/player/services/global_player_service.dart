@@ -66,8 +66,12 @@ class GlobalPlayerService extends ChangeNotifier {
   Timer? _backgroundCompletionTimer;
   bool _backgroundAutoAdvanceTriggered = false;
   double _backgroundLastKnownPosSeconds = 0.0;
-  // 内部切歌标记：用于抑制“被中断”误判
+  String? _backgroundLastMediaId; // 记录上次处理的媒体ID
+  // 内部切歌标记：用于抑制"被中断"误判
   bool _isInternalTrackSwitch = false;
+
+  // 防止重复触发playNext的标记
+  bool _isPlayNextInProgress = false;
 
   // 添加保存上次播放媒体的常量
   static const String _lastPlayedMediaIdKey = 'last_played_media_id';
@@ -665,7 +669,15 @@ class GlobalPlayerService extends ChangeNotifier {
         _restartCurrentTrack();
         break;
       case RepeatMode.all:
-        playNext();
+        // 检查是否已经有playNext在执行，避免重复调用
+        if (!_isPlayNextInProgress) {
+          debugPrint('Track completion triggering playNext for RepeatMode.all');
+          playNext();
+        } else {
+          debugPrint(
+            'Track completion detected playNext already in progress, skipping',
+          );
+        }
         break;
       case RepeatMode.none:
         break;
@@ -1413,43 +1425,52 @@ class GlobalPlayerService extends ChangeNotifier {
   }
 
   Future<void> playNext() async {
+    // 防止重复调用：如果已经有playNext在执行，直接返回
+    if (_isPlayNextInProgress) {
+      debugPrint('playNext already in progress, skipping duplicate call');
+      return;
+    }
+
     final playlist = _currentPlaylist;
     if (playlist.isEmpty) {
       debugPrint('playNext called but playlist is empty');
       return;
     }
 
+    // 设置执行标记，防止重复调用
+    _isPlayNextInProgress = true;
+
     // 对于全部循环模式，总是自动播放下一首
     final shouldAutoPlay = _repeatMode == RepeatMode.all ? true : _isPlaying;
     final oldIndex = _currentIndex;
 
-    debugPrint(
-      'playNext called: _isPlaying=$_isPlaying, shouldAutoPlay=$shouldAutoPlay, '
-      'currentIndex=$_currentIndex, playlistLength=${playlist.length}',
-    );
-
-    // 计算下一个索引
-    if (_currentIndex < playlist.length - 1) {
-      _currentIndex++;
-    } else {
-      // 到达播放列表末尾，重置到开头
-      _currentIndex = 0;
-      debugPrint('Reached end of playlist, cycling back to start');
-    }
-
-    debugPrint(
-      'Moving from index $oldIndex to $_currentIndex, shouldAutoPlay=$shouldAutoPlay',
-    );
-
-    // 确保新索引有效
-    if (_currentIndex < 0 || _currentIndex >= playlist.length) {
-      debugPrint(
-        'Invalid index after calculation: $_currentIndex, resetting to 0',
-      );
-      _currentIndex = 0;
-    }
-
     try {
+      debugPrint(
+        'playNext called: _isPlaying=$_isPlaying, shouldAutoPlay=$shouldAutoPlay, '
+        'currentIndex=$_currentIndex, playlistLength=${playlist.length}',
+      );
+
+      // 计算下一个索引
+      if (_currentIndex < playlist.length - 1) {
+        _currentIndex++;
+      } else {
+        // 到达播放列表末尾，重置到开头
+        _currentIndex = 0;
+        debugPrint('Reached end of playlist, cycling back to start');
+      }
+
+      debugPrint(
+        'Moving from index $oldIndex to $_currentIndex, shouldAutoPlay=$shouldAutoPlay',
+      );
+
+      // 确保新索引有效
+      if (_currentIndex < 0 || _currentIndex >= playlist.length) {
+        debugPrint(
+          'Invalid index after calculation: $_currentIndex, resetting to 0',
+        );
+        _currentIndex = 0;
+      }
+
       _isInternalTrackSwitch = true; // 标记内部切歌，抑制中断误判
       // 使用增强版会话管理器切换媒体，避免数据丢失
       await _switchToMediaAtIndex(
@@ -1501,6 +1522,46 @@ class GlobalPlayerService extends ChangeNotifier {
       // 给底层一点时间完成状态切换，再释放标记
       Future.delayed(const Duration(milliseconds: 800), () {
         _isInternalTrackSwitch = false;
+      });
+
+      // 清除playNext执行标记
+      _isPlayNextInProgress = false;
+      debugPrint('playNext execution completed, flag cleared');
+
+      // 最终状态验证：确保UI状态与实际播放状态一致
+      Future.delayed(const Duration(milliseconds: 500), () {
+        final actualIsPlaying =
+            _audioPlayer.currentState == MindraPlayerState.playing;
+        if (_isPlaying != actualIsPlaying) {
+          debugPrint(
+            '🔧 Final state correction: UI was $_isPlaying, actual is $actualIsPlaying',
+          );
+          _isPlaying = actualIsPlaying;
+          _playerState = actualIsPlaying
+              ? MindraPlayerState.playing
+              : MindraPlayerState.stopped;
+          notifyListeners();
+          debugPrint('🔧 UI state corrected after playNext completion');
+
+          // 同时修正AudioHandler状态
+          try {
+            audioHandler.updatePlaybackState(
+              isPlaying: actualIsPlaying,
+              position: Duration(seconds: _currentPosition.toInt()),
+              duration: Duration(seconds: _totalDuration.toInt()),
+              processingState: _mapPlayerStateToAudioProcessingState(
+                _playerState,
+              ),
+            );
+            debugPrint(
+              '🔧 AudioHandler state also corrected in final verification',
+            );
+          } catch (e) {
+            debugPrint(
+              'Error correcting AudioHandler state in final verification: $e',
+            );
+          }
+        }
       });
     }
   }
@@ -1586,8 +1647,58 @@ class GlobalPlayerService extends ChangeNotifier {
         debugPrint('Auto-playing after enhanced media switch');
         await _audioPlayer.play();
         debugPrint('Enhanced auto-play command sent');
+
+        // 立即同步UI状态，确保播放按钮显示正确
+        _isPlaying = true;
+        _playerState = MindraPlayerState.playing;
+        notifyListeners();
+        debugPrint('UI state synchronized after auto-play');
+
+        // 立即同步AudioHandler状态，确保系统媒体控制正确
+        try {
+          audioHandler.updatePlaybackState(
+            isPlaying: true,
+            position: Duration.zero, // 新歌从头开始
+            duration: Duration(seconds: _totalDuration.toInt()),
+            processingState: _mapPlayerStateToAudioProcessingState(
+              MindraPlayerState.playing,
+            ),
+          );
+          debugPrint('AudioHandler state synchronized after auto-play');
+        } catch (e) {
+          debugPrint('Error syncing AudioHandler state after auto-play: $e');
+        }
+
+        // 小延迟后再次确认状态，防止异步监听器覆盖
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (_audioPlayer.currentState == MindraPlayerState.playing) {
+            _isPlaying = true;
+            _playerState = MindraPlayerState.playing;
+            notifyListeners();
+            debugPrint('UI state confirmed after delay');
+
+            // 再次同步AudioHandler确保系统媒体控制状态正确
+            try {
+              audioHandler.updatePlaybackState(
+                isPlaying: true,
+                position: Duration(seconds: _currentPosition.toInt()),
+                duration: Duration(seconds: _totalDuration.toInt()),
+                processingState: _mapPlayerStateToAudioProcessingState(
+                  MindraPlayerState.playing,
+                ),
+              );
+              debugPrint('AudioHandler state re-confirmed after delay');
+            } catch (e) {
+              debugPrint('Error re-syncing AudioHandler state after delay: $e');
+            }
+          }
+        });
       } else {
         debugPrint('Not auto-playing: shouldAutoPlay=$shouldAutoPlay');
+        // 确保停止状态的UI同步
+        _isPlaying = false;
+        _playerState = MindraPlayerState.stopped;
+        notifyListeners();
       }
     } catch (e) {
       debugPrint(
@@ -1635,8 +1746,66 @@ class GlobalPlayerService extends ChangeNotifier {
         debugPrint('Auto-playing after fallback media switch');
         await _audioPlayer.play();
         debugPrint('Fallback auto-play command sent');
+
+        // 立即同步UI状态，确保播放按钮显示正确
+        _isPlaying = true;
+        _playerState = MindraPlayerState.playing;
+        notifyListeners();
+        debugPrint('UI state synchronized after fallback auto-play');
+
+        // 立即同步AudioHandler状态，确保系统媒体控制正确
+        try {
+          audioHandler.updatePlaybackState(
+            isPlaying: true,
+            position: Duration.zero, // 新歌从头开始
+            duration: Duration(seconds: _totalDuration.toInt()),
+            processingState: _mapPlayerStateToAudioProcessingState(
+              MindraPlayerState.playing,
+            ),
+          );
+          debugPrint(
+            'AudioHandler state synchronized after fallback auto-play',
+          );
+        } catch (e) {
+          debugPrint(
+            'Error syncing AudioHandler state after fallback auto-play: $e',
+          );
+        }
+
+        // 小延迟后再次确认状态，防止异步监听器覆盖
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (_audioPlayer.currentState == MindraPlayerState.playing) {
+            _isPlaying = true;
+            _playerState = MindraPlayerState.playing;
+            notifyListeners();
+            debugPrint('Fallback UI state confirmed after delay');
+
+            // 再次同步AudioHandler确保系统媒体控制状态正确
+            try {
+              audioHandler.updatePlaybackState(
+                isPlaying: true,
+                position: Duration(seconds: _currentPosition.toInt()),
+                duration: Duration(seconds: _totalDuration.toInt()),
+                processingState: _mapPlayerStateToAudioProcessingState(
+                  MindraPlayerState.playing,
+                ),
+              );
+              debugPrint(
+                'AudioHandler state re-confirmed after fallback delay',
+              );
+            } catch (e) {
+              debugPrint(
+                'Error re-syncing AudioHandler state after fallback delay: $e',
+              );
+            }
+          }
+        });
       } else {
         debugPrint('Fallback not auto-playing: shouldAutoPlay=$shouldAutoPlay');
+        // 确保停止状态的UI同步
+        _isPlaying = false;
+        _playerState = MindraPlayerState.stopped;
+        notifyListeners();
       }
     } catch (e) {
       debugPrint('Error in fallback loading media at index $index: $e');
@@ -2062,6 +2231,14 @@ class GlobalPlayerService extends ChangeNotifier {
             return;
           }
 
+          // 如果playNext正在执行中，跳过后台触发，避免重复调用
+          if (_isPlayNextInProgress) {
+            debugPrint(
+              '⏭️ Background watchdog detected playNext in progress, skipping',
+            );
+            return;
+          }
+
           // 优先从底层读取位置与时长，避免前台流在后台不更新
           final posDur = await _audioPlayer.getCurrentPosition();
           final dur = await _audioPlayer.getDuration();
@@ -2074,19 +2251,55 @@ class GlobalPlayerService extends ChangeNotifier {
 
           if (total > 0 && pos >= 0) {
             final remaining = total - pos;
-            final isNearEnd = remaining <= 1.0;
+            final progressPercent = pos / total;
+
+            // 更严格的结束判断：
+            // 1. 剩余时间 <= 0.5秒 (更严格的时间窗口)
+            // 2. 或者进度超过98%且剩余时间 <= 2秒 (避免网络音频的时长不准确问题)
+            final isNearEnd =
+                remaining <= 0.5 ||
+                (progressPercent >= 0.98 && remaining <= 2.0);
+
+            // 检测从接近结尾位置重置到开头（用于检测已完成但未检测到的情况）
             final resetToZeroAfterEnd =
-                (pos <= 0.2 && _backgroundLastKnownPosSeconds >= total - 1.0);
+                (pos <= 1.0 && _backgroundLastKnownPosSeconds >= total - 2.0);
+
             if (isNearEnd || resetToZeroAfterEnd) {
+              // 额外检查：避免同一首歌重复触发
+              final currentMediaId = _currentMedia?.id;
+              if (currentMediaId != null &&
+                  currentMediaId == _backgroundLastMediaId) {
+                debugPrint(
+                  '⏭️ Background watchdog skipping: same media already processed ($currentMediaId)',
+                );
+                return;
+              }
+
+              debugPrint(
+                '⏭️ Background trigger conditions: remaining=$remaining, progressPercent=$progressPercent, resetToZero=$resetToZeroAfterEnd',
+              );
               _backgroundAutoAdvanceTriggered = true;
+              _backgroundLastMediaId = currentMediaId; // 记录当前处理的媒体
               debugPrint('⏭️ Background watchdog advancing to next track');
               try {
                 await playNext();
-              } finally {
-                // 重置标记，允许后续再次触发
+                debugPrint(
+                  '⏭️ Background watchdog playNext completed successfully',
+                );
+
+                // 延迟重置标记，确保playNext完全完成且新歌开始播放
+                Future.delayed(const Duration(seconds: 3), () {
+                  _backgroundAutoAdvanceTriggered = false;
+                  _backgroundLastKnownPosSeconds = 0.0;
+                  _backgroundLastMediaId = null; // 清除媒体ID记录
+                  debugPrint('⏭️ Background watchdog flags reset after delay');
+                });
+              } catch (e) {
+                debugPrint('⏭️ Background watchdog playNext failed: $e');
+                // 出错时立即重置，允许重试
                 _backgroundAutoAdvanceTriggered = false;
                 _backgroundLastKnownPosSeconds = 0.0;
-                // 保持媒体ID记录留作扩展
+                _backgroundLastMediaId = null; // 清除媒体ID记录，允许重试
               }
             }
           }
@@ -2106,6 +2319,9 @@ class GlobalPlayerService extends ChangeNotifier {
       _backgroundCompletionTimer?.cancel();
       _backgroundCompletionTimer = null;
       _backgroundAutoAdvanceTriggered = false;
+      _backgroundLastKnownPosSeconds = 0.0;
+      _backgroundLastMediaId = null; // 清除媒体ID记录
+      debugPrint('⏭️ Background watchdog stopped and cleaned up');
     } catch (_) {}
   }
 
