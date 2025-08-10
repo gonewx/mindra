@@ -247,7 +247,7 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                               widget.title,
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
-                                    fontWeight: FontWeight.w200,
+                                    fontWeight: FontWeight.w400,
                                     fontSize: titleFontSize,
                                   ),
                               maxLines: isSmallScreen ? 1 : 2,
@@ -411,7 +411,7 @@ class _AnimatedMediaCardState extends State<AnimatedMediaCard>
                               widget.title,
                               style: Theme.of(context).textTheme.bodyLarge
                                   ?.copyWith(
-                                    fontWeight: FontWeight.w200,
+                                    fontWeight: FontWeight.w400,
                                     fontSize: titleFontSize,
                                   ),
                               maxLines: 1,
