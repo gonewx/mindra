@@ -217,7 +217,7 @@ class EnhancedMeditationStatisticsService {
       }
     }
 
-    return totalSeconds ~/ 60;
+    return totalSeconds > 0 ? ((totalSeconds + 59) ~/ 60) : 0;
   }
 
   /// 计算总会话数 - 基于每日有效冥想日
@@ -229,11 +229,11 @@ class EnhancedMeditationStatisticsService {
 
   /// 计算总时长 - 包含所有有效播放时间
   static int _calculateTotalMinutes(List<MeditationSession> sessions) {
-    return sessions.fold<int>(
-          0,
-          (sum, session) => sum + session.actualDuration,
-        ) ~/
-        60;
+    final totalSeconds = sessions.fold<int>(
+      0,
+      (sum, session) => sum + session.actualDuration,
+    );
+    return totalSeconds > 0 ? ((totalSeconds + 59) ~/ 60) : 0;
   }
 
   /// 计算平均评分 - 仅包含有评分的会话
@@ -270,7 +270,9 @@ class EnhancedMeditationStatisticsService {
       final summary = summaryMap[dateKey];
 
       if (summary != null) {
-        weeklyData[i] = summary.totalDurationSeconds ~/ 60;
+        weeklyData[i] = summary.totalDurationSeconds > 0
+            ? ((summary.totalDurationSeconds + 59) ~/ 60)
+            : 0;
       }
     }
 
@@ -366,7 +368,9 @@ class EnhancedMeditationStatisticsService {
         MeditationDayRecord(
           date: date,
           sessionCount: summary?.sessionCount ?? 0,
-          totalMinutes: (summary?.totalDurationSeconds ?? 0) ~/ 60,
+          totalMinutes: (summary?.totalDurationSeconds ?? 0) > 0
+              ? (((summary?.totalDurationSeconds ?? 0) + 59) ~/ 60)
+              : 0,
           hasSession: summary?.hasValidMeditation ?? false,
         ),
       );
@@ -438,5 +442,6 @@ class DailyMeditationSummary {
     this.lastSessionEnd,
   });
 
-  int get totalMinutes => totalDurationSeconds ~/ 60;
+  int get totalMinutes =>
+      totalDurationSeconds > 0 ? ((totalDurationSeconds + 59) ~/ 60) : 0;
 }

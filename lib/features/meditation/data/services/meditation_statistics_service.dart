@@ -60,7 +60,11 @@ class MeditationStatisticsService {
       final totalSessions = validSessions.length;
       final totalMinutes = validSessions.fold<int>(
         0,
-        (sum, session) => sum + (session.actualDuration ~/ 60),
+        (sum, session) =>
+            sum +
+            (session.actualDuration > 0
+                ? ((session.actualDuration + 59) ~/ 60)
+                : 0),
       );
       final averageRating = validSessions.isNotEmpty
           ? validSessions.fold<double>(
@@ -199,7 +203,11 @@ class MeditationStatisticsService {
 
     return weeklySessions.fold<int>(
       0,
-      (sum, session) => sum + (session.actualDuration ~/ 60),
+      (sum, session) =>
+          sum +
+          (session.actualDuration > 0
+              ? ((session.actualDuration + 59) ~/ 60)
+              : 0),
     );
   }
 
@@ -225,7 +233,9 @@ class MeditationStatisticsService {
 
       // 确保只计算本周内的会话数据
       if (dayIndex >= 0 && dayIndex < 7) {
-        weeklyData[dayIndex] += session.actualDuration ~/ 60;
+        weeklyData[dayIndex] += session.actualDuration > 0
+            ? ((session.actualDuration + 59) ~/ 60)
+            : 0;
       }
     }
 
@@ -314,7 +324,11 @@ class MeditationStatisticsService {
           sessionCount: daySessions.length,
           totalMinutes: daySessions.fold<int>(
             0,
-            (sum, session) => sum + (session.actualDuration ~/ 60),
+            (sum, session) =>
+                sum +
+                (session.actualDuration > 0
+                    ? ((session.actualDuration + 59) ~/ 60)
+                    : 0),
           ),
           hasSession: daySessions.isNotEmpty,
         ),
@@ -339,7 +353,11 @@ class MeditationStatisticsService {
             sessionCount: daySessions.length,
             totalMinutes: daySessions.fold<int>(
               0,
-              (sum, session) => sum + (session.actualDuration ~/ 60),
+              (sum, session) =>
+                  sum +
+                  (session.actualDuration > 0
+                      ? ((session.actualDuration + 59) ~/ 60)
+                      : 0),
             ),
             hasSession: true,
           ),
@@ -419,7 +437,11 @@ class MeditationStatisticsService {
       final totalSessions = filteredSessions.length;
       final totalMinutes = filteredSessions.fold<int>(
         0,
-        (sum, session) => sum + (session.actualDuration ~/ 60),
+        (sum, session) =>
+            sum +
+            (session.actualDuration > 0
+                ? ((session.actualDuration + 59) ~/ 60)
+                : 0),
       );
       final averageRating = filteredSessions.isNotEmpty
           ? filteredSessions.fold<double>(
