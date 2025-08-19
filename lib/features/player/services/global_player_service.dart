@@ -1969,6 +1969,24 @@ class GlobalPlayerService extends ChangeNotifier {
       if (_isPlaying) {
         await pause();
       }
+
+      // 完成冥想会话以确保统计数据被正确记录
+      try {
+        if (EnhancedMeditationSessionManager.hasActiveSession) {
+          await EnhancedMeditationSessionManager.completeSession();
+          debugPrint(
+            'Sleep timer completed: Enhanced meditation session completed',
+          );
+        } else if (MeditationSessionManager.hasActiveSession) {
+          await MeditationSessionManager.completeSession();
+          debugPrint(
+            'Sleep timer completed: Traditional meditation session completed',
+          );
+        }
+      } catch (e) {
+        debugPrint('Error completing session after sleep timer: $e');
+      }
+
       _sleepTimerMinutes = 0;
       notifyListeners();
     });

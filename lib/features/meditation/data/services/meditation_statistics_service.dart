@@ -24,6 +24,9 @@ class MeditationStatisticsService {
             .toList();
       }
 
+      // 融合增强版会话管理器的每日统计数据
+      sessions = await _mergeEnhancedDailyStats(sessions);
+
       // 计算统计数据
       final now = DateTime.now();
       // 修正本周计算：获取本周一的开始时间（00:00:00）
@@ -124,8 +127,8 @@ class MeditationStatisticsService {
 
     if (sessionsByDate.isEmpty) return 0;
 
-    debugPrint('连续天数计算 - 有效会话数量: ${validSessions.length}');
-    debugPrint('连续天数计算 - 有冥想的日期: ${sessionsByDate.keys.toList()..sort()}');
+    // debugPrint('连续天数计算 - 有效会话数量: ${validSessions.length}');
+    // debugPrint('连续天数计算 - 有冥想的日期: ${sessionsByDate.keys.toList()..sort()}');
 
     // 计算当前连续天数（从今天或最近的冥想日期开始往前推）
     final today = DateTime.now();
@@ -150,7 +153,7 @@ class MeditationStatisticsService {
 
       if (daysSinceLatest > 1) {
         // 如果超过1天没有冥想，连续天数为0
-        debugPrint('连续天数计算 - 最近冥想日期: $latestDateKey, 距今: $daysSinceLatest 天');
+        // debugPrint('连续天数计算 - 最近冥想日期: $latestDateKey, 距今: $daysSinceLatest 天');
         return 0;
       }
       startDate = latestDate;
@@ -164,7 +167,7 @@ class MeditationStatisticsService {
       final dateKey = _getDateKey(checkDate);
       if (sessionsByDate.containsKey(dateKey)) {
         currentStreakDays++;
-        debugPrint('连续天数计算 - 第$currentStreakDays天: $dateKey');
+        // debugPrint('连续天数计算 - 第$currentStreakDays天: $dateKey');
         checkDate = checkDate.subtract(const Duration(days: 1));
       } else {
         break;
@@ -389,6 +392,101 @@ class MeditationStatisticsService {
       achievements: [],
       monthlyRecords: [],
     );
+  }
+
+  /// 融合增强版会话管理器的每日统计数据
+  static Future<List<MeditationSession>> _mergeEnhancedDailyStats(
+    List<MeditationSession> originalSessions,
+  ) async {
+    try {
+      final Map<String, List<MeditationSession>> sessionsByDate = {};
+      final Map<String, int> dailyTotalsByDate = {};
+
+      // 将原始会话按日期分组
+      for (final session in originalSessions) {
+        final dateKey = _getDateKey(session.startTime);
+        sessionsByDate[dateKey] = sessionsByDate[dateKey] ?? [];
+        sessionsByDate[dateKey]!.add(session);
+
+        // 计算每日总时长
+        final currentTotal = dailyTotalsByDate[dateKey] ?? 0;
+        dailyTotalsByDate[dateKey] = currentTotal + session.actualDuration;
+      }
+
+      // 读取最近30天的增强版每日统计数据
+      final now = DateTime.now();
+      final List<MeditationSession> mergedSessions = List.from(
+        originalSessions,
+      );
+
+      for (int i = 0; i < 30; i++) {
+        final checkDate = now.subtract(Duration(days: i));
+        final dateKey = _getDateKey(checkDate);
+
+        // 尝试读取该日期的增强版统计数据
+        String? enhancedStatsJson;
+        final prefKey = 'daily_stats_$dateKey';
+
+        if (kIsWeb) {
+          enhancedStatsJson = await WebStorageHelper.getPreference(prefKey);
+        } else {
+          enhancedStatsJson = await DatabaseHelper.getPreference(prefKey);
+        }
+
+        if (enhancedStatsJson != null && enhancedStatsJson.isNotEmpty) {
+          try {
+            // 解析增强版统计数据
+            final regex = RegExp(r'"totalDurationSeconds":(\d+)');
+            final match = regex.firstMatch(enhancedStatsJson);
+
+            if (match != null) {
+              final enhancedTotalSeconds = int.parse(match.group(1)!);
+              final currentTotalSeconds = dailyTotalsByDate[dateKey] ?? 0;
+
+              // 如果增强版的统计数据大于数据库记录的总和，说明有遗漏的数据
+              if (enhancedTotalSeconds > currentTotalSeconds) {
+                final missingSeconds =
+                    enhancedTotalSeconds - currentTotalSeconds;
+
+                debugPrint(
+                  'Statistics merge: Found missing data for $dateKey: '
+                  '${missingSeconds}s (enhanced: ${enhancedTotalSeconds}s, db: ${currentTotalSeconds}s)',
+                );
+
+                // 创建一个虚拟会话记录来补足缺失的统计数据
+                final virtualSession = MeditationSession(
+                  id: 'virtual_${dateKey}_${DateTime.now().millisecondsSinceEpoch}',
+                  mediaItemId: 'enhanced_daily_stats',
+                  title: '每日累计冥想时长',
+                  duration: missingSeconds,
+                  actualDuration: missingSeconds,
+                  startTime: checkDate,
+                  endTime: checkDate.add(Duration(seconds: missingSeconds)),
+                  type: SessionType.meditation,
+                  soundEffects: [],
+                  isCompleted: true,
+                  rating: 0.0,
+                  notes: '增强版会话管理器记录的每日累计时长',
+                  defaultImageIndex: 1,
+                );
+
+                mergedSessions.add(virtualSession);
+                debugPrint(
+                  'Added virtual session for $dateKey with ${missingSeconds}s',
+                );
+              }
+            }
+          } catch (e) {
+            debugPrint('Error parsing enhanced stats for $dateKey: $e');
+          }
+        }
+      }
+
+      return mergedSessions;
+    } catch (e) {
+      debugPrint('Error merging enhanced daily stats: $e');
+      return originalSessions; // 发生错误时返回原始数据
+    }
   }
 
   /// 刷新统计数据缓存
