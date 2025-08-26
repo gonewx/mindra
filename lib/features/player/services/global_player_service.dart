@@ -585,6 +585,20 @@ class GlobalPlayerService extends ChangeNotifier {
         _isPlaying = false;
         _playerState = MindraPlayerState.completed;
 
+        // 播放完成时，强制更新会话进度为完整的音频时长
+        // 这解决了播放器可能没有发送最后位置更新导致统计不准确的问题
+        if (_totalDuration > 0) {
+          final completeDuration = _totalDuration.toInt();
+          debugPrint(
+            'Updating session progress to full duration: ${completeDuration}s on completion',
+          );
+          // 更新两个会话管理器的进度到完整时长
+          MeditationSessionManager.updateSessionProgress(completeDuration);
+          EnhancedMeditationSessionManager.updateSessionProgress(
+            completeDuration,
+          );
+        }
+
         // 检查是否需要循环播放
         if (_repeatMode == RepeatMode.one) {
           // 单曲循环：不结束会话，直接重新开始
