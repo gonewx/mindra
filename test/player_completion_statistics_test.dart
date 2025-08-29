@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mindra/features/meditation/data/services/meditation_session_manager.dart';
-import 'package:mindra/features/meditation/data/services/enhanced_meditation_session_manager.dart';
 import 'package:mindra/features/media/domain/entities/media_item.dart';
 import 'package:mindra/features/meditation/domain/entities/meditation_session.dart';
 import 'package:mindra/core/constants/media_category.dart';
@@ -10,7 +9,7 @@ void main() {
     setUp(() {
       // 清理之前的会话状态
       MeditationSessionManager.clearSession();
-      EnhancedMeditationSessionManager.clearSession();
+      MeditationSessionManager.clearSession();
     });
 
     test('播放完成时应该正确统计完整的播放时长', () async {
@@ -29,40 +28,38 @@ void main() {
 
       // 1. 开始会话
       // === 开始会话测试 ===
-      await EnhancedMeditationSessionManager.startSession(
+      await MeditationSessionManager.startSession(
         mediaItem: testMedia,
         sessionType: SessionType.meditation,
       );
 
       // 会话已启动
-      expect(EnhancedMeditationSessionManager.hasActiveSession, isTrue);
+      expect(MeditationSessionManager.hasActiveSession, isTrue);
 
       // 2. 模拟播放过程中的进度更新（只播放到55秒）
       // === 模拟播放进度更新 ===
       for (int i = 10; i <= 55; i += 10) {
-        EnhancedMeditationSessionManager.updateSessionProgress(i);
+        MeditationSessionManager.updateSessionProgress(i);
         // 更新进度到: $i秒
       }
 
       // 检查当前记录的时长
-      final currentDuration =
-          EnhancedMeditationSessionManager.currentSessionDuration;
+      final currentDuration = MeditationSessionManager.currentSessionDuration;
       // 当前记录时长: $currentDuration秒
       expect(currentDuration, equals(55)); // 应该是55秒
 
       // 3. 模拟播放完成：强制更新到完整时长（这是我们的修复）
       // === 模拟播放完成时的强制更新 ===
       final completeDuration = testMedia.duration; // 60秒
-      EnhancedMeditationSessionManager.updateSessionProgress(completeDuration);
+      MeditationSessionManager.updateSessionProgress(completeDuration);
       // 强制更新到完整时长: $completeDuration秒
 
       // 4. 完成会话
       // === 完成会话 ===
-      await EnhancedMeditationSessionManager.completeSession();
+      await MeditationSessionManager.completeSession();
 
       // 5. 验证结果
-      final finalDuration =
-          EnhancedMeditationSessionManager.currentSessionDuration;
+      final finalDuration = MeditationSessionManager.currentSessionDuration;
       // 最终记录时长: $finalDuration秒
 
       // 验证：完成的会话应该记录完整的60秒时长，而不是55秒

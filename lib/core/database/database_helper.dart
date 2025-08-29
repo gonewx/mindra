@@ -382,6 +382,9 @@ class DatabaseHelper {
         CREATE INDEX idx_meditation_sessions_start_time ON $_meditationSessionsTable(start_time)
       ''');
 
+      // 确保所有表都已正确创建（额外保险措施）
+      await _ensureAllTablesExist(db);
+
       debugPrint('Database tables created successfully');
     } catch (e) {
       debugPrint('Error creating database tables: $e');
@@ -396,6 +399,9 @@ class DatabaseHelper {
   ) async {
     try {
       debugPrint('Upgrading database from version $oldVersion to $newVersion');
+
+      // 首先检查并创建所有必需的表（解决表缺失问题）
+      await _ensureAllTablesExist(db);
 
       // 处理数据库升级逻辑
       if (oldVersion < newVersion) {
@@ -451,6 +457,80 @@ class DatabaseHelper {
       debugPrint('Database upgrade completed successfully');
     } catch (e) {
       debugPrint('Error upgrading database: $e');
+      rethrow;
+    }
+  }
+
+  /// 确保所有必需的表都存在
+  static Future<void> _ensureAllTablesExist(Database db) async {
+    try {
+      // 检查当前数据库中的表
+      final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table'",
+      );
+      final existingTableNames = tables.map((t) => t['name'] as String).toSet();
+
+      // 检查并创建media_items表
+      if (!existingTableNames.contains(_mediaItemsTable)) {
+        debugPrint('Creating missing $_mediaItemsTable table');
+        await db.execute('''
+          CREATE TABLE $_mediaItemsTable (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT,
+            file_path TEXT NOT NULL,
+            thumbnail_path TEXT,
+            type TEXT NOT NULL,
+            category TEXT NOT NULL,
+            duration INTEGER NOT NULL,
+            created_at INTEGER NOT NULL,
+            last_played_at INTEGER,
+            play_count INTEGER DEFAULT 0,
+            tags TEXT,
+            is_favorite INTEGER DEFAULT 0,
+            source_url TEXT,
+            sort_index INTEGER DEFAULT 0
+          )
+        ''');
+      }
+
+      // 检查并创建meditation_sessions表
+      if (!existingTableNames.contains(_meditationSessionsTable)) {
+        debugPrint('Creating missing $_meditationSessionsTable table');
+        await db.execute('''
+          CREATE TABLE $_meditationSessionsTable (
+            id TEXT PRIMARY KEY,
+            media_item_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            duration INTEGER NOT NULL,
+            actual_duration INTEGER NOT NULL,
+            start_time INTEGER NOT NULL,
+            end_time INTEGER,
+            type TEXT NOT NULL,
+            sound_effects TEXT,
+            rating REAL,
+            notes TEXT,
+            is_completed INTEGER,
+            default_image_index INTEGER DEFAULT 1,
+            FOREIGN KEY (media_item_id) REFERENCES $_mediaItemsTable (id)
+          )
+        ''');
+      }
+
+      // 检查并创建user_preferences表
+      if (!existingTableNames.contains(_userPreferencesTable)) {
+        debugPrint('Creating missing $_userPreferencesTable table');
+        await db.execute('''
+          CREATE TABLE $_userPreferencesTable (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+          )
+        ''');
+      }
+
+      debugPrint('All required tables are now present');
+    } catch (e) {
+      debugPrint('Error ensuring tables exist: $e');
       rethrow;
     }
   }

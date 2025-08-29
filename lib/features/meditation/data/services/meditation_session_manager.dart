@@ -16,9 +16,12 @@ class MeditationSessionManager {
   static int _actualDuration = 0; // 实际播放时长(秒)
   static bool _isPaused = false;
 
-  // 定期保存定时器
-  static Timer? _autoSaveTimer;
-  static const int _autoSaveIntervalSeconds = 10; // 每10秒自动保存一次
+  // 每日累计数据 - 来自Enhanced管理器的核心功能
+  static DateTime? _currentMeditationDate;
+  static int _dailyCumulativeDuration = 0; // 当天累计冥想时长
+  static int _dailySessionCount = 0; // 当天会话数量
+  static final Set<String> _dailyMediaIds = {}; // 当天播放的媒体ID
+  static final Set<String> _dailySoundEffects = {}; // 当天使用的音效
 
   // 数据更新通知流
   static final StreamController<void> _dataUpdateController =
@@ -26,6 +29,8 @@ class MeditationSessionManager {
   static final StreamController<Map<String, dynamic>>
   _realTimeUpdateController =
       StreamController<Map<String, dynamic>>.broadcast();
+  static final StreamController<DailyMeditationStats> _dailyStatsController =
+      StreamController<DailyMeditationStats>.broadcast();
 
   /// 数据更新通知流，其他组件可以监听此流来刷新数据
   static Stream<void> get dataUpdateStream => _dataUpdateController.stream;
@@ -33,6 +38,10 @@ class MeditationSessionManager {
   /// 实时进度更新流，包含详细的进度信息
   static Stream<Map<String, dynamic>> get realTimeUpdateStream =>
       _realTimeUpdateController.stream;
+
+  /// 每日统计更新流
+  static Stream<DailyMeditationStats> get dailyStatsStream =>
+      _dailyStatsController.stream;
 
   /// 开始新的冥想会话
   static Future<String> startSession({
@@ -43,6 +52,13 @@ class MeditationSessionManager {
     try {
       final sessionId = _uuid.v4();
       final startTime = DateTime.now();
+      final today = DateTime(startTime.year, startTime.month, startTime.day);
+
+      // 智能处理每日统计
+      if (_currentMeditationDate == null ||
+          !_isSameDay(_currentMeditationDate!, today)) {
+        await _initializeDailyStats(today);
+      }
 
       _currentSession = MeditationSession(
         id: sessionId,
@@ -63,11 +79,13 @@ class MeditationSessionManager {
       _isPaused = false;
       _lastPauseTime = null;
 
+      // 更新每日统计
+      _dailySessionCount++;
+      _dailyMediaIds.add(mediaItem.id);
+      _dailySoundEffects.addAll(soundEffects);
+
       // 立即保存会话记录（状态为未完成）
       await _saveSessionToDatabase(_currentSession!);
-
-      // 启动自动保存定时器
-      _startAutoSaveTimer();
 
       debugPrint(
         'Started meditation session: ${_currentSession!.id} for ${_currentSession!.title}',
@@ -76,8 +94,9 @@ class MeditationSessionManager {
         'Session details: Media ID: ${mediaItem.id}, Duration: ${mediaItem.duration}s, Start time: $startTime',
       );
 
-      // 通知实时更新
+      // 通知更新
       _notifyRealTimeUpdate();
+      _notifyDailyStatsUpdate();
 
       return sessionId;
     } catch (e) {
@@ -86,16 +105,52 @@ class MeditationSessionManager {
     }
   }
 
-  /// 更新会话进度（播放时间）
+  /// 更新会话进度 - 增强版本，包含每日累计
   static void updateSessionProgress(int currentPositionSeconds) {
-    if (_sessionStartTime != null && _currentSession != null) {
-      // 如果不是暂停状态，更新实际播放时长
-      if (!_isPaused) {
-        _actualDuration = currentPositionSeconds;
+    if (_sessionStartTime != null && _currentSession != null && !_isPaused) {
+      final previousDuration = _actualDuration;
+      _actualDuration = currentPositionSeconds;
 
-        // 通知实时更新
-        _notifyRealTimeUpdate();
+      // 更新每日累计时长（增量更新）
+      final increment = _actualDuration - previousDuration;
+      if (increment > 0) {
+        _dailyCumulativeDuration += increment;
       }
+    }
+  }
+
+  /// 手动触发实时更新通知（用于关键时刻）
+  static void triggerRealTimeUpdate() {
+    _notifyRealTimeUpdate();
+  }
+
+  /// 智能切换媒体 - 来自Enhanced管理器的核心功能
+  static Future<String> switchToMedia({
+    required MediaItem newMediaItem,
+    SessionType? sessionType,
+    List<String> soundEffects = const [],
+  }) async {
+    try {
+      // 保存当前会话的进度（如果存在）
+      if (_currentSession != null) {
+        await _saveCurrentProgressWithoutStopping();
+        debugPrint(
+          '保存切换前进度: ${_actualDuration}s for ${_currentSession!.title}',
+        );
+      }
+
+      // 开始新会话，但继续累计到当天的统计中
+      final newSessionId = await startSession(
+        mediaItem: newMediaItem,
+        sessionType: sessionType ?? SessionType.meditation,
+        soundEffects: soundEffects,
+      );
+
+      debugPrint('切换到新媒体: ${newMediaItem.title}, 继续每日累计');
+      return newSessionId;
+    } catch (e) {
+      debugPrint('切换媒体错误: $e');
+      rethrow;
     }
   }
 
@@ -114,9 +169,27 @@ class MeditationSessionManager {
           : 0.0,
       'isPlaying': !_isPaused,
       'startTime': _sessionStartTime?.toIso8601String(),
+      'dailyCumulativeDuration': _dailyCumulativeDuration,
+      'dailySessionCount': _dailySessionCount,
     };
 
     _realTimeUpdateController.add(updateData);
+  }
+
+  /// 通知每日统计更新
+  static void _notifyDailyStatsUpdate() {
+    if (_currentMeditationDate == null) return;
+
+    final dailyStats = DailyMeditationStats(
+      date: _currentMeditationDate!,
+      totalDurationSeconds: _dailyCumulativeDuration,
+      sessionCount: _dailySessionCount,
+      mediaIds: _dailyMediaIds.toList(),
+      soundEffects: _dailySoundEffects.toList(),
+      lastUpdated: DateTime.now(),
+    );
+
+    _dailyStatsController.add(dailyStats);
   }
 
   /// 暂停会话
@@ -126,13 +199,14 @@ class MeditationSessionManager {
         _isPaused = true;
         _lastPauseTime = DateTime.now();
 
-        // 立即保存当前进度
-        await _saveCurrentProgress();
+        // 立即保存当前进度和每日统计
+        await _saveCurrentProgressWithDailyStats();
 
         debugPrint(
           'Paused meditation session: ${_currentSession!.id}, position: ${_actualDuration}s',
         );
         _notifyRealTimeUpdate();
+        _notifyDailyStatsUpdate();
       } catch (e) {
         debugPrint('Error pausing meditation session: $e');
       }
@@ -171,9 +245,6 @@ class MeditationSessionManager {
   }) async {
     if (_currentSession != null && _sessionStartTime != null) {
       try {
-        // 停止自动保存定时器
-        _stopAutoSaveTimer();
-
         final endTime = DateTime.now();
         final completedSession = _currentSession!.copyWith(
           actualDuration: _actualDuration,
@@ -205,9 +276,6 @@ class MeditationSessionManager {
   static Future<void> stopSession({double rating = 0.0, String? notes}) async {
     if (_currentSession != null && _sessionStartTime != null) {
       try {
-        // 停止自动保存定时器
-        _stopAutoSaveTimer();
-
         final endTime = DateTime.now();
         final stoppedSession = _currentSession!.copyWith(
           actualDuration: _actualDuration,
@@ -256,11 +324,51 @@ class MeditationSessionManager {
       if (kIsWeb) {
         await WebStorageHelper.insertMeditationSession(session);
       } else {
+        // 检查并确保对应的MediaItem存在，避免外键约束错误
+        await _ensureMediaItemExists(session);
         await DatabaseHelper.insertMeditationSession(session.toMap());
       }
     } catch (e) {
       debugPrint('Error saving session to database: $e');
       rethrow;
+    }
+  }
+
+  /// 确保MediaItem存在，如果不存在则创建一个临时记录
+  static Future<void> _ensureMediaItemExists(MeditationSession session) async {
+    try {
+      // 检查MediaItem是否存在
+      final existingItem = await DatabaseHelper.getMediaItemById(
+        session.mediaItemId,
+      );
+
+      if (existingItem == null) {
+        debugPrint(
+          'MediaItem ${session.mediaItemId} not found, creating temporary record',
+        );
+
+        // 创建临时MediaItem记录
+        final tempMediaItem = {
+          'id': session.mediaItemId,
+          'title': session.title,
+          'description': '临时创建的媒体记录（由会话管理器自动生成）',
+          'file_path': 'temp://placeholder',
+          'type': 'audio',
+          'category': session.type.name,
+          'duration': session.duration,
+          'created_at': session.startTime.millisecondsSinceEpoch,
+          'play_count': 0,
+          'tags': '',
+          'is_favorite': 0,
+          'sort_index': 0,
+        };
+
+        await DatabaseHelper.insertMediaItem(tempMediaItem);
+        debugPrint('Created temporary MediaItem for session ${session.id}');
+      }
+    } catch (e) {
+      debugPrint('Error ensuring MediaItem exists: $e');
+      // 不重新抛出错误，让会话保存继续尝试
     }
   }
 
@@ -318,7 +426,6 @@ class MeditationSessionManager {
 
   /// 清理会话状态（用于测试或重置）
   static void clearSession() {
-    _stopAutoSaveTimer();
     _clearSessionState();
   }
 
@@ -332,30 +439,7 @@ class MeditationSessionManager {
     _isPaused = false;
   }
 
-  /// 启动自动保存定时器
-  static void _startAutoSaveTimer() {
-    _stopAutoSaveTimer(); // 先停止现有定时器
-
-    _autoSaveTimer = Timer.periodic(
-      Duration(seconds: _autoSaveIntervalSeconds),
-      (timer) async {
-        if (_currentSession != null) {
-          try {
-            await _saveCurrentProgress();
-            debugPrint('Auto-saved session progress: ${_actualDuration}s');
-          } catch (e) {
-            debugPrint('Error auto-saving session progress: $e');
-          }
-        }
-      },
-    );
-  }
-
-  /// 停止自动保存定时器
-  static void _stopAutoSaveTimer() {
-    _autoSaveTimer?.cancel();
-    _autoSaveTimer = null;
-  }
+  // 移除自动保存定时器相关方法
 
   /// 保存当前进度到数据库
   static Future<void> _saveCurrentProgress() async {
@@ -366,6 +450,23 @@ class MeditationSessionManager {
     );
 
     await _updateSessionInDatabase(updatedSession);
+  }
+
+  /// 保存当前进度但不停止会话 - Enhanced功能
+  static Future<void> _saveCurrentProgressWithoutStopping() async {
+    if (_currentSession == null) return;
+
+    final updatedSession = _currentSession!.copyWith(
+      actualDuration: _actualDuration,
+    );
+
+    await _updateSessionInDatabase(updatedSession);
+    await _saveDailyStatsToDatabase();
+  }
+
+  /// 保存当前进度和每日统计
+  static Future<void> _saveCurrentProgressWithDailyStats() async {
+    await _saveCurrentProgressWithoutStopping();
   }
 
   /// 强制保存当前会话状态（用于应用后台切换等场景）
@@ -391,6 +492,8 @@ class MeditationSessionManager {
       'isPaused': _isPaused,
       'startTime': _sessionStartTime?.toIso8601String(),
       'lastPauseTime': _lastPauseTime?.toIso8601String(),
+      'dailyCumulativeDuration': _dailyCumulativeDuration,
+      'dailySessionCount': _dailySessionCount,
     };
   }
 
@@ -399,16 +502,194 @@ class MeditationSessionManager {
     _dataUpdateController.add(null);
   }
 
+  /// 初始化每日统计
+  static Future<void> _initializeDailyStats(DateTime date) async {
+    _currentMeditationDate = date;
+
+    try {
+      final existingStats = await _loadDailyStatsFromDatabase(date);
+      if (existingStats != null) {
+        _dailyCumulativeDuration = existingStats.totalDurationSeconds;
+        _dailySessionCount = existingStats.sessionCount;
+        _dailyMediaIds.clear();
+        _dailyMediaIds.addAll(existingStats.mediaIds);
+        _dailySoundEffects.clear();
+        _dailySoundEffects.addAll(existingStats.soundEffects);
+
+        debugPrint(
+          '恢复每日统计: duration=${_dailyCumulativeDuration}s, sessions=$_dailySessionCount',
+        );
+      } else {
+        _dailyCumulativeDuration = 0;
+        _dailySessionCount = 0;
+        _dailyMediaIds.clear();
+        _dailySoundEffects.clear();
+        debugPrint('初始化新的每日统计');
+      }
+    } catch (e) {
+      debugPrint('初始化每日统计错误: $e');
+      _dailyCumulativeDuration = 0;
+      _dailySessionCount = 0;
+      _dailyMediaIds.clear();
+      _dailySoundEffects.clear();
+    }
+  }
+
+  /// 保存每日统计到数据库
+  static Future<void> _saveDailyStatsToDatabase() async {
+    if (_currentMeditationDate == null) return;
+
+    try {
+      final dailyStats = DailyMeditationStats(
+        date: _currentMeditationDate!,
+        totalDurationSeconds: _dailyCumulativeDuration,
+        sessionCount: _dailySessionCount,
+        mediaIds: _dailyMediaIds.toList(),
+        soundEffects: _dailySoundEffects.toList(),
+        lastUpdated: DateTime.now(),
+      );
+
+      await _saveDailyStatsData(dailyStats);
+    } catch (e) {
+      debugPrint('保存每日统计错误: $e');
+    }
+  }
+
+  /// 从数据库加载每日统计
+  static Future<DailyMeditationStats?> _loadDailyStatsFromDatabase(
+    DateTime date,
+  ) async {
+    try {
+      return await _loadDailyStatsData(date);
+    } catch (e) {
+      debugPrint('加载每日统计错误: $e');
+      return null;
+    }
+  }
+
+  static Future<void> _saveDailyStatsData(DailyMeditationStats stats) async {
+    final key = 'daily_stats_${_getDateKey(stats.date)}';
+    final value = stats.toJson();
+
+    if (kIsWeb) {
+      await WebStorageHelper.setPreference(key, value);
+    } else {
+      await DatabaseHelper.setPreference(key, value);
+    }
+  }
+
+  static Future<DailyMeditationStats?> _loadDailyStatsData(
+    DateTime date,
+  ) async {
+    final key = 'daily_stats_${_getDateKey(date)}';
+
+    String? value;
+    if (kIsWeb) {
+      value = await WebStorageHelper.getPreference(key);
+    } else {
+      value = await DatabaseHelper.getPreference(key);
+    }
+
+    if (value != null && value.isNotEmpty) {
+      return DailyMeditationStats.fromJson(value);
+    }
+    return null;
+  }
+
+  static bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
+  static String _getDateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  // 新增：每日统计访问器
+  static int get dailyCumulativeDuration => _dailyCumulativeDuration;
+  static int get dailySessionCount => _dailySessionCount;
+  static DateTime? get currentMeditationDate => _currentMeditationDate;
+
+  /// 获取当前每日统计
+  static DailyMeditationStats? getCurrentDailyStats() {
+    if (_currentMeditationDate == null) return null;
+
+    return DailyMeditationStats(
+      date: _currentMeditationDate!,
+      totalDurationSeconds: _dailyCumulativeDuration,
+      sessionCount: _dailySessionCount,
+      mediaIds: _dailyMediaIds.toList(),
+      soundEffects: _dailySoundEffects.toList(),
+      lastUpdated: DateTime.now(),
+    );
+  }
+
   /// 关闭流控制器（应用退出时调用）
   static Future<void> dispose() async {
     // 保存当前状态
     await forceSaveCurrentState();
 
-    // 停止定时器
-    _stopAutoSaveTimer();
-
     // 关闭流控制器
     await _dataUpdateController.close();
     await _realTimeUpdateController.close();
+    await _dailyStatsController.close();
+  }
+}
+
+/// 每日冥想统计数据模型 - 来自Enhanced管理器
+class DailyMeditationStats {
+  final DateTime date;
+  final int totalDurationSeconds;
+  final int sessionCount;
+  final List<String> mediaIds;
+  final List<String> soundEffects;
+  final DateTime lastUpdated;
+
+  const DailyMeditationStats({
+    required this.date,
+    required this.totalDurationSeconds,
+    required this.sessionCount,
+    required this.mediaIds,
+    required this.soundEffects,
+    required this.lastUpdated,
+  });
+
+  int get totalMinutes => totalDurationSeconds ~/ 60;
+
+  String toJson() {
+    return '{"date":"${date.toIso8601String()}","totalDurationSeconds":$totalDurationSeconds,"sessionCount":$sessionCount,"mediaIds":${_listToJsonArray(mediaIds)},"soundEffects":${_listToJsonArray(soundEffects)},"lastUpdated":"${lastUpdated.toIso8601String()}"}';
+  }
+
+  static DailyMeditationStats fromJson(String json) {
+    final regex = RegExp(r'"([^"]+)":(\[[^\]]*\]|"[^"]*"|\d+)');
+    final matches = regex.allMatches(json);
+    final map = <String, String>{};
+
+    for (final match in matches) {
+      map[match.group(1)!] = match.group(2)!;
+    }
+
+    return DailyMeditationStats(
+      date: DateTime.parse(map['date']!.replaceAll('"', '')),
+      totalDurationSeconds: int.parse(map['totalDurationSeconds']!),
+      sessionCount: int.parse(map['sessionCount']!),
+      mediaIds: _parseJsonArray(map['mediaIds']!),
+      soundEffects: _parseJsonArray(map['soundEffects']!),
+      lastUpdated: DateTime.parse(map['lastUpdated']!.replaceAll('"', '')),
+    );
+  }
+
+  static String _listToJsonArray(List<String> list) {
+    return '[${list.map((item) => '"$item"').join(',')}]';
+  }
+
+  static List<String> _parseJsonArray(String jsonArray) {
+    if (jsonArray == '[]') return [];
+    final content = jsonArray.substring(1, jsonArray.length - 1);
+    return content
+        .split(',')
+        .map((item) => item.replaceAll('"', '').trim())
+        .toList();
   }
 }

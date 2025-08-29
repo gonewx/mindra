@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../data/services/meditation_statistics_service.dart';
 import '../../data/services/enhanced_meditation_statistics_service.dart';
-import '../../data/services/enhanced_meditation_session_manager.dart';
+import '../../data/services/meditation_session_manager.dart';
 import '../../domain/entities/meditation_statistics.dart';
 import '../widgets/goal_settings_dialog.dart';
 import '../widgets/reminder_settings_dialog.dart';
@@ -129,28 +129,29 @@ class _EnhancedMeditationHistoryPageState
   /// 设置数据流监听
   void _setupDataStreams() {
     // 监听数据更新通知
-    _dataUpdateSubscription = EnhancedMeditationSessionManager.dataUpdateStream
-        .listen((_) {
-          debugPrint('Enhanced data update received, refreshing...');
-          _refreshDataIfNeeded();
-        });
+    _dataUpdateSubscription = MeditationSessionManager.dataUpdateStream.listen((
+      _,
+    ) {
+      debugPrint('Enhanced data update received, refreshing...');
+      _refreshDataIfNeeded();
+    });
 
     // 监听每日统计更新
-    _dailyStatsSubscription = EnhancedMeditationSessionManager.dailyStatsStream
-        .listen((dailyStats) {
-          debugPrint(
-            'Daily stats update received: ${dailyStats.totalMinutes} minutes',
-          );
-          if (mounted) {
-            setState(() {
-              _todayStats = dailyStats;
-            });
-          }
+    _dailyStatsSubscription = MeditationSessionManager.dailyStatsStream.listen((
+      dailyStats,
+    ) {
+      debugPrint(
+        'Daily stats update received: ${dailyStats.totalMinutes} minutes',
+      );
+      if (mounted) {
+        setState(() {
+          _todayStats = dailyStats;
         });
+      }
+    });
 
     // 监听实时进度更新
-    _realTimeSubscription = EnhancedMeditationSessionManager
-        .realTimeUpdateStream
+    _realTimeSubscription = MeditationSessionManager.realTimeUpdateStream
         .listen((updateData) {
           debugPrint(
             'Real-time update received: ${updateData['actualDuration']}s',
@@ -242,8 +243,7 @@ class _EnhancedMeditationHistoryPageState
   /// 加载今日统计
   Future<void> _loadTodayStats() async {
     try {
-      final todayStats =
-          EnhancedMeditationSessionManager.getCurrentDailyStats();
+      final todayStats = MeditationSessionManager.getCurrentDailyStats();
       if (mounted) {
         setState(() {
           _todayStats = todayStats;
@@ -330,7 +330,7 @@ class _EnhancedMeditationHistoryPageState
   /// 保存当前状态
   Future<void> _saveCurrentState() async {
     try {
-      await EnhancedMeditationSessionManager.forceSaveCurrentState();
+      await MeditationSessionManager.forceSaveCurrentState();
     } catch (e) {
       debugPrint('Error saving current state: $e');
     }
@@ -593,7 +593,7 @@ class _EnhancedMeditationHistoryPageState
                 ),
               ),
               const Spacer(),
-              if (EnhancedMeditationSessionManager.hasActiveSession)
+              if (MeditationSessionManager.hasActiveSession)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -860,7 +860,7 @@ class _EnhancedMeditationHistoryPageState
             ),
           ),
           const SizedBox(height: 4),
-          if (EnhancedMeditationSessionManager.hasActiveSession)
+          if (MeditationSessionManager.hasActiveSession)
             Text(
               '正在实时同步中...',
               style: theme.textTheme.bodySmall?.copyWith(

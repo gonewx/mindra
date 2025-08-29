@@ -5,7 +5,6 @@ import 'package:audio_service/audio_service.dart' as audio_service;
 import '../../../core/audio/audio_player.dart';
 import '../../../features/media/domain/entities/media_item.dart';
 import '../../../features/meditation/data/services/meditation_session_manager.dart';
-import '../../../features/meditation/data/services/enhanced_meditation_session_manager.dart';
 import '../../media/data/datasources/media_local_datasource.dart';
 import '../../media/domain/usecases/media_usecases.dart';
 import '../../../core/di/injection_container.dart';
@@ -72,6 +71,10 @@ class GlobalPlayerService extends ChangeNotifier {
 
   // 防止重复触发playNext的标记
   bool _isPlayNextInProgress = false;
+
+  // 播放时长统计定时器 - 优化为1分钟间隔
+  Timer? _playTimeTrackingTimer;
+  static const int _playTimeTrackingIntervalSeconds = 60; // 1分钟统计间隔
 
   // 添加保存上次播放媒体的常量
   static const String _lastPlayedMediaIdKey = 'last_played_media_id';
@@ -399,11 +402,8 @@ class GlobalPlayerService extends ChangeNotifier {
 
       notifyListeners();
 
-      // 更新会话进度，让两个管理器都处理实时更新
-      MeditationSessionManager.updateSessionProgress(position.inSeconds);
-      EnhancedMeditationSessionManager.updateSessionProgress(
-        position.inSeconds,
-      );
+      // 移除每秒的进度更新调用 - 改为定时器统计
+      // 只保留位置记录用于UI显示和保存
 
       // 减少保存频率：只在位置变化较大时保存
       if (positionDiff > 10.0) {
@@ -495,24 +495,23 @@ class GlobalPlayerService extends ChangeNotifier {
     }
 
     if (isPlaying) {
-      // 优先使用增强版会话管理器
-      if (!EnhancedMeditationSessionManager.hasActiveSession &&
-          !MeditationSessionManager.hasActiveSession &&
-          _currentMedia != null) {
+      // 使用统一的会话管理器
+      if (!MeditationSessionManager.hasActiveSession && _currentMedia != null) {
         _startMeditationSession();
-      } else if (EnhancedMeditationSessionManager.hasActiveSession) {
-        EnhancedMeditationSessionManager.resumeSession();
       } else if (MeditationSessionManager.hasActiveSession) {
         MeditationSessionManager.resumeSession();
       }
+
+      // 启动播放时长统计定时器
+      _startPlayTimeTracking();
     } else {
-      // 暂停时同时处理两个管理器
-      if (EnhancedMeditationSessionManager.hasActiveSession) {
-        EnhancedMeditationSessionManager.pauseSession();
-      }
+      // 使用统一的会话管理器
       if (MeditationSessionManager.hasActiveSession) {
         MeditationSessionManager.pauseSession();
       }
+
+      // 停止播放时长统计定时器
+      _stopPlayTimeTracking();
     }
   }
 
@@ -592,11 +591,9 @@ class GlobalPlayerService extends ChangeNotifier {
           debugPrint(
             'Updating session progress to full duration: ${completeDuration}s on completion',
           );
-          // 更新两个会话管理器的进度到完整时长
+          // 播放完成时强制更新到完整时长（保留此逻辑）
           MeditationSessionManager.updateSessionProgress(completeDuration);
-          EnhancedMeditationSessionManager.updateSessionProgress(
-            completeDuration,
-          );
+          MeditationSessionManager.updateSessionProgress(completeDuration);
         }
 
         // 检查是否需要循环播放
@@ -623,8 +620,8 @@ class GlobalPlayerService extends ChangeNotifier {
         // 通知音频焦点管理器音频开始播放
         AudioFocusManager().notifyMainAudioStarted();
 
-        if (EnhancedMeditationSessionManager.hasActiveSession) {
-          EnhancedMeditationSessionManager.resumeSession();
+        if (MeditationSessionManager.hasActiveSession) {
+          MeditationSessionManager.resumeSession();
         }
         if (MeditationSessionManager.hasActiveSession) {
           MeditationSessionManager.resumeSession();
@@ -640,8 +637,8 @@ class GlobalPlayerService extends ChangeNotifier {
           AudioFocusManager().notifyMainAudioStopped();
         }
 
-        if (EnhancedMeditationSessionManager.hasActiveSession) {
-          EnhancedMeditationSessionManager.pauseSession();
+        if (MeditationSessionManager.hasActiveSession) {
+          MeditationSessionManager.pauseSession();
         }
         if (MeditationSessionManager.hasActiveSession) {
           MeditationSessionManager.pauseSession();
@@ -656,8 +653,8 @@ class GlobalPlayerService extends ChangeNotifier {
         // 通知音频焦点管理器音频停止
         AudioFocusManager().notifyMainAudioStopped();
 
-        if (EnhancedMeditationSessionManager.hasActiveSession) {
-          EnhancedMeditationSessionManager.pauseSession();
+        if (MeditationSessionManager.hasActiveSession) {
+          MeditationSessionManager.pauseSession();
         }
         if (MeditationSessionManager.hasActiveSession) {
           MeditationSessionManager.pauseSession();
@@ -819,10 +816,9 @@ class GlobalPlayerService extends ChangeNotifier {
     if (_currentMedia == null) return;
 
     try {
-      final sessionType =
-          EnhancedMeditationSessionManager.getSessionTypeFromCategory(
-            _currentMedia!.category.name,
-          );
+      final sessionType = MeditationSessionManager.getSessionTypeFromCategory(
+        _currentMedia!.category.name,
+      );
 
       List<String> soundEffects = [];
       try {
@@ -837,7 +833,7 @@ class GlobalPlayerService extends ChangeNotifier {
 
       // 优先使用增强版会话管理器
       try {
-        await EnhancedMeditationSessionManager.startSession(
+        await MeditationSessionManager.startSession(
           mediaItem: _currentMedia!,
           sessionType: sessionType,
           soundEffects: soundEffects,
@@ -868,8 +864,8 @@ class GlobalPlayerService extends ChangeNotifier {
   Future<void> _completeMeditationSession() async {
     try {
       // 优先完成增强版会话管理器的会话
-      if (EnhancedMeditationSessionManager.hasActiveSession) {
-        await EnhancedMeditationSessionManager.completeSession();
+      if (MeditationSessionManager.hasActiveSession) {
+        await MeditationSessionManager.completeSession();
         debugPrint('Completed enhanced meditation session');
       }
 
@@ -1062,8 +1058,8 @@ class GlobalPlayerService extends ChangeNotifier {
           await _pauseSoundEffects();
           AudioFocusManager().notifyMainAudioStopped();
           // 停止所有活跃的会话
-          if (EnhancedMeditationSessionManager.hasActiveSession) {
-            await EnhancedMeditationSessionManager.stopSession();
+          if (MeditationSessionManager.hasActiveSession) {
+            await MeditationSessionManager.stopSession();
           }
           if (MeditationSessionManager.hasActiveSession) {
             await MeditationSessionManager.stopSession();
@@ -1149,10 +1145,9 @@ class GlobalPlayerService extends ChangeNotifier {
     // 这将保存当前进度并继续累计到当天的统计中
     if (_currentMedia != null) {
       try {
-        final sessionType =
-            EnhancedMeditationSessionManager.getSessionTypeFromCategory(
-              _currentMedia!.category.name,
-            );
+        final sessionType = MeditationSessionManager.getSessionTypeFromCategory(
+          _currentMedia!.category.name,
+        );
 
         List<String> soundEffects = [];
         try {
@@ -1165,7 +1160,8 @@ class GlobalPlayerService extends ChangeNotifier {
           soundEffects = [];
         }
 
-        await EnhancedMeditationSessionManager.switchToMedia(
+        // 使用智能切换媒体功能
+        await MeditationSessionManager.switchToMedia(
           newMediaItem: _currentMedia!,
           sessionType: sessionType,
           soundEffects: soundEffects,
@@ -1374,6 +1370,10 @@ class GlobalPlayerService extends ChangeNotifier {
       await _saveLastPlayedPosition();
       await _pauseSoundEffects();
 
+      // 暂停时停止统计定时器并即时保存进度
+      _stopPlayTimeTracking();
+      _saveCurrentProgressImmediately();
+
       // 通知音频焦点管理器音频停止
       AudioFocusManager().notifyMainAudioStopped();
     } catch (e) {
@@ -1400,12 +1400,16 @@ class GlobalPlayerService extends ChangeNotifier {
     await _saveLastPlayedPosition();
     await _pauseSoundEffects();
 
+    // 停止时停止统计定时器并即时保存进度
+    _stopPlayTimeTracking();
+    _saveCurrentProgressImmediately();
+
     // 通知音频焦点管理器音频停止
     AudioFocusManager().notifyMainAudioStopped();
 
     // 停止所有活跃的会话
-    if (EnhancedMeditationSessionManager.hasActiveSession) {
-      await EnhancedMeditationSessionManager.stopSession();
+    if (MeditationSessionManager.hasActiveSession) {
+      await MeditationSessionManager.stopSession();
     }
     if (MeditationSessionManager.hasActiveSession) {
       await MeditationSessionManager.stopSession();
@@ -1612,10 +1616,9 @@ class GlobalPlayerService extends ChangeNotifier {
     try {
       // 使用增强版会话管理器智能切换媒体
       // 这将保存当前进度并继续累计到当天的统计中
-      final sessionType =
-          EnhancedMeditationSessionManager.getSessionTypeFromCategory(
-            media.category.name,
-          );
+      final sessionType = MeditationSessionManager.getSessionTypeFromCategory(
+        media.category.name,
+      );
 
       List<String> soundEffects = [];
       try {
@@ -1647,7 +1650,7 @@ class GlobalPlayerService extends ChangeNotifier {
       await _saveLastPlayedMedia();
 
       // 使用增强版会话管理器切换
-      await EnhancedMeditationSessionManager.switchToMedia(
+      await MeditationSessionManager.switchToMedia(
         newMediaItem: media,
         sessionType: sessionType,
         soundEffects: soundEffects,
@@ -1986,8 +1989,8 @@ class GlobalPlayerService extends ChangeNotifier {
 
       // 完成冥想会话以确保统计数据被正确记录
       try {
-        if (EnhancedMeditationSessionManager.hasActiveSession) {
-          await EnhancedMeditationSessionManager.completeSession();
+        if (MeditationSessionManager.hasActiveSession) {
+          await MeditationSessionManager.completeSession();
           debugPrint(
             'Sleep timer completed: Enhanced meditation session completed',
           );
@@ -2037,7 +2040,7 @@ class GlobalPlayerService extends ChangeNotifier {
       // 启动后台完成兜底监控（仅全部循环模式需要跨曲目自动播放）
       _startBackgroundCompletionWatchdog();
 
-      await EnhancedMeditationSessionManager.forceSaveCurrentState();
+      await MeditationSessionManager.forceSaveCurrentState();
       await MeditationSessionManager.forceSaveCurrentState();
       await _saveLastPlayedPosition();
 
@@ -2060,7 +2063,7 @@ class GlobalPlayerService extends ChangeNotifier {
       _stopBackgroundCompletionWatchdog();
 
       // 验证当前会话是否仍然有效
-      if (EnhancedMeditationSessionManager.hasActiveSession) {
+      if (MeditationSessionManager.hasActiveSession) {
         debugPrint('Resumed from background with active enhanced session');
       } else if (MeditationSessionManager.hasActiveSession) {
         debugPrint('Resumed from background with active traditional session');
@@ -2361,13 +2364,13 @@ class GlobalPlayerService extends ChangeNotifier {
   Future<void> prepareForTermination() async {
     try {
       // 强制保存所有状态
-      await EnhancedMeditationSessionManager.forceSaveCurrentState();
+      await MeditationSessionManager.forceSaveCurrentState();
       await MeditationSessionManager.forceSaveCurrentState();
       await _saveLastPlayedPosition();
 
       // 如果有活跃会话，标记为停止（而不是完成）
-      if (EnhancedMeditationSessionManager.hasActiveSession) {
-        await EnhancedMeditationSessionManager.stopSession();
+      if (MeditationSessionManager.hasActiveSession) {
+        await MeditationSessionManager.stopSession();
       }
       if (MeditationSessionManager.hasActiveSession) {
         await MeditationSessionManager.stopSession();
@@ -2388,6 +2391,9 @@ class GlobalPlayerService extends ChangeNotifier {
   Future<void> _disposeInternal() async {
     // 首先标记为未初始化，防止其他操作访问
     _isInitialized = false;
+
+    // 停止播放时长统计定时器
+    _stopPlayTimeTracking();
 
     // 停止后台完成兜底监控
     _stopBackgroundCompletionWatchdog();
@@ -2410,7 +2416,7 @@ class GlobalPlayerService extends ChangeNotifier {
 
     // 在dispose前保存状态
     try {
-      await EnhancedMeditationSessionManager.forceSaveCurrentState();
+      await MeditationSessionManager.forceSaveCurrentState();
       await MeditationSessionManager.forceSaveCurrentState();
       await _saveLastPlayedPosition();
     } catch (e) {
@@ -2418,8 +2424,8 @@ class GlobalPlayerService extends ChangeNotifier {
     }
 
     // 停止所有活跃会话
-    if (EnhancedMeditationSessionManager.hasActiveSession) {
-      await EnhancedMeditationSessionManager.stopSession();
+    if (MeditationSessionManager.hasActiveSession) {
+      await MeditationSessionManager.stopSession();
     }
     if (MeditationSessionManager.hasActiveSession) {
       await MeditationSessionManager.stopSession();
@@ -2443,6 +2449,65 @@ class GlobalPlayerService extends ChangeNotifier {
 
   Future<void> shutdown() async {
     await _disposeInternal();
+  }
+
+  /// 启动播放时长统计定时器
+  void _startPlayTimeTracking() {
+    // 防止重复启动：如果已经有定时器在运行，直接返回
+    if (_playTimeTrackingTimer != null) {
+      debugPrint('🕒 定时器已在运行，跳过重复启动');
+      return;
+    }
+
+    debugPrint('🕒 启动播放时长统计定时器 ($_playTimeTrackingIntervalSeconds秒间隔)');
+
+    _playTimeTrackingTimer = Timer.periodic(
+      Duration(seconds: _playTimeTrackingIntervalSeconds),
+      (timer) {
+        debugPrint(
+          '🕒 定时器触发 - isPlaying: $_isPlaying, position: $_currentPosition',
+        );
+
+        // 只在播放状态时统计时长
+        if (_isPlaying && _currentPosition > 0) {
+          // 更新统一管理器的进度
+          MeditationSessionManager.updateSessionProgress(
+            _currentPosition.toInt(),
+          );
+
+          // 触发UI更新通知（1分钟一次）
+          MeditationSessionManager.triggerRealTimeUpdate();
+
+          debugPrint('播放时长统计更新: ${_currentPosition.toInt()}秒');
+        } else {
+          debugPrint(
+            '🕒 跳过统计更新 - isPlaying: $_isPlaying, position: $_currentPosition',
+          );
+        }
+      },
+    );
+  }
+
+  /// 停止播放时长统计定时器
+  void _stopPlayTimeTracking() {
+    if (_playTimeTrackingTimer != null) {
+      debugPrint('🕒 停止播放时长统计定时器');
+      _playTimeTrackingTimer?.cancel();
+      _playTimeTrackingTimer = null;
+    }
+  }
+
+  /// 即时保存当前进度（用于暂停/停止/切换时）
+  void _saveCurrentProgressImmediately() {
+    if (_currentPosition > 0) {
+      // 即时更新统一管理器的进度
+      MeditationSessionManager.updateSessionProgress(_currentPosition.toInt());
+
+      // 触发UI更新通知
+      MeditationSessionManager.triggerRealTimeUpdate();
+
+      debugPrint('即时保存播放进度: ${_currentPosition.toInt()}秒');
+    }
   }
 
   /// 检查并更新媒体项的时长数据

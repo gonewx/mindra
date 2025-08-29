@@ -15,6 +15,7 @@ import 'core/config/app_config_service.dart';
 import 'core/database/database_helper.dart';
 import 'core/database/database_health_checker.dart';
 import 'core/database/database_connection_manager.dart';
+import 'core/database/database_repair.dart';
 import 'core/services/reminder_scheduler_service.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/services/app_data_validator.dart';
@@ -405,6 +406,11 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
       debugPrint('Starting database initialization...');
       final db = await DatabaseHelper.database;
       debugPrint('Database path: ${db.path}');
+
+      // 执行数据库修复，确保所有表都存在
+      debugPrint('Performing database repair check...');
+      await DatabaseRepair.repairDatabase();
+      debugPrint('Database repair completed');
 
       // 验证数据库功能
       final testResult = await db.rawQuery(

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../../../core/database/database_helper.dart';
 import '../../domain/entities/meditation_session.dart';
-import 'enhanced_meditation_session_manager.dart';
+import 'meditation_session_manager.dart';
 import 'dart:async';
 
 /// 数据一致性检查和错误恢复机制 - 简化版本
@@ -75,8 +75,8 @@ class MeditationDataIntegrityManager {
       await _checkCurrentSessionState();
 
       // 强制保存当前状态
-      if (EnhancedMeditationSessionManager.hasActiveSession) {
-        await EnhancedMeditationSessionManager.forceSaveCurrentState();
+      if (MeditationSessionManager.hasActiveSession) {
+        await MeditationSessionManager.forceSaveCurrentState();
       }
 
       debugPrint('[$_logTag] Periodic health check completed');
@@ -92,13 +92,12 @@ class MeditationDataIntegrityManager {
     DataIntegrityReport report,
   ) async {
     try {
-      if (!EnhancedMeditationSessionManager.hasActiveSession) {
+      if (!MeditationSessionManager.hasActiveSession) {
         report.addInfo('会话状态', '当前无活跃会话');
         return;
       }
 
-      final sessionInfo =
-          EnhancedMeditationSessionManager.getCurrentSessionInfo();
+      final sessionInfo = MeditationSessionManager.getCurrentSessionInfo();
       if (sessionInfo == null) {
         report.addWarning('会话状态异常', '活跃会话但无法获取详细信息');
         return;
@@ -206,10 +205,9 @@ class MeditationDataIntegrityManager {
   /// 检查当前会话状态
   static Future<void> _checkCurrentSessionState() async {
     try {
-      if (!EnhancedMeditationSessionManager.hasActiveSession) return;
+      if (!MeditationSessionManager.hasActiveSession) return;
 
-      final sessionInfo =
-          EnhancedMeditationSessionManager.getCurrentSessionInfo();
+      final sessionInfo = MeditationSessionManager.getCurrentSessionInfo();
       if (sessionInfo == null) return;
 
       final currentDuration = sessionInfo['actualDuration'] as int;
@@ -226,7 +224,7 @@ class MeditationDataIntegrityManager {
         if (timeDiff > 300) {
           // 超过5分钟偏差
           debugPrint('[$_logTag] Warning: Session time inconsistency detected');
-          await EnhancedMeditationSessionManager.forceSaveCurrentState();
+          await MeditationSessionManager.forceSaveCurrentState();
         }
       }
     } catch (e) {
