@@ -108,14 +108,48 @@ class MeditationSessionManager {
   /// 更新会话进度 - 增强版本，包含每日累计
   static void updateSessionProgress(int currentPositionSeconds) {
     if (_sessionStartTime != null && _currentSession != null && !_isPaused) {
+      // 使用更智能的进度计算方式
+      // 如果当前位置小于记录的实际时长，说明可能发生了倒退（用户拖动进度条）
+      // 这种情况下不更新时长，避免计算错误
+      if (currentPositionSeconds < _actualDuration) {
+        debugPrint(
+          'Progress went backwards (likely seeked): current=$currentPositionSeconds, recorded=$_actualDuration',
+        );
+        // 更新实际位置但不计入累计时长
+        _actualDuration = currentPositionSeconds;
+        return;
+      }
+
       final previousDuration = _actualDuration;
       _actualDuration = currentPositionSeconds;
 
       // 更新每日累计时长（增量更新）
       final increment = _actualDuration - previousDuration;
-      if (increment > 0) {
+      if (increment > 0 && increment <= 10) {
+        // 合理的增量范围（最多10秒，避免异常值）
         _dailyCumulativeDuration += increment;
+        debugPrint(
+          'Progress updated: position=$currentPositionSeconds, increment=$increment, daily total=$_dailyCumulativeDuration',
+        );
+      } else if (increment > 10) {
+        // 增量过大，可能是跳转或首次更新，使用保守策略
+        _dailyCumulativeDuration += 5; // 只增加5秒作为保守估计
+        debugPrint(
+          'Large progress jump detected: increment=$increment, adding conservative 5s',
+        );
       }
+    }
+  }
+
+  /// 基于时间间隔更新会话进度（更准确的方法）
+  static void updateSessionProgressByInterval(int intervalSeconds) {
+    if (_sessionStartTime != null && _currentSession != null && !_isPaused) {
+      _actualDuration += intervalSeconds;
+      _dailyCumulativeDuration += intervalSeconds;
+
+      debugPrint(
+        'Progress updated by interval: +${intervalSeconds}s, total=$_actualDuration, daily=$_dailyCumulativeDuration',
+      );
     }
   }
 
@@ -500,6 +534,15 @@ class MeditationSessionManager {
   /// 手动触发数据更新通知
   static void notifyDataUpdate() {
     _dataUpdateController.add(null);
+  }
+
+  /// 立即保存每日统计数据到数据库（供外部调用）
+  static Future<void> saveDailyStats() async {
+    debugPrint(
+      '🔄 开始保存每日统计数据：累计时长=${_dailyCumulativeDuration}s，会话数=$_dailySessionCount',
+    );
+    await _saveDailyStatsToDatabase();
+    debugPrint('🔄 每日统计数据保存完成');
   }
 
   /// 初始化每日统计

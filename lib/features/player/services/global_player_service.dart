@@ -72,9 +72,9 @@ class GlobalPlayerService extends ChangeNotifier {
   // 防止重复触发playNext的标记
   bool _isPlayNextInProgress = false;
 
-  // 播放时长统计定时器 - 优化为1分钟间隔
+  // 播放时长统计定时器 - 优化为5秒间隔
   Timer? _playTimeTrackingTimer;
-  static const int _playTimeTrackingIntervalSeconds = 60; // 1分钟统计间隔
+  static const int _playTimeTrackingIntervalSeconds = 5; // 5秒统计间隔，确保准确性
 
   // 添加保存上次播放媒体的常量
   static const String _lastPlayedMediaIdKey = 'last_played_media_id';
@@ -2470,15 +2470,28 @@ class GlobalPlayerService extends ChangeNotifier {
 
         // 只在播放状态时统计时长
         if (_isPlaying && _currentPosition > 0) {
-          // 更新统一管理器的进度
+          // 使用基于时间间隔的更新方式（更准确）
+          MeditationSessionManager.updateSessionProgressByInterval(
+            _playTimeTrackingIntervalSeconds,
+          );
+          // 同时更新当前位置（用于UI显示）
           MeditationSessionManager.updateSessionProgress(
             _currentPosition.toInt(),
           );
 
-          // 触发UI更新通知（1分钟一次）
+          // 触发UI更新通知（每5秒一次）
           MeditationSessionManager.triggerRealTimeUpdate();
 
-          debugPrint('播放时长统计更新: ${_currentPosition.toInt()}秒');
+          // 每30秒保存一次每日统计数据到数据库（重要！）
+          if (timer.tick % 6 == 0) {
+            // 每6次触发（30秒）保存一次
+            debugPrint('🔄 定期保存每日统计数据到数据库（第${timer.tick}次触发）');
+            MeditationSessionManager.saveDailyStats();
+          }
+
+          debugPrint(
+            '播放时长统计更新: ${_currentPosition.toInt()}秒，增加$_playTimeTrackingIntervalSeconds秒到累计时长',
+          );
         } else {
           debugPrint(
             '🕒 跳过统计更新 - isPlaying: $_isPlaying, position: $_currentPosition',
