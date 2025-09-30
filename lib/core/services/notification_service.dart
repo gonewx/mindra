@@ -35,11 +35,16 @@ class NotificationService {
           requestSoundPermission: false,
         );
 
+    // Linux 初始化设置
+    const LinuxInitializationSettings initializationSettingsLinux =
+        LinuxInitializationSettings(defaultActionName: 'Open notification');
+
     // 初始化设置
     const InitializationSettings initializationSettings =
         InitializationSettings(
           android: initializationSettingsAndroid,
           iOS: initializationSettingsIOS,
+          linux: initializationSettingsLinux,
         );
 
     // 初始化插件
@@ -317,7 +322,13 @@ class NotificationService {
       sound: 'default',
     );
 
-    return const NotificationDetails(android: androidDetails, iOS: iosDetails);
+    const linuxDetails = LinuxNotificationDetails();
+
+    return const NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+      linux: linuxDetails,
+    );
   }
 
   /// 创建冥想提醒通知详情
@@ -346,7 +357,13 @@ class NotificationService {
       sound: enableSound ? 'default' : null,
     );
 
-    return NotificationDetails(android: androidDetails, iOS: iosDetails);
+    const linuxDetails = LinuxNotificationDetails();
+
+    return NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+      linux: linuxDetails,
+    );
   }
 
   /// 获取系统时区

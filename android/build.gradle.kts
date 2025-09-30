@@ -1,5 +1,11 @@
 allprojects {
     repositories {
+        // 使用阿里云镜像加速依赖下载
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/central") }
+
+        // 备用官方仓库
         google()
         mavenCentral()
     }

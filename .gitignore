@@ -61,3 +61,4 @@ report/
 
 build_report*.txt
 coverage/
+android/.kotlin/
