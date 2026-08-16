@@ -1,0 +1,72 @@
+[env]
+IOS_DEVICE_ID = "00008150-001474443AE0C01C"
+IOS_BUNDLE_ID = "com.mindra.app.lee"
+
+[tasks."ios:devices"]
+description = "List connected physical iOS devices and simulators"
+run = "flutter devices"
+
+[tasks."ios:open"]
+description = "Open the iOS workspace in Xcode"
+run = "open ios/Runner.xcworkspace"
+
+[tasks."ios:sim:build"]
+description = "Build a Debug app for the iOS simulator"
+run = "flutter build ios --simulator --debug"
+
+[tasks."ios:sim:install"]
+description = "Build, install, and launch the app on the booted simulator"
+run = '''
+flutter build ios --simulator --debug
+xcrun simctl terminate booted "$IOS_BUNDLE_ID" 2>/dev/null || true
+xcrun simctl install booted build/ios/iphonesimulator/Runner.app
+xcrun simctl launch booted "$IOS_BUNDLE_ID"
+'''
+
+[tasks."ios:run:debug"]
+description = "Run Debug on the configured physical iPhone"
+run = "flutter run -d \"$IOS_DEVICE_ID\""
+
+[tasks."ios:run:release"]
+description = "Install and run Release on the configured physical iPhone"
+run = "flutter run --release -d \"$IOS_DEVICE_ID\""
+
+[tasks."ios:ipa:build"]
+description = "Build a signed Release IPA"
+run = "flutter build ipa --release"
+
+[tasks."ios:ipa:install"]
+description = "Install the newest IPA, or the file specified by IPA_PATH"
+run = '''
+ipa_path="${IPA_PATH:-}"
+
+if [ -z "$ipa_path" ]; then
+  ipa_path=$(find build/ios/ipa "$HOME/Documents" -type f -name '*.ipa' -print 2>/dev/null \
+    | while IFS= read -r candidate; do
+        printf '%s\t%s\n' "$(stat -f '%m' "$candidate")" "$candidate"
+      done \
+    | sort -nr \
+    | head -n 1 \
+    | cut -f 2-)
+fi
+
+if [ -z "$ipa_path" ] || [ ! -f "$ipa_path" ]; then
+  echo "No IPA found. Pass a path or run: mise run ios:ipa:build" >&2
+  exit 1
+fi
+
+echo "Installing: $ipa_path"
+xcrun devicectl device install app --device "$IOS_DEVICE_ID" "$ipa_path"
+'''
+
+[tasks."ios:launch"]
+description = "Launch the installed app on the configured iPhone"
+run = "xcrun devicectl device process launch --device \"$IOS_DEVICE_ID\" \"$IOS_BUNDLE_ID\""
+
+[tasks."ios:sim:screenshot"]
+description = "Save a simulator screenshot; override SIM_SCREENSHOT_PATH if needed"
+run = '''
+output_path="${SIM_SCREENSHOT_PATH:-/tmp/mindra-simulator.png}"
+xcrun simctl io booted screenshot "$output_path"
+echo "Saved: $output_path"
+'''

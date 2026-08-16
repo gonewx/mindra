@@ -3,7 +3,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:audio_service/audio_service.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -31,9 +30,7 @@ late MindraAudioHandler _audioHandler;
 MindraAudioHandler get audioHandler => _audioHandler;
 
 void main() async {
-  // 保持原生启动画面
-  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  WidgetsFlutterBinding.ensureInitialized();
 
   // 初始化 AudioService 和 AudioHandler
   try {

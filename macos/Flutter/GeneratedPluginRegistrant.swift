@@ -8,7 +8,7 @@ import Foundation
 import audio_service
 import audio_session
 import audioplayers_darwin
-import file_picker
+import file_picker_darwin
 import flutter_local_notifications
 import path_provider_foundation
 import shared_preferences_foundation

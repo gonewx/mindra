@@ -934,7 +934,7 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
     final l10n = AppLocalizations.of(context)!;
 
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: [
           // Audio formats
@@ -942,11 +942,10 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
           // Video formats
           'mp4', 'mov', 'avi', 'mkv', 'webm',
         ],
-        withData: kIsWeb, // On web, get file bytes
       );
 
-      if (result != null) {
-        final file = result.files.first;
+      if (file != null) {
+        final webFileBytes = kIsWeb ? await file.readAsBytes() : null;
         setState(() {
           _titleController.text = file.name.split('.').first;
           _selectedFileName = file.name;
@@ -954,10 +953,10 @@ class _AddMediaDialogState extends State<AddMediaDialog> {
 
           if (kIsWeb) {
             // On web, use file bytes and a placeholder path
-            _selectedFileBytes = file.bytes;
+            _selectedFileBytes = webFileBytes;
             _selectedFilePath = 'web://files/${file.name}';
             debugPrint(
-              'Web file selected: ${file.name}, bytes: ${file.bytes?.length ?? 0}',
+              'Web file selected: ${file.name}, bytes: ${webFileBytes?.length ?? 0}',
             );
           } else {
             // On other platforms, use the actual file path
