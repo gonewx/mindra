@@ -202,16 +202,27 @@ run_tests() {
 check_certificates() {
     if [ "$CREATE_ARCHIVE" = true ] || [ "$CONFIGURATION" = "Release" ]; then
         log_info "检查 iOS 证书和配置文件..."
-        
-        # 检查开发者证书
-        local cert_count=$(security find-identity -v -p codesigning | grep "iPhone" | wc -l)
-        if [ $cert_count -eq 0 ]; then
-            log_error "未找到有效的 iOS 开发者证书"
-            log_info "请在 Xcode 中配置开发者账号和证书"
+
+        # 注意：不能只 grep "iPhone"——分发证书名是 "Apple Distribution"，
+        # 不含 iPhone 字样，旧写法会把分发证书误判成 0 个然后失败。
+        local identities
+        identities=$(security find-identity -v -p codesigning 2>/dev/null | grep -E '^\s+[0-9]+\)' || true)
+        if [ -z "$identities" ]; then
+            log_error "未找到任何有效的签名身份"
+            log_info "签名资产导入: mise run ios:vm:signing:import"
             exit 1
         fi
-        
-        log_info "找到 $cert_count 个 iOS 证书"
+
+        # 手动签名链路（scripts/ios_archive.sh）还要求 Signing.xcconfig 已填值
+        if [ "$CREATE_ARCHIVE" = true ] && [ -f "ios/Flutter/Signing.xcconfig" ]; then
+            if grep -qE '^MINDRA_DEVELOPMENT_TEAM *= *$' "ios/Flutter/Signing.xcconfig"; then
+                log_error "Signing.xcconfig 的 Team ID 为空"
+                log_info "重新导入签名资产: mise run ios:vm:signing:import"
+                exit 1
+            fi
+        fi
+
+        echo "$identities" | sed 's/^/  /'
         log_success "证书检查通过"
     fi
 }

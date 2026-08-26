@@ -29,15 +29,10 @@ ANDROID_KEY_ALIAS             # Key alias
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON  # Google Play service account JSON (optional)
 ```
 
-#### Required for iOS Release:
-```
-IOS_BUILD_CERTIFICATE_BASE64   # iOS build certificate Base64 encoded
-IOS_P12_PASSWORD              # P12 certificate password
-IOS_BUILD_PROVISION_PROFILE_BASE64  # Provisioning profile Base64 encoded
-IOS_KEYCHAIN_PASSWORD         # Keychain password
-APPLE_ID                      # Apple ID
-APP_SPECIFIC_PASSWORD         # App-specific password
-```
+#### iOS Note:
+iOS does **not** go through GitHub CI. Signing credentials never enter
+Secrets — builds are signed on a local offline macOS machine and uploaded via
+appuploader. See [iOS Release Pipeline](ios_release_pipeline.md).
 
 ### 2. Create Release Keystore (Android)
 

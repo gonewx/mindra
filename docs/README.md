@@ -16,6 +16,7 @@ Welcome to Mindra documentation! This directory contains comprehensive guides an
 
 ### Build & Release
 - **[Build and Release Summary](build_and_release_summary.md)** - Complete build and release system overview
+- **[iOS Release Pipeline](ios_release_pipeline.md)** - Full iOS build/sign/upload pipeline (appuploader + mise + offline build machine; in Chinese)
 - **[GitHub Release Guide](github_release_guide.md)** - Guide for releasing on GitHub platform
 - **[App Store Release Guide](app_store_release_guide.md)** - Complete guide for Google Play Store and Apple App Store releases
 
@@ -33,6 +34,7 @@ All documentation is available in both English and Chinese:
 | Development Guide | [DEVELOPMENT.md](DEVELOPMENT.md) | [DEVELOPMENT_ZH.md](DEVELOPMENT_ZH.md) |
 | Linux AppImage Guide | [LINUX_APPIMAGE_ONLY.md](LINUX_APPIMAGE_ONLY.md) | [LINUX_APPIMAGE_ONLY_ZH.md](LINUX_APPIMAGE_ONLY_ZH.md) |
 | Build & Release Summary | [build_and_release_summary.md](build_and_release_summary.md) | [build_and_release_summary_ZH.md](build_and_release_summary_ZH.md) |
+| iOS Release Pipeline | [ios_release_pipeline.md](ios_release_pipeline.md) | (primary doc is Chinese) |
 | GitHub Release Guide | [github_release_guide.md](github_release_guide.md) | [github_release_guide_ZH.md](github_release_guide_ZH.md) |
 | App Store Release Guide | [app_store_release_guide.md](app_store_release_guide.md) | [app_store_release_guide_ZH.md](app_store_release_guide_ZH.md) |
 | Google Play Console Permission | [google_play_console_permission.md](google_play_console_permission.md) | [google_play_console_permission_ZH.md](google_play_console_permission_ZH.md) |

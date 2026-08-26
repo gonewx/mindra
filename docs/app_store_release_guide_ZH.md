@@ -239,16 +239,28 @@ Mindra 是一款专业的冥想与正念应用，致力于帮助用户在快节�
 
 ### 7. 构建上传
 
-```bash
-# 使用脚本上传
-./scripts/release_ios.sh -t
+构建签名在一台离线 macOS 编译机上完成，上传由 appuploader 完成（证书不进 CI）：
 
-# 或使用 Xcode
-# 1. 打开 Xcode
-# 2. Window > Organizer
-# 3. 选择 Archive
-# 4. Distribute App > App Store Connect
+```bash
+cd mindra/
+
+# 编译签名 IPA（自动同步代码到编译机，约 1-3 分钟）
+mise run ios:vm:archive
+
+# IPA 回宿主
+mise run ios:sync:back
+
+# 上传：打开 appuploader（GUI），选 build/ios/ipa/ 下的 IPA 上传 TestFlight
 ```
+
+首次使用需先导入签名资产（appuploader 里导出的 .p12 和 .mobileprovision）：
+
+```bash
+mise run ios:vm:signing:import -- -c <证书.p12> -p <profile.mobileprovision>
+```
+
+完整链路说明见 [ios_release_pipeline.md](ios_release_pipeline.md)。
+后续版本迭代：先 `mise run ios:build:bump` 再构建（TestFlight 要求 build number 递增）。
 
 ### 8. 提交审核
 

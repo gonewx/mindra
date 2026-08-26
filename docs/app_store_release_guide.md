@@ -239,16 +239,31 @@ We'll continue updating to bring you a better meditation experience.
 
 ### 7. Build Upload
 
-```bash
-# Upload using script
-./scripts/release_ios.sh -t
+Builds are signed on an offline macOS build machine; upload is done by
+appuploader (signing credentials never enter CI):
 
-# Or use Xcode
-# 1. Open Xcode
-# 2. Window > Organizer
-# 3. Select Archive
-# 4. Distribute App > App Store Connect
+```bash
+cd mindra/
+
+# Build and sign the IPA (auto-syncs code to the build machine, 1-3 min)
+mise run ios:vm:archive
+
+# Fetch the IPA back to the host
+mise run ios:sync:back
+
+# Upload: open appuploader (GUI), pick the IPA under build/ios/ipa/
 ```
+
+First-time setup requires importing signing assets (.p12 and
+.mobileprovision exported from appuploader):
+
+```bash
+mise run ios:vm:signing:import -- -c <cert.p12> -p <profile.mobileprovision>
+```
+
+See ios_release_pipeline.md for the full pipeline. For subsequent releases,
+run `mise run ios:build:bump` before building (TestFlight requires an
+incrementing build number).
 
 ### 8. Submit for Review
 
@@ -408,24 +423,18 @@ A: Recommended:
    # Android
    ./scripts/create_release_keystore.sh
 
-   # iOS - Configure certificates in Xcode
+   # iOS - import assets exported from appuploader
+   mise run ios:vm:signing:import -- -c <cert.p12> -p <profile.mobileprovision>
    ```
 
 2. **Set Environment Variables**:
    ```bash
    # Android
    export ANDROID_HOME=/path/to/android/sdk
-
-   # iOS
-   export APPLE_ID=your-apple-id@example.com
-   export APP_SPECIFIC_PASSWORD=your-app-password
    ```
 
 3. **Install Dependencies**:
    ```bash
-   # Fastlane
-   gem install fastlane
-
    # Flutter
    flutter doctor
    ```
@@ -471,8 +480,8 @@ A: Recommended:
    - Verify keystore file path
 
 2. **iOS Certificate Issues**:
-   - Reconfigure certificates in Xcode
-   - Check provisioning profile validity
+   - Check `mise run ios:vm:signing:status` output
+   - Re-run `ios:vm:signing:import` with `--reset` to start clean
 
 3. **Version Number Conflicts**:
    - Use `version_manager.sh` for unified management

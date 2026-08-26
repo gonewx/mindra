@@ -15,16 +15,14 @@ mindra/
 │   ├── build_ios.sh           # iOS build script
 │   ├── build_all.sh           # Cross-platform build script
 │   ├── release_android.sh     # Android release script
-│   ├── release_ios.sh         # iOS release script
+│   ├── release_ios.sh         # iOS release script (IPA export + appuploader guide)
+│   ├── ios_archive.sh         # iOS signed build (runs on the build machine)
+│   ├── ios_signing_import.sh  # iOS signing asset import (build machine)
+│   ├── ios_sync.sh            # Host ↔ build machine sync (push/pull/cert/status)
 │   ├── version_manager.sh     # Version management script
 │   ├── quick_deploy.sh        # Quick deployment script
 │   └── build_summary.sh       # Build summary script (existing)
-├── android/fastlane/          # Android Fastlane configuration
-│   ├── Fastfile              # Fastlane main config
-│   └── Appfile               # App configuration
-├── ios/fastlane/              # iOS Fastlane configuration
-│   ├── Fastfile              # Fastlane main config
-│   └── Appfile               # App configuration
+├── mise.toml                  # Unified mise task entry for the iOS pipeline
 ├── .github/workflows/         # GitHub Actions CI/CD
 │   ├── build_and_test.yml    # Build and test workflow
 │   ├── release.yml           # Release workflow
@@ -95,7 +93,6 @@ mindra/
 ### 1. Android Release (`release_android.sh`)
 - Supports multiple release tracks
 - Google Play Console integration
-- Fastlane automation
 - Manual upload guidance
 
 **Usage Examples:**
@@ -177,10 +174,13 @@ One-click deployment solution:
    - Security checks
    - Performance checks
 
-### Fastlane Integration
+### iOS Release Pipeline (current approach)
 
-- **Android**: Automate Google Play Store release
-- **iOS**: Automate TestFlight and App Store release
+- Certificate management and TestFlight upload are handled by **appuploader**
+  (GUI); signing credentials never enter CI
+- Signed builds run on an offline macOS build machine (`ssh imacvm-tahoe`),
+  driven from the host via mise tasks
+- See [ios_release_pipeline.md](ios_release_pipeline.md) for details
 
 ## 📖 Usage Guide
 
@@ -190,25 +190,19 @@ One-click deployment solution:
    ```bash
    # Android
    ./scripts/create_release_keystore.sh
-   
-   # iOS - Configure certificates in Xcode
+
+   # iOS - import assets exported from appuploader
+   mise run ios:vm:signing:import -- -c <cert.p12> -p <profile.mobileprovision>
    ```
 
 2. **Set Environment Variables**:
    ```bash
    # Android
    export ANDROID_HOME=/path/to/android/sdk
-   
-   # iOS
-   export APPLE_ID=your-apple-id@example.com
-   export APP_SPECIFIC_PASSWORD=your-app-password
    ```
 
 3. **Install Dependencies**:
    ```bash
-   # Fastlane
-   gem install fastlane
-   
    # Flutter
    flutter doctor
    ```

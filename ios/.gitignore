@@ -20,6 +20,10 @@ Flutter/Flutter.framework
 Flutter/Flutter.podspec
 Flutter/Generated.xcconfig
 Flutter/ephemeral/
+# 手动签名参数（含 Team ID），只保留 Signing.xcconfig.example 模板
+Flutter/Signing.xcconfig
+# 由 scripts/ios_archive.sh 从 ExportOptions.plist.template 生成
+ExportOptions.plist
 Flutter/app.flx
 Flutter/app.zip
 Flutter/flutter_assets/

@@ -16,6 +16,7 @@
 
 ### 构建与发布
 - **[构建发布系统总结](build_and_release_summary_ZH.md)** - 完整的构建和发布系统概览
+- **[iOS 发布链路](ios_release_pipeline.md)** - iOS 编译签名上传的完整链路（appuploader + mise + 离线编译机）
 - **[GitHub 发布指南](github_release_guide_ZH.md)** - GitHub 平台发布指南
 - **[应用商店发布指南](app_store_release_guide_ZH.md)** - Google Play Store 和 Apple App Store 完整发布指南
 
@@ -33,6 +34,7 @@
 | 开发指南 | [DEVELOPMENT.md](DEVELOPMENT.md) | [DEVELOPMENT_ZH.md](DEVELOPMENT_ZH.md) |
 | Linux AppImage 指南 | [LINUX_APPIMAGE_ONLY.md](LINUX_APPIMAGE_ONLY.md) | [LINUX_APPIMAGE_ONLY_ZH.md](LINUX_APPIMAGE_ONLY_ZH.md) |
 | 构建发布系统总结 | [build_and_release_summary.md](build_and_release_summary.md) | [build_and_release_summary_ZH.md](build_and_release_summary_ZH.md) |
+| iOS 发布链路 | [ios_release_pipeline.md](ios_release_pipeline.md) | （中文为主，暂无独立英文版） |
 | GitHub 发布指南 | [github_release_guide.md](github_release_guide.md) | [github_release_guide_ZH.md](github_release_guide_ZH.md) |
 | 应用商店发布指南 | [app_store_release_guide.md](app_store_release_guide.md) | [app_store_release_guide_ZH.md](app_store_release_guide_ZH.md) |
 | Google Play 控制台权限 | [google_play_console_permission.md](google_play_console_permission.md) | [google_play_console_permission_ZH.md](google_play_console_permission_ZH.md) |

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Mindra iOS 导出选项（模板）
+
+  占位符由 scripts/ios_archive.sh 从 ios/Flutter/Signing.xcconfig 读值后替换，
+  生成 build/ios/ExportOptions.plist。不要直接把真实 Team ID 填进这个文件
+  —— 它进 git。
+
+  几个容易踩的点：
+  - method 用 app-store-connect（Xcode 15 起的新名，旧名 app-store 会告警）
+  - signingStyle 必须是 manual，否则 Xcode 会去联系 developerservices2.apple.com，
+    而编译用的 macOS VM 已在 /etc/hosts 阻断该域名，会卡住然后失败
+  - destination 显式设为 export，确保只产出 IPA 不尝试上传
+    （上传由宿主 Linux 上的 appuploader 负责）
+  - provisioningProfiles 的 key 是 Bundle ID，value 是 profile 名称
+-->
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store-connect</string>
+    <key>destination</key>
+    <string>export</string>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>teamID</key>
+    <string>__MINDRA_DEVELOPMENT_TEAM__</string>
+    <key>signingCertificate</key>
+    <string>__MINDRA_CODE_SIGN_IDENTITY__</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>__MINDRA_BUNDLE_ID__</key>
+        <string>__MINDRA_PROVISIONING_PROFILE__</string>
+    </dict>
+    <key>uploadSymbols</key>
+    <true/>
+    <key>stripSwiftSymbols</key>
+    <true/>
+    <key>manageAppVersionAndBuildNumber</key>
+    <false/>
+</dict>
+</plist>

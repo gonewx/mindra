@@ -1,0 +1,24 @@
+// Mindra iOS 手动签名参数（模板）
+//
+// 复制为同目录下的 Signing.xcconfig 后填入真实值。Signing.xcconfig 已被
+// .gitignore 排除，Team ID 与证书信息不会进入版本库。
+//
+// 这三个变量被 Runner target 的 Release / Profile 配置引用，见
+// ios/Runner.xcodeproj/project.pbxproj。留空会导致 archive 阶段报
+// "No signing certificate" 或 "No profile matching" —— 那是变量没填，
+// 不是证书装错了。
+//
+// 填值来源：mise run ios:signing:import 会解析 .mobileprovision 并把
+// 正确的值打印出来，也可以直接用 mise run ios:signing:apply 自动写入。
+
+// 证书类型名。App Store 分发固定用 Apple Distribution。
+// 注意不要写成 "iPhone Distribution"（旧名）或 "Apple Development"（开发证书）。
+MINDRA_CODE_SIGN_IDENTITY = Apple Distribution
+
+// 10 位 Team ID，例如 A1B2C3D4E5。从 appuploader 的证书列表或
+// .mobileprovision 的 TeamIdentifier 字段取。
+MINDRA_DEVELOPMENT_TEAM =
+
+// Provisioning Profile 的**名称**（不是 UUID、不是文件名）。
+// 即 appuploader 创建 profile 时填的那个 name。
+MINDRA_PROVISIONING_PROFILE =

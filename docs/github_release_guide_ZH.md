@@ -29,15 +29,9 @@ ANDROID_KEY_ALIAS             # 密钥别名
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON  # Google Play服务账号JSON（可选）
 ```
 
-#### iOS发布所需：
-```
-IOS_BUILD_CERTIFICATE_BASE64   # iOS构建证书Base64编码
-IOS_P12_PASSWORD              # P12证书密码
-IOS_BUILD_PROVISION_PROFILE_BASE64  # 配置文件Base64编码
-IOS_KEYCHAIN_PASSWORD         # 密钥链密码
-APPLE_ID                      # Apple ID
-APP_SPECIFIC_PASSWORD         # 应用专用密码
-```
+#### iOS 说明：
+iOS **不走 GitHub CI**。签名证书不进 Secrets——编译在本地离线 macOS 编译机完成，
+上传由 appuploader 完成。见 [iOS 发布链路](ios_release_pipeline.md)。
 
 ### 2. 创建发布密钥库（Android）
 

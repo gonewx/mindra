@@ -105,13 +105,10 @@ check_environment() {
         log_error "Xcode 未安装或命令行工具未配置"
         exit 1
     fi
-    
-    # 检查 altool (Xcode 13+)
-    if ! xcrun altool --help &> /dev/null; then
-        log_error "altool 不可用，请确保 Xcode 版本 >= 13"
-        exit 1
-    fi
-    
+
+    # 上传不走 altool/iTMSTransporter（那会在编译机上联系 Apple，且 VM 已
+    # 离线加固），统一由宿主 Linux 上的 appuploader 完成，这里不再检查。
+
     log_success "环境检查通过"
 }
 
@@ -167,28 +164,24 @@ validate_archive() {
 }
 
 # 检查 App Store Connect API 配置
+# 注意：上传已不归本脚本管 —— 证书管理与 TestFlight 上传统一由 appuploader
+# （GUI）完成。这里只检查「能否找到回传的 IPA」，不再检查 API 密钥。
 check_api_config() {
-    log_info "检查 App Store Connect API 配置..."
-    
-    # 检查 API 密钥文件
-    local api_key_file="ios/AuthKey_*.p8"
-    if ! ls $api_key_file 1> /dev/null 2>&1; then
-        log_warning "App Store Connect API 密钥文件不存在"
-        log_info "请按照以下步骤配置:"
-        log_info "1. 在 App Store Connect 中创建 API 密钥"
-        log_info "2. 下载 .p8 文件到 ios/ 目录"
-        log_info "3. 设置环境变量 APP_STORE_CONNECT_API_KEY_ID 和 APP_STORE_CONNECT_ISSUER_ID"
-        return 1
+    log_info "检查上传准备（上传由 appuploader 完成）..."
+
+    local ipa_path="build/ios/ipa/Runner.ipa"
+    if [ ! -f "$ipa_path" ]; then
+        ipa_path=$(find build/ios/ipa -maxdepth 1 -name '*.ipa' 2>/dev/null | head -n 1)
     fi
-    
-    # 检查环境变量
-    if [ -z "$APP_STORE_CONNECT_API_KEY_ID" ] || [ -z "$APP_STORE_CONNECT_ISSUER_ID" ]; then
-        log_warning "App Store Connect API 环境变量未设置"
-        return 1
+
+    if [ -n "$ipa_path" ] && [ -f "$ipa_path" ]; then
+        log_success "找到待上传 IPA: $ipa_path"
+        return 0
     fi
-    
-    log_success "API 配置检查完成"
-    return 0
+
+    log_warning "build/ios/ipa/ 下没有 IPA"
+    log_info "先在宿主 Linux 上执行: mise run ios:sync:back"
+    return 1
 }
 
 # 导出 IPA
@@ -239,58 +232,31 @@ EOF
 }
 
 # 上传到 TestFlight
+# 上传动作本身由宿主 Linux 上的 appuploader GUI 完成（证书管理与上传统一归它，
+# 本项目只做衔接）。这里只负责导出 IPA 并给出操作指引。
 upload_to_testflight() {
     if [ "$UPLOAD_TO_TESTFLIGHT" = true ]; then
-        log_info "上传到 TestFlight..."
-        
+        log_info "准备 TestFlight 上传..."
+
         local ipa_path="build/ios/ipa/Runner.ipa"
-        
+
+        if [ ! -f "$ipa_path" ]; then
+            ipa_path=$(find build/ios/ipa -maxdepth 1 -name '*.ipa' 2>/dev/null | head -n 1)
+        fi
+
         if [ ! -f "$ipa_path" ]; then
             export_ipa
+            ipa_path="build/ios/ipa/Runner.ipa"
         fi
-        
+
         if [ "$DRY_RUN" = true ]; then
-            log_info "模拟运行: 上传 $ipa_path 到 TestFlight"
-            log_success "模拟上传完成"
+            log_info "模拟运行: 待上传 IPA 为 $ipa_path"
+            log_success "模拟完成"
             return
         fi
-        
-        # 使用 altool 上传
-        if check_api_config; then
-            # 使用 API 密钥上传
-            local api_key_file=$(ls ios/AuthKey_*.p8 | head -n 1)
-            
-            if xcrun altool --upload-app \
-                           --type ios \
-                           --file "$ipa_path" \
-                           --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
-                           --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"; then
-                log_success "TestFlight 上传成功"
-            else
-                log_error "TestFlight 上传失败"
-                exit 1
-            fi
-        else
-            # 使用应用专用密码上传
-            log_info "使用应用专用密码上传..."
-            log_warning "请确保已设置 APPLE_ID 和 APP_SPECIFIC_PASSWORD 环境变量"
-            
-            if [ -z "$APPLE_ID" ] || [ -z "$APP_SPECIFIC_PASSWORD" ]; then
-                log_error "APPLE_ID 或 APP_SPECIFIC_PASSWORD 环境变量未设置"
-                exit 1
-            fi
-            
-            if xcrun altool --upload-app \
-                           --type ios \
-                           --file "$ipa_path" \
-                           --username "$APPLE_ID" \
-                           --password "$APP_SPECIFIC_PASSWORD"; then
-                log_success "TestFlight 上传成功"
-            else
-                log_error "TestFlight 上传失败"
-                exit 1
-            fi
-        fi
+
+        check_api_config || { manual_upload_guide; exit 1; }
+        manual_upload_guide
     fi
 }
 
@@ -315,34 +281,27 @@ upload_to_store() {
     fi
 }
 
-# 手动上传指导
+# appuploader 上传指导
 manual_upload_guide() {
-    log_info "手动上传指导:"
+    log_info "上传由 appuploader 完成（宿主 Linux 上运行）:"
     echo ""
     echo "=========================================="
-    echo "           手动上传到 App Store Connect"
+    echo "        用 appuploader 上传到 TestFlight"
     echo "=========================================="
     echo ""
-    echo "方法一: 使用 Xcode"
-    echo "1. 打开 Xcode"
-    echo "2. 选择 Window > Organizer"
-    echo "3. 选择 Archives 标签"
-    echo "4. 找到 Mindra 应用的 Archive"
-    echo "5. 点击 'Distribute App'"
-    echo "6. 选择 'App Store Connect'"
-    echo "7. 选择 'Upload'"
-    echo "8. 按照向导完成上传"
+    echo "1. 在宿主 Linux 启动 appuploader（appstore-connect-gui）"
+    echo "2. 选择 ASC API Key（Team Key，首次需在 App Store Connect 网页创建）"
+    echo "3. 选择待上传 IPA:"
     echo ""
-    echo "方法二: 使用 Transporter 应用"
-    echo "1. 从 Mac App Store 下载 Transporter"
-    echo "2. 导出 IPA 文件"
-    echo "3. 在 Transporter 中选择 IPA 文件"
-    echo "4. 点击 'Deliver' 上传"
-    echo ""
-    echo "Archive 路径: $ARCHIVE_PATH"
     if [ -f "build/ios/ipa/Runner.ipa" ]; then
-        echo "IPA 路径: build/ios/ipa/Runner.ipa"
+        echo "   build/ios/ipa/Runner.ipa"
+    else
+        find build/ios/ipa -maxdepth 1 -name '*.ipa' 2>/dev/null | sed 's/^/   /'
     fi
+    echo ""
+    echo "   （若是宿主 Linux 上执行，IPA 已由 mise run ios:sync:back 放好）"
+    echo "4. 确认版本号与 build number 无误后上传"
+    echo "5. 上传后在 App Store Connect 的 TestFlight 页面查看处理状态"
     echo ""
     echo "=========================================="
 }

@@ -15,16 +15,14 @@ mindra/
 │   ├── build_ios.sh           # iOS 构建脚本
 │   ├── build_all.sh           # 跨平台构建脚本
 │   ├── release_android.sh     # Android 发布脚本
-│   ├── release_ios.sh         # iOS 发布脚本
+│   ├── release_ios.sh         # iOS 发布脚本（IPA 导出 + appuploader 指引）
+│   ├── ios_archive.sh         # iOS 签名构建（编译机上，手动签名链路）
+│   ├── ios_signing_import.sh  # iOS 签名资产导入（编译机上）
+│   ├── ios_sync.sh            # 宿主 ↔ 编译机同步（push/pull/cert/status）
 │   ├── version_manager.sh     # 版本管理脚本
 │   ├── quick_deploy.sh        # 快速部署脚本
 │   └── build_summary.sh       # 构建摘要脚本（已存在）
-├── android/fastlane/          # Android Fastlane 配置
-│   ├── Fastfile              # Fastlane 主配置
-│   └── Appfile               # 应用配置
-├── ios/fastlane/              # iOS Fastlane 配置
-│   ├── Fastfile              # Fastlane 主配置
-│   └── Appfile               # 应用配置
+├── mise.toml                  # iOS 发布链路统一任务入口
 ├── .github/workflows/         # GitHub Actions CI/CD
 │   ├── build_and_test.yml    # 构建和测试工作流
 │   ├── release.yml           # 发布工作流
@@ -95,7 +93,6 @@ mindra/
 ### 1. Android 发布 (`release_android.sh`)
 - 支持多个发布轨道
 - Google Play Console 集成
-- Fastlane 自动化
 - 手动上传指导
 
 **使用示例：**
@@ -177,10 +174,11 @@ mindra/
    - 安全检查
    - 性能检查
 
-### Fastlane 集成
+### iOS 发布链路（现行方案）
 
-- **Android**: 自动化 Google Play Store 发布
-- **iOS**: 自动化 TestFlight 和 App Store 发布
+- 证书管理与 TestFlight 上传由 **appuploader**（GUI）完成，证书不进 CI
+- 编译签名在离线 macOS 编译机（`ssh imacvm-tahoe`）上做，宿主通过 mise 任务远程驱动
+- 完整说明见 [ios_release_pipeline.md](ios_release_pipeline.md)
 
 ## 📖 使用指南
 
@@ -190,25 +188,19 @@ mindra/
    ```bash
    # Android
    ./scripts/create_release_keystore.sh
-   
-   # iOS - 在 Xcode 中配置证书
+
+   # iOS - 导入 appuploader 导出的签名资产
+   mise run ios:vm:signing:import -- -c <cert.p12> -p <profile.mobileprovision>
    ```
 
 2. **设置环境变量**：
    ```bash
    # Android
    export ANDROID_HOME=/path/to/android/sdk
-   
-   # iOS
-   export APPLE_ID=your-apple-id@example.com
-   export APP_SPECIFIC_PASSWORD=your-app-password
    ```
 
 3. **安装依赖**：
    ```bash
-   # Fastlane
-   gem install fastlane
-   
    # Flutter
    flutter doctor
    ```

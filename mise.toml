@@ -1,6 +1,8 @@
 [env]
 IOS_DEVICE_ID = "00008150-001474443AE0C01C"
 IOS_BUNDLE_ID = "com.gonewx.mindra.app"
+# 编译机 SSH 别名，见 scripts/ios_sync.sh
+MINDRA_VM_HOST = "imacvm-tahoe"
 
 [tasks."ios:devices"]
 description = "List connected physical iOS devices and simulators"
@@ -34,6 +36,70 @@ run = "flutter run --release -d \"$IOS_DEVICE_ID\""
 [tasks."ios:ipa:build"]
 description = "Build a signed Release IPA"
 run = "flutter build ipa --release"
+
+# ---------------------------------------------------------------------------
+# iOS 发布链路（宿主 Linux + 离线 Mac VM + appuploader 上传）
+#
+# 完整流程（账号下来后第一次）：
+#   1. appuploader（GUI）里创建证书 + profile，导出 .p12 / .mobileprovision
+#   2. mise run ios:vm:signing:import -- -c <p12> -p <profile>  装进编译机
+#   3. mise run ios:vm:archive                                    编译签名出 IPA
+#   4. mise run ios:sync:back                                      IPA 回宿主
+#   5. appuploader 里选 build/ios/ipa/ 下的 IPA 上传 TestFlight
+#
+# 日常迭代：ios:build:bump → ios:vm:archive → ios:sync:back → appuploader
+# ---------------------------------------------------------------------------
+
+[tasks."ios:signing:status"]
+description = "（编译机上）查看证书/profile/Signing.xcconfig 状态"
+run = "./scripts/ios_signing_import.sh --status"
+
+[tasks."ios:signing:import"]
+description = "（编译机上）导入 .p12 与 .mobileprovision 并写 Signing.xcconfig"
+run = "./scripts/ios_signing_import.sh"
+
+[tasks."ios:signing:reset"]
+description = "（编译机上）清空专用 keychain 与已装 profile"
+run = "./scripts/ios_signing_import.sh --reset"
+
+[tasks."ios:build:bump"]
+description = "iOS build number +1（ios/build_number.txt，TestFlight 要求递增）"
+run = '''
+n=$(cat ios/build_number.txt)
+echo $((n + 1)) > ios/build_number.txt
+echo "build number: $n -> $((n + 1))"
+'''
+
+[tasks."ios:archive"]
+description = "（编译机上）构建签名 IPA 到 build/ios/ipa/"
+run = "./scripts/ios_archive.sh"
+
+[tasks."ios:sync:push"]
+description = "（宿主）代码同步到 Mac 编译机"
+run = "./scripts/ios_sync.sh push"
+
+[tasks."ios:sync:back"]
+description = "（宿主）从编译机回收 IPA 到 build/ios/ipa/"
+run = "./scripts/ios_sync.sh pull"
+
+[tasks."ios:sync:status"]
+description = "（宿主）查看编译机环境状态"
+run = "./scripts/ios_sync.sh status"
+
+[tasks."ios:vm:signing:status"]
+description = "（宿主）远程查看编译机签名资产状态"
+run = "./scripts/ios_sync.sh status"
+
+[tasks."ios:vm:signing:import"]
+description = "（宿主）递送 .p12/.mobileprovision 到编译机并导入（参数原样透传）"
+run = "./scripts/ios_sync.sh cert"
+
+[tasks."ios:vm:archive"]
+description = "（宿主）先同步代码，再远程在编译机上构建 IPA"
+run = '''
+./scripts/ios_sync.sh push
+ssh "$MINDRA_VM_HOST" "cd mindra && mise exec -- ./scripts/ios_archive.sh"
+'''
 
 [tasks."ios:ipa:install"]
 description = "Install the newest IPA, or the file specified by IPA_PATH"
