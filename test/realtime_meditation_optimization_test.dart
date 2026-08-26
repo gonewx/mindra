@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleState;
+import 'helpers/test_database_setup.dart';
 import 'package:mindra/features/meditation/data/services/meditation_session_manager.dart';
 import 'package:mindra/features/meditation/domain/entities/meditation_session.dart';
 import 'package:mindra/features/media/domain/entities/media_item.dart';
@@ -7,6 +9,11 @@ import 'package:mindra/core/constants/media_category.dart';
 import 'package:mindra/core/services/app_lifecycle_manager.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    await setupTestDatabase();
+  });
   group('实时冥想进度优化测试', () {
     setUp(() {
       // 每次测试前清理会话状态
@@ -52,6 +59,9 @@ void main() {
 
         // 模拟播放进度更新
         MeditationSessionManager.updateSessionProgress(30); // 30秒
+        // updateSessionProgress 只更新状态不发通知——真实播放器里由定时器
+        // 调 triggerRealTimeUpdate()，这里手动触发模拟同样的行为
+        MeditationSessionManager.triggerRealTimeUpdate();
         await Future.delayed(const Duration(milliseconds: 50));
 
         // 验证实时更新反映了新的进度
@@ -81,6 +91,7 @@ void main() {
 
         // 继续播放
         MeditationSessionManager.updateSessionProgress(90); // 90秒
+        MeditationSessionManager.triggerRealTimeUpdate();
         await Future.delayed(const Duration(milliseconds: 50));
 
         final resumedUpdate = realTimeUpdates.last;
@@ -199,6 +210,9 @@ void main() {
         // 完成会话
         await MeditationSessionManager.completeSession();
 
+        // Stream 事件是异步投递的，等它送达监听器
+        await Future.delayed(const Duration(milliseconds: 10));
+
         // 验证数据更新通知
         expect(dataUpdateReceived, isTrue);
 
@@ -215,6 +229,9 @@ void main() {
         // 中途停止
         await MeditationSessionManager.stopSession();
 
+        // Stream 事件是异步投递的，等它送达监听器
+        await Future.delayed(const Duration(milliseconds: 10));
+
         // 验证停止也触发数据更新
         expect(dataUpdateReceived, isTrue);
 
@@ -229,8 +246,12 @@ void main() {
       // 创建生命周期管理器实例
       final lifecycleManager = AppLifecycleManager.instance;
 
-      // 验证生命周期管理器功能
-      expect(lifecycleManager.isAppInForeground, isTrue); // 测试环境默认前台
+      // 测试环境没有真实的应用生命周期事件，currentState 初始为 null。
+      // 通过 binding 广播 resumed 状态（会同时更新 lifecycleState 并通知观察者）
+      TestWidgetsFlutterBinding.instance.handleAppLifecycleStateChanged(
+        AppLifecycleState.resumed,
+      );
+      expect(lifecycleManager.isAppInForeground, isTrue);
 
       // 验证状态保存功能不会抛出异常
       expect(
@@ -282,7 +303,8 @@ void main() {
 
       // 暂停测试
       await MeditationSessionManager.pauseSession();
-      await Future.delayed(const Duration(milliseconds: 100));
+      // 暂停时长按整秒累计（inSeconds），暂停 1 秒以上才能观测到
+      await Future.delayed(const Duration(seconds: 2));
       await MeditationSessionManager.resumeSession();
 
       final pausedInfo = MeditationSessionManager.getCurrentSessionInfo();

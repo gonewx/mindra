@@ -1,21 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/foundation.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:mindra/core/database/database_helper.dart';
+import 'helpers/test_database_setup.dart';
 import 'package:mindra/features/meditation/data/services/meditation_session_manager.dart';
 import 'package:mindra/features/meditation/data/services/meditation_statistics_service.dart';
 import 'package:mindra/features/meditation/domain/entities/meditation_session.dart';
 import 'package:mindra/features/media/domain/entities/media_item.dart';
 import 'package:mindra/core/constants/media_category.dart';
-import 'package:mindra/core/database/database_helper.dart';
 
 void main() {
   group('统计数据更新诊断测试', () {
     setUpAll(() async {
-      // 初始化FFI数据库工厂
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-
-      // 初始化数据库
+      // 初始化 FFI + 清理残留库（内部会触发全新初始化）
+      await setupTestDatabase();
       await DatabaseHelper.database;
     });
 

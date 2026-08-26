@@ -1,14 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:mindra/core/database/database_helper.dart';
+import 'helpers/test_database_setup.dart';
 import 'package:mindra/core/database/database_health_checker.dart';
 
 void main() {
   group('数据库健壮性测试', () {
     setUpAll(() async {
-      // Initialize FFI
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
+      await setupTestDatabase();
     });
 
     tearDown(() async {
@@ -138,8 +136,12 @@ void main() {
       );
       expect(repairedIssues, isNotEmpty);
 
+      // 自动修复可能触发 forceReinitialize()（比如连带修复连接问题），
+      // 那会关闭旧连接，必须重新获取，不能用上面那个句柄
+      final freshDb = await DatabaseHelper.database;
+
       // 验证索引已重新创建
-      final indexCheck = await db.rawQuery(
+      final indexCheck = await freshDb.rawQuery(
         "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_media_items_created_at'",
       );
       expect(indexCheck, isNotEmpty);

@@ -1,13 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:mindra/core/database/database_helper.dart';
+import 'helpers/test_database_setup.dart';
 
 void main() {
   group('数据库修复测试', () {
     setUpAll(() async {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
+      await setupTestDatabase();
     });
 
     test('检查并修复缺失的数据库表', () async {

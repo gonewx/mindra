@@ -1,13 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:mindra/core/database/database_helper.dart';
+import 'helpers/test_database_setup.dart';
 
 void main() {
   group('Database Tests', () {
     setUpAll(() async {
-      // Initialize FFI
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
+      await setupTestDatabase();
     });
 
     test('Database initialization should work', () async {

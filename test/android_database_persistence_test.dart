@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mindra/core/database/database_helper.dart';
+import 'helpers/test_database_setup.dart';
 import 'package:mindra/core/database/database_connection_manager.dart';
 import 'package:mindra/features/media/domain/entities/media_item.dart';
 import 'package:mindra/core/constants/media_category.dart';
@@ -9,9 +9,7 @@ import 'package:mindra/core/constants/media_category.dart';
 void main() {
   group('Android Database Persistence Tests', () {
     setUpAll(() async {
-      // 初始化测试环境
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
+      await setupTestDatabase();
     });
 
     tearDown(() async {

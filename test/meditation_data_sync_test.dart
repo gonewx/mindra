@@ -1,11 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/foundation.dart';
+import 'helpers/test_database_setup.dart';
 import 'package:mindra/features/meditation/data/services/meditation_session_manager.dart';
 import 'package:mindra/features/meditation/domain/entities/meditation_session.dart';
 import 'package:mindra/features/media/domain/entities/media_item.dart';
 import 'package:mindra/core/constants/media_category.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    await setupTestDatabase();
+  });
   group('冥想数据同步测试', () {
     setUp(() {
       // 每次测试前清理会话状态
@@ -51,6 +57,9 @@ void main() {
 
         // 验证会话已结束
         expect(MeditationSessionManager.hasActiveSession, isFalse);
+
+        // Stream 事件是异步投递的，等它送达监听器
+        await Future.delayed(const Duration(milliseconds: 10));
 
         // 验证数据更新通知已发送
         expect(dataUpdateReceived, isTrue);
@@ -126,6 +135,9 @@ void main() {
 
         // 验证会话已结束
         expect(MeditationSessionManager.hasActiveSession, isFalse);
+
+        // Stream 事件是异步投递的，等它送达监听器
+        await Future.delayed(const Duration(milliseconds: 10));
 
         // 验证数据更新通知已发送
         expect(dataUpdateReceived, isTrue);

@@ -1,0 +1,8 @@
+# flutter test 配置
+#
+# 数据库类测试（sqflite_common_ffi）共用 .dart_tool 下的同一个数据库文件。
+# flutter test 默认按 CPU 数并行跑多个测试套件，并行写同一个 SQLite 文件
+# 会触发 "database is locked"（sqlite_error: 5）导致随机失败。
+# 串行执行保证同一时刻只有一个套件在碰数据库，速度损失可以接受
+# （当前全量测试不到 1 分钟）。
+concurrency: 1

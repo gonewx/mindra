@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mindra/core/database/database_helper.dart';
+import 'helpers/test_database_setup.dart';
 import 'package:mindra/core/constants/app_constants.dart';
 
 void main() {
@@ -9,8 +9,7 @@ void main() {
     setUpAll(() async {
       // 模拟非Web环境
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
+      await setupTestDatabase();
     });
 
     tearDownAll(() async {
