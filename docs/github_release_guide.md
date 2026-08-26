@@ -166,7 +166,7 @@ storeFile=release-keystore.jks
    #### Option 4: Flathub
    ```bash
    # Need to create Flatpak manifest
-   flatpak-builder build com.mindra.app.json
+   flatpak-builder build com.gonewx.mindra.app.json
    ```
 
 ### iOS Platform

@@ -158,8 +158,8 @@ validate_archive() {
     log_info "Bundle ID: $bundle_id"
     
     # 验证 Bundle ID
-    if [ "$bundle_id" != "com.mindra.app" ]; then
-        log_error "Bundle ID 不匹配，期望: com.mindra.app，实际: $bundle_id"
+    if [ "$bundle_id" != "com.gonewx.mindra.app" ]; then
+        log_error "Bundle ID 不匹配，期望: com.gonewx.mindra.app，实际: $bundle_id"
         exit 1
     fi
     

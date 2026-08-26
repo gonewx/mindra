@@ -12,25 +12,35 @@ allprojects {
 }
 
 subprojects {
-    // 为所有子项目配置Java版本和编译器选项
+    // 为所有子项目统一 Java / Kotlin 的 JVM 目标到 17
+    // 必须放在 afterEvaluate 里：部分第三方插件（如 audioplayers_android）在自己的
+    // build.gradle 里把 Java 目标设成 1.8，只有等子项目评估完再覆盖才生效。
+    // 若提前到 plugins.withId 阶段设置，会被插件自身配置覆盖，导致
+    // "Inconsistent JVM-target compatibility (Java 1.8 vs Kotlin 17)" 构建失败。
     afterEvaluate {
-        if (project.hasProperty("android")) {
-            val android = project.extensions.getByName("android") as com.android.build.gradle.BaseExtension
-            android.compileOptions {
+        // AGP 9 起 BaseExtension 已移除，改用 com.android.build.api.dsl 下的新 DSL 接口
+        when (val androidExt = extensions.findByName("android")) {
+            is com.android.build.api.dsl.LibraryExtension -> androidExt.compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
+            is com.android.build.api.dsl.ApplicationExtension -> androidExt.compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
                 targetCompatibility = JavaVersion.VERSION_17
             }
         }
-        
-        // 为所有Java编译任务添加-Xlint:-options参数
-        tasks.withType<JavaCompile> {
+
+        // 直接给编译任务兜底，不依赖 extension 的配置时机
+        tasks.withType<JavaCompile>().configureEach {
+            sourceCompatibility = JavaVersion.VERSION_17.toString()
+            targetCompatibility = JavaVersion.VERSION_17.toString()
             options.compilerArgs.add("-Xlint:-options")
         }
-        
-        // 为所有Kotlin编译任务设置JVM目标
-        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-            kotlinOptions {
-                jvmTarget = "17"
+
+        // Kotlin 2.x 起 kotlinOptions/jvmTarget 已废弃，改用 compilerOptions DSL
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            compilerOptions {
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
             }
         }
     }

@@ -59,7 +59,7 @@ if [ -f "pubspec.yaml" ]; then
     VERSION=$(grep "^version:" pubspec.yaml | cut -d' ' -f2)
     echo "📱 应用名称: Mindra"
     echo "🔢 版本号: $VERSION"
-    echo "🆔 应用ID: com.mindra.app"
+    echo "🆔 应用ID: com.gonewx.mindra.app"
     echo "📝 描述: 专业的冥想与正念应用，帮助您找到内心的平静与专注"
 fi
 

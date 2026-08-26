@@ -90,7 +90,7 @@ class MindraAudioHandler extends BaseAudioHandler
         artist: '正念冥想',
         duration: Duration(seconds: media.duration),
         artUri: Uri.parse(
-          'android.resource://com.mindra.app/mipmap/launcher_icon',
+          'android.resource://com.gonewx.mindra.app/mipmap/launcher_icon',
         ), // 使用 Android 应用图标
         extras: {'filePath': media.filePath, 'category': media.category.name},
       );
@@ -196,7 +196,7 @@ class MindraAudioHandler extends BaseAudioHandler
         artist: '正念冥想',
         duration: duration, // 使用最新的时长
         artUri: Uri.parse(
-          'android.resource://com.mindra.app/mipmap/launcher_icon',
+          'android.resource://com.gonewx.mindra.app/mipmap/launcher_icon',
         ), // 使用 Android 应用图标
         extras: {
           'filePath': _currentMindraMedia!.filePath,

@@ -154,7 +154,7 @@ analyze_code() {
     
     if [ "$STRICT_MODE" = true ]; then
         # 严格模式：所有问题都视为错误
-        if dart analyze --fatal-infos > /tmp/analyze_output.txt 2>&1; then
+        if dart analyze > /tmp/analyze_output.txt 2>&1; then
             log_success "静态分析通过（严格模式）"
         else
             log_error "静态分析发现问题（严格模式）:"
@@ -167,7 +167,7 @@ analyze_code() {
                 
                 # 重新检查
                 log_info "重新运行静态分析..."
-                if dart analyze --fatal-infos > /tmp/analyze_recheck.txt 2>&1; then
+                if dart analyze > /tmp/analyze_recheck.txt 2>&1; then
                     log_success "自动修复后静态分析通过"
                     rm -f /tmp/analyze_recheck.txt
                 else

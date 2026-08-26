@@ -166,7 +166,7 @@ storeFile=release-keystore.jks
    #### 选项4：Flathub
    ```bash
    # 需要创建Flatpak manifest
-   flatpak-builder build com.mindra.app.json
+   flatpak-builder build com.gonewx.mindra.app.json
    ```
 
 ### iOS平台

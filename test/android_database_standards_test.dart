@@ -42,7 +42,10 @@ void main() {
       final dbPath = db.path;
 
       // 验证路径不包含硬编码的绝对路径
-      expect(dbPath, isNot(contains('/data/data/com.mindra.app/databases')));
+      expect(
+        dbPath,
+        isNot(contains('/data/data/com.gonewx.mindra.app/databases')),
+      );
       expect(dbPath, isNot(contains('/sdcard')));
       expect(dbPath, isNot(contains('/storage/emulated')));
 

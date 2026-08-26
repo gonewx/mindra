@@ -141,7 +141,7 @@ pre_release_validation() {
     
     # 检查应用 ID（从 build.gradle.kts 读取）
     log_info "验证应用 ID..."
-    local expected_app_id="com.mindra.app"
+    local expected_app_id="com.gonewx.mindra.app"
     local gradle_file="android/app/build.gradle.kts"
     
     if [ -f "$gradle_file" ]; then

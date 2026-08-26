@@ -419,7 +419,7 @@ generate_report() {
             echo "  应用名称: Mindra"
             echo "  版本名称: $version_name"
             echo "  版本代码: $version_code"
-            echo "  应用 ID: com.mindra.app"
+            echo "  应用 ID: com.gonewx.mindra.app"
         fi
         
         echo ""

@@ -6,7 +6,8 @@ import '../../features/meditation/domain/entities/meditation_session.dart';
 import '../constants/media_category.dart';
 
 // Conditional import for web-only functionality
-import 'web_storage_helper_io.dart' as html if (dart.library.html) 'dart:html';
+// 注意：as 必须放在所有 if 之后，否则 dart format 会撞到 formatter bug
+import 'web_storage_helper_io.dart' if (dart.library.html) 'dart:html' as html;
 
 class WebStorageHelper {
   static const String _mediaItemsKey = 'mindra_media_items';

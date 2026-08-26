@@ -1,4 +1,4 @@
-package com.mindra.app
+package com.gonewx.mindra.app
 
 import android.os.Bundle
 import com.ryanheise.audioservice.AudioServiceActivity

@@ -31,7 +31,7 @@ open ios/Runner.xcworkspace
 
 ### 3. 在 Xcode 中配置
 
-1. **Bundle Identifier**：设置为 `com.mindra.app`
+1. **Bundle Identifier**：设置为 `com.gonewx.mindra.app`
 2. **Team**：选择您的 Apple Developer Team
 3. **Signing & Capabilities**：
    - 启用 "Automatically manage signing"
@@ -67,7 +67,7 @@ flutter build ipa --release
 <key>CFBundleDisplayName</key>
 <string>Mindra</string>
 <key>CFBundleIdentifier</key>
-<string>com.mindra.app</string>
+<string>com.gonewx.mindra.app</string>
 ```
 
 ### 权限配置

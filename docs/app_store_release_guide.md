@@ -162,7 +162,7 @@ jarsigner -verify build/app/outputs/bundle/release/app-release.aab
 1. Log in to [App Store Connect](https://appstoreconnect.apple.com)
 2. Create new app:
    - **Name**: Mindra
-   - **Bundle ID**: com.mindra.app
+   - **Bundle ID**: com.gonewx.mindra.app
    - **SKU**: mindra-app
    - **User Access**: Full Access
 

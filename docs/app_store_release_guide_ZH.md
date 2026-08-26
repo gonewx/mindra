@@ -162,7 +162,7 @@ jarsigner -verify build/app/outputs/bundle/release/app-release.aab
 1. 登录 [App Store Connect](https://appstoreconnect.apple.com)
 2. 创建新应用：
    - **名称**: Mindra
-   - **Bundle ID**: com.mindra.app
+   - **Bundle ID**: com.gonewx.mindra.app
    - **SKU**: mindra-app
    - **用户访问权限**: 完全访问权限
 

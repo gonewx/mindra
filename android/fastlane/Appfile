@@ -2,7 +2,7 @@
 
 # Google Play Console 配置
 json_key_file("play-console-service-account.json") # Google Play Console API 密钥文件路径
-package_name("com.mindra.app") # 应用包名
+package_name("com.gonewx.mindra.app") # 应用包名
 
 # 可选：指定 Google Play Console 开发者账号
 # for_platform :android do

@@ -16,9 +16,9 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.mindra.app"
+    namespace = "com.gonewx.mindra.app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.2.12479018"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -26,17 +26,12 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-        freeCompilerArgs += listOf("-Xlint:-options")
-    }
-
-    tasks.withType<JavaCompile> {
+    tasks.withType<JavaCompile>().configureEach {
         options.compilerArgs.addAll(listOf("-Xlint:-options"))
     }
 
     defaultConfig {
-        applicationId = "com.mindra.app"
+        applicationId = "com.gonewx.mindra.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -75,6 +70,13 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
         }
+    }
+}
+
+// Kotlin 2.x 起 kotlinOptions/jvmTarget 已废弃，改用 compilerOptions DSL
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 

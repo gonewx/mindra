@@ -2,7 +2,7 @@
 
 # Apple ID 配置
 apple_id(ENV["APPLE_ID"] || "your-apple-id@example.com") # 替换为您的 Apple ID
-app_identifier("com.mindra.app") # 应用 Bundle ID
+app_identifier("com.gonewx.mindra.app") # 应用 Bundle ID
 
 # Team ID（可选，如果有多个开发团队）
 team_id(ENV["TEAM_ID"]) # 从环境变量获取，或直接填写

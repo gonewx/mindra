@@ -1,6 +1,6 @@
 [env]
 IOS_DEVICE_ID = "00008150-001474443AE0C01C"
-IOS_BUNDLE_ID = "com.mindra.app.lee"
+IOS_BUNDLE_ID = "com.gonewx.mindra.app"
 
 [tasks."ios:devices"]
 description = "List connected physical iOS devices and simulators"

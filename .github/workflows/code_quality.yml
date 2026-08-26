@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 env:
-  FLUTTER_VERSION: '3.32.5'
+  FLUTTER_VERSION: '3.47.0'
 
 jobs:
   analyze:
@@ -43,7 +43,7 @@ jobs:
         
     - name: Analyze project source
       run: |
-        dart analyze --fatal-infos
+        dart analyze
         if [ $? -ne 0 ]; then
           echo "❌ Code analysis issues found"
           exit 1

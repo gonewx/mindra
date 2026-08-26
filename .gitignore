@@ -32,6 +32,8 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+# Gradle 9 起会在 android/ 下生成 problems report
+android/build/
 
 # Symbolication related
 app.*.symbols

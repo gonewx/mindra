@@ -5,7 +5,7 @@ default_platform(:ios)
 
 platform :ios do
   # 应用基本信息
-  APP_IDENTIFIER = "com.mindra.app"
+  APP_IDENTIFIER = "com.gonewx.mindra.app"
   WORKSPACE = "Runner.xcworkspace"
   SCHEME = "Runner"
   

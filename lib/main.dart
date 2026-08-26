@@ -37,7 +37,7 @@ void main() async {
     _audioHandler = await AudioService.init(
       builder: () => MindraAudioHandler(),
       config: const AudioServiceConfig(
-        androidNotificationChannelId: 'com.mindra.app.channel.audio',
+        androidNotificationChannelId: 'com.gonewx.mindra.app.channel.audio',
         androidNotificationChannelName: 'Mindra 冥想音频播放',
         androidNotificationOngoing:
             false, // 改为false以兼容androidStopForegroundOnPause
@@ -378,7 +378,7 @@ class _MindraAppState extends State<MindraApp> with WidgetsBindingObserver {
 
       // 获取当前应用的包信息
       try {
-        final packageName = 'com.mindra.app';
+        final packageName = 'com.gonewx.mindra.app';
         debugPrint('Package name: $packageName');
       } catch (e) {
         debugPrint('Could not get package info: $e');

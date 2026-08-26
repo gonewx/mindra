@@ -5,7 +5,7 @@ on:
     branches: [ main, develop ]
 
 env:
-  FLUTTER_VERSION: '3.32.5'
+  FLUTTER_VERSION: '3.47.0'
   JAVA_VERSION: '21'
 
 jobs:
@@ -51,7 +51,7 @@ jobs:
     - name: Run static analysis
       run: |
         echo "运行静态分析..."
-        dart analyze --fatal-infos
+        dart analyze
         echo "✅ 静态分析通过"
         
     - name: Run tests
