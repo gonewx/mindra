@@ -6,6 +6,9 @@
 >
 > 本文档是**按操作顺序编排的完整工作流**：从零开始照着走一遍「阶段一」就能完成
 > 首次发布；之后每次发版只走「阶段二」。
+>
+> 2026-08-27 全链路首次跑通（1.0.0 build 1 已产出 IPA），当天修复的脚本问题
+> 已全部反映在本文档的「故障排查」一节。
 
 ## 目录
 
@@ -214,20 +217,36 @@ cd /mnt/disk0/project/mindra/mindra_cc/mindra/
 # 不确定文件实际叫什么就先看一眼
 ls -l ~/下载/*.p12 ~/下载/*.mobileprovision
 
-# 用实际路径执行（会提示输 p12 密码，即步骤 4 创建证书时设的密码）
+# 用实际路径执行（p12 密码即步骤 4 创建证书时设的密码）
 mise run ios:vm:signing:import -- -c ~/下载/dist.p12 -p ~/下载/mindra.mobileprovision
-
-# 免交互方式：提前 export MINDRA_P12_PASSWORD='密码'
-# 换证书/profile 重灌：加 --reset
-#   mise run ios:vm:signing:import -- --reset -c <p12> -p <profile>
 ```
+
+> ⚠️ **密码必须通过环境变量或参数传入，mise 环境下无法交互输入**：
+>
+> ```bash
+> # 方式一：环境变量（推荐，不落 shell history 可配合 read -s）
+> read -s MINDRA_P12_PASSWORD && export MINDRA_P12_PASSWORD
+> mise run ios:vm:signing:import -- -c ~/下载/dist.p12 -p ~/下载/mindra.mobileprovision
+>
+> # 方式二：命令行参数（注意会进 history）
+> mise run ios:vm:signing:import -- -c <p12> -p <profile> --password '密码'
+>
+> # 换证书/profile 重灌：加 --reset
+> #   mise run ios:vm:signing:import -- --reset -c <p12> -p <profile>
+> ```
+>
+> mise 任务里 stdin 不是终端，脚本检测到后会明确报错（而不是静默失败），
+> 但只有把密码传进去才能走通。
 
 脚本自动完成（**不需要手动填任何签名参数**）：
 
 - scp 两个文件到 VM 中转目录 `~/mindra-transfer/`，再远程执行导入
 - 证书装进**专用 keychain**（`mindra-signing.keychain-db`，非 login keychain，不需要登录密码）
+- 把仓库内置的 **Apple WWDR 中间证书**（`scripts/apple-certs/`，G3-G6）一并装进 keychain——
+  离线 VM 上没有它，证书链验证不过，表现为 `find-identity` 报 "0 valid identities"
 - profile 按 UUID 命名装到 Xcode 的 profile 目录
 - 解析 profile 得到 **Team ID** 和 **profile 名**，写入 `ios/Flutter/Signing.xcconfig`
+  （签名身份里的空格会原样保留，如 `iPhone Distribution`，导出时按名字匹配证书）
 - 校验 profile 的 App ID 与项目 Bundle ID 匹配、没过期、不是 7 天期的免费账号 profile
 - 密码通过 stdin 传给远端脚本，不进进程列表与 history
 
@@ -332,7 +351,8 @@ git tag 发布版本时照旧用 tag 递增（`v0.5.8` 起），与上述规则�
 | `mindra/mise.toml` | 所有 iOS 任务入口 | ✅ |
 | `mindra/scripts/ios_sync.sh` | 宿主↔VM 同步、资产递送 | ✅ |
 | `mindra/scripts/ios_signing_import.sh` | VM 侧签名资产导入 | ✅ |
-| `mindra/scripts/ios_archive.sh` | VM 侧编译签名出 IPA | ✅ |
+| `mindra/scripts/ios_archive.sh` | VM 侧编译签名出 IPA（构建前自动解锁专用 keychain） | ✅ |
+| `mindra/scripts/apple-certs/` | Apple WWDR 中间证书 G3-G6（离线 VM 验证证书链用） | ✅ |
 | `mindra/ios/Flutter/Signing.xcconfig` | 签名参数（Team ID 等） | ❌ 已 ignore |
 | `mindra/ios/Flutter/Signing.xcconfig.example` | 上面的模板 | ✅ |
 | `mindra/ios/ExportOptions.plist.template` | IPA 导出选项模板 | ✅ |
@@ -346,6 +366,39 @@ git tag 发布版本时照旧用 tag 递增（`v0.5.8` 起），与上述规则�
 **`mise run ios:vm:archive` 报 "No signing certificate / No profile matching"**
 → Signing.xcconfig 变量为空或证书没装。`mise run ios:vm:signing:status` 看缺什么，
 必要时重新导入：`mise run ios:vm:signing:import -- --reset -c <p12> -p <profile>`。
+
+**archive 报 "缺少 ios/Flutter/Signing.xcconfig"，但明明导入过**
+→ 曾经的 bug：push 的 rsync 排除规则路径写错（写成了 `ios/Signing.xcconfig`），
+带 `--delete` 的同步会把 VM 上刚生成的签名配置删掉。已修复（2026-08-27）；
+若再遇到，重新跑一次 `ios:vm:signing:import`（只需 `-p` 参数）即可再生成。
+
+**签名导入报 "MAC verification failed (wrong password?)"**
+→ .p12 密码不对。就是 appuploader 里创建证书时设的那个密码，忘了只能重新创建证书。
+注意它与 keychain 密码（脚本自管）是两回事。
+
+**签名导入静默退出 / 报 "stdin 不是终端"**
+→ 旧版脚本在非终端环境下交互读密码会被 `set -e` 静默吞掉，已改为显式报错。
+用 `MINDRA_P12_PASSWORD` 环境变量或 `--password` 参数传密码（见步骤 6）。
+
+**`security` 报 "User interaction is not allowed"**
+→ keychain 锁定状态下执行了需要解锁的操作（SSH 会话里无法弹窗）。已修复：
+导入脚本先 `unlock-keychain` 再改设置。若手动操作 keychain 遇到，先解锁：
+`security unlock-keychain -p "$(cat ~/.mindra-signing-keychain-password)" mindra-signing.keychain-db`
+
+**`find-identity` 显示 "0 valid identities"（证书和私钥都在）**
+→ 缺 Apple WWDR 中间证书，证书链验证不过。已修复：导入脚本自动装
+`scripts/apple-certs/` 里的 WWDR G3-G6。另一个可能：keychain 搜索列表损坏
+（手动 `security list-keychains -s` 时参数拼接出错），修复：
+`security list-keychains -d user -s login.keychain-db mindra-signing.keychain-db`
+
+**编译签名时报 `errSecInternalComponent`**
+→ 构建 SSH 会话里 keychain 是锁的，codesign 拿私钥时无法弹密码框。已修复：
+`ios_archive.sh` 构建前自动解锁专用 keychain。若用其他方式触发构建遇到此错，
+先手动解锁再构建。
+
+**导出 IPA 报 "No certificate for team ... matching 'iPhoneDistribution'"**
+→ Signing.xcconfig 里的签名身份被去掉了空格（应为 `iPhone Distribution`）。
+已修复：读取身份名时只清行尾空白。手动编辑过 xcconfig 的话注意保留空格。
 
 **编译卡死不动**
 → 编译机 keychain 锁了（SSH 里看不到弹窗）。导入脚本已关闭超时锁定，若手动动过

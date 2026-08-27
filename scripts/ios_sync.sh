@@ -67,6 +67,12 @@ need_ssh() {
 # ---- push：代码去程 ---------------------------------------------------------
 cmd_push() {
     need_ssh
+    # rsync 源是 ./，在错误目录运行会把别的目录同步过去并 --delete 掉 VM 上的项目
+    if [ ! -f "pubspec.yaml" ] || [ ! -d "ios/Runner.xcodeproj" ]; then
+        log_error "当前目录不是 Flutter 项目根目录（rsync 源是 ./，会同步错内容）"
+        log_info "请在 mindra/ 目录下运行"
+        exit 1
+    fi
     log_info "同步代码到 $SSH_HOST:~/$VM_PROJECT_DIR ..."
     rsync -az --delete \
         --exclude '.git/' \
@@ -75,6 +81,7 @@ cmd_push() {
         --exclude 'ios/Pods/' \
         --exclude 'ios/.symlinks/' \
         --exclude 'ios/Flutter/Generated.xcconfig' \
+        --exclude 'ios/Flutter/Signing.xcconfig' \
         --exclude 'ios/Flutter/ephemeral/' \
         --exclude 'ios/Signing.xcconfig' \
         --exclude 'macos/Flutter/ephemeral/' \
@@ -151,6 +158,11 @@ cmd_cert() {
         printf '%s\n' "$password" | ssh -T "$SSH_HOST" \
             "cd $VM_PROJECT_DIR && MINDRA_P12_PASSWORD=\$(cat) ./scripts/ios_signing_import.sh ${args[*]}"
     else
+        if [ ! -t 0 ] && [ -n "$cert" ]; then
+            log_error "需要 .p12 密码，但当前 stdin 不是终端，无法交互输入"
+            log_info "请加 --password PW 参数或设置 MINDRA_P12_PASSWORD 环境变量"
+            exit 1
+        fi
         # shellcheck disable=SC2029
         ssh -t "$SSH_HOST" "cd $VM_PROJECT_DIR && ./scripts/ios_signing_import.sh ${args[*]}"
     fi

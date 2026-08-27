@@ -79,7 +79,9 @@ read_signing_config() {
         log_info "（或手动: cp ios/Flutter/Signing.xcconfig.example 并填值）"
         exit 1
     fi
-    SIGN_IDENTITY=$(sed -n 's/^MINDRA_CODE_SIGN_IDENTITY *= *//p' "$SIGNING_XCCONFIG" | tr -d '[:space:]')
+    # 身份名里的空格必须保留（"iPhone Distribution"），导出时 xcodebuild 按名字前缀匹配证书；
+    # 只清行尾空白。Team/Profile 不含空格，仍可整串去空白。
+    SIGN_IDENTITY=$(sed -n 's/^MINDRA_CODE_SIGN_IDENTITY *= *//p' "$SIGNING_XCCONFIG" | sed 's/[[:space:]]*$//')
     SIGN_TEAM=$(sed -n 's/^MINDRA_DEVELOPMENT_TEAM *= *//p' "$SIGNING_XCCONFIG" | tr -d '[:space:]')
     SIGN_PROFILE=$(sed -n 's/^MINDRA_PROVISIONING_PROFILE *= *//p' "$SIGNING_XCCONFIG")
 
@@ -95,6 +97,19 @@ read_signing_config() {
     log_info "签名身份:  $SIGN_IDENTITY"
     log_info "Team ID:   $SIGN_TEAM"
     log_info "Profile:   $SIGN_PROFILE"
+}
+
+# ---- keychain 解锁 ----------------------------------------------------------
+# 构建 via SSH 时每个会话的 keychain 锁定状态独立，锁定状态下 codesign 访问
+# 私钥会因无法弹窗而报 errSecInternalComponent。构建前显式解锁。
+unlock_signing_keychain() {
+    local keychain="mindra-signing.keychain-db"
+    local pwfile="$HOME/.mindra-signing-keychain-password"
+    if security list-keychains -d user | grep -q "$keychain" && [ -f "$pwfile" ]; then
+        security unlock-keychain -p "$(cat "$pwfile")" "$keychain" \
+            || { log_error "解锁 $keychain 失败"; exit 1; }
+        log_info "已解锁 $keychain"
+    fi
 }
 
 # ---- 版本号 ----------------------------------------------------------------
@@ -211,6 +226,7 @@ verify_ipa() {
 main() {
     check_environment
     read_signing_config
+    unlock_signing_keychain
     read_versions
     generate_export_options
     do_build

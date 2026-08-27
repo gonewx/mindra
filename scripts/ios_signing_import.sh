@@ -26,6 +26,12 @@ KEYCHAIN_PW_FILE="$HOME/.mindra-signing-keychain-password"
 SIGNING_XCCONFIG="ios/Flutter/Signing.xcconfig"
 BUNDLE_ID="${IOS_BUNDLE_ID:-com.gonewx.mindra.app}"
 
+# Apple WWDR 中间证书（G3-G6，官网公开下载，随仓库同步）。
+# 分发证书链向 WWDR，而这台离线编译机的 login keychain 里没有它 ——
+# 缺了它 security find-identity 会报 "0 valid identities"（证书和私钥
+# 都在，只是链条验证不过），codesign 也会找不到身份。
+WWDR_CERT_DIR="scripts/apple-certs"
+
 # Xcode 16 起 profile 目录搬到了 Developer/Xcode/UserData 下，旧位置有些工具还在读，
 # 两边都写一份，成本只有几十 KB。
 PROFILE_DIRS=(
@@ -122,6 +128,13 @@ import_certificate() {
     fi
 
     if [ -z "$P12_PASSWORD" ]; then
+        # mise/CI 环境下 stdin 不是终端，read -s 会失败并被 set -e 静默吞掉，
+        # 表现为脚本无声退出。这里显式检测并报可诊断的错误。
+        if [ ! -t 0 ]; then
+            log_error "stdin 不是终端，无法交互输入 .p12 密码"
+            log_info "请用 --password PW 参数或 MINDRA_P12_PASSWORD 环境变量传入"
+            exit 1
+        fi
         read -r -s -p "请输入 .p12 密码: " P12_PASSWORD; echo
     fi
 
@@ -134,8 +147,10 @@ import_certificate() {
 
     # 无参数的 set-keychain-settings = 关闭超时自动锁定。
     # 漏了这步，长时间编译中途 keychain 会锁，codesign 卡在看不见的密码框上。
-    security set-keychain-settings "$KEYCHAIN_NAME"
+    # 注意顺序必须先 unlock 再 set-keychain-settings：keychain 锁定时改设置
+    # 会想弹 UI，SSH 会话里没有窗口服务，报 "User interaction is not allowed"。
     security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+    security set-keychain-settings "$KEYCHAIN_NAME"
 
     # 把专用 keychain 加进用户搜索列表，同时保留原有条目（-s 是替换语义，
     # 不带上 login.keychain-db 会让其他工具突然找不到钥匙串）
@@ -161,6 +176,24 @@ import_certificate() {
         -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
 
     log_success "证书已导入 $KEYCHAIN_NAME"
+}
+
+# ---- 导入 WWDR 中间证书 ------------------------------------------------------
+import_wwdr_certs() {
+    [ -f "$KEYCHAIN_PATH" ] || return 0
+    # 每个 SSH 会话的 keychain 锁定状态独立，这里要自己解锁
+    ensure_keychain_password
+    security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+    local n=0
+    for cer in "$WWDR_CERT_DIR"/AppleWWDRCAG*.cer; do
+        [ -f "$cer" ] || continue
+        # 重复导入已存在的证书会报错，属预期，忽略即可
+        security import "$cer" -k "$KEYCHAIN_PATH" 2>/dev/null || true
+        n=$((n + 1))
+    done
+    if [ "$n" -gt 0 ]; then
+        log_info "已确保 $n 个 WWDR 中间证书在 keychain 里（链条验证用）"
+    fi
 }
 
 # ---- 导入 .mobileprovision -------------------------------------------------
@@ -266,7 +299,7 @@ EOF
 signing_identity_name() {
     security find-identity -v -p codesigning 2>/dev/null \
         | grep -oE '"(Apple Distribution|iPhone Distribution)[^"]*"' \
-        | head -n 1 | tr -d '"' | cut -d: -f1
+        | head -n 1 | tr -d '"' | cut -d: -f1 || true
 }
 
 show_status() {
@@ -347,6 +380,7 @@ main() {
     fi
 
     import_certificate
+    import_wwdr_certs
     import_profile
     apply_xcconfig
     show_status
