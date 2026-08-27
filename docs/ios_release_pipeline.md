@@ -303,6 +303,11 @@ appuploader → 提交上传 → 选择 `mindra/build/ios/ipa/` 下的 IPA 文�
 上传后在 [App Store Connect](https://appstoreconnect.apple.com) → TestFlight 页面看处理状态
 （几分钟到半小时），构建版本出现后即可添加内部测试者装机测试。
 
+> **出口合规**：`ios/Runner/Info.plist` 已声明 `ITSAppUsesNonExemptEncryption = false`
+>（App 只用 HTTPS 等系统标准加密，属豁免范围）。新上传的构建会自动显示「合规，无需证明」；
+> 历史构建仍提示「缺少出口合规证明」的话，在 ASC 构建弹窗 → 出口合规 → 管理里
+> 选一次「不属于上述的任意一种算法」即可（见故障排查）。
+
 ### 步骤 11：填写商店元数据并提交审核
 
 在 ASC 网页的 App 页面完善各标签页。**完整字段值和截图规格见
@@ -508,6 +513,14 @@ keychain 则重跑导入。另：VM 上跑 Xcode GUI 自动签名必然失败—
 **TestFlight 拒收 "build number already exists"**
 → 忘了 bump（或用了重复的 build number）。`mise run ios:build:bump` 后**必须重新构建**
 （`ios:vm:archive` + `sync:back`）再上传——bump 只影响下一次构建，旧包不会被"修正"。
+
+**TestFlight 提示「缺少出口合规证明」**
+→ 出口合规问题：需要确认 App 是否使用非豁免加密。本 App 只用 HTTPS 等系统标准加密，
+`ios/Runner/Info.plist` 里已声明 `ITSAppUsesNonExemptEncryption = false`（豁免），
+新构建会**自动**标记为「合规，无需证明」，不用再管。对**已上传的旧构建**，在
+ASC → TestFlight → 该版本的构建弹窗 → 出口合规 → 管理，选「不属于上述的任意一种算法」
+一次即可（或在 App 页面一次性设置，若默认选标准加密会应用到全部后续构建）。
+若将来引入自定义加密算法（如用户数据本地加密），改成 `true` 并按 Apple 要求提供证明。
 
 **profile 只剩几天有效期**
 → 免费账号签的（7 天期），无法做 App Store 分发。确认 appuploader 里登录的是
