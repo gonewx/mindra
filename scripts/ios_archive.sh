@@ -60,7 +60,7 @@ done
 
 check_environment() {
     if [[ "$OSTYPE" != "darwin"* ]]; then
-        log_error "本脚本必须在 macOS 编译机上运行（当前: $OSTYPE）"
+        log_error "本脚本必须在 macOS 编译机上运行（当前: ${OSTYPE}）"
         log_info "宿主 Linux 上请用: mise run ios:vm:archive"
         exit 1
     fi
@@ -100,15 +100,16 @@ read_signing_config() {
 }
 
 # ---- keychain 解锁 ----------------------------------------------------------
-# 构建 via SSH 时每个会话的 keychain 锁定状态独立，锁定状态下 codesign 访问
-# 私钥会因无法弹窗而报 errSecInternalComponent。构建前显式解锁。
+# macOS 按 audit session 隔离 keychain 锁定状态：SSH 构建时在本会话解的锁，对
+# GUI 里的 Xcode / appuploader 无效，反之亦然。锁定状态下 codesign 访问私钥在
+# SSH 里报 errSecInternalComponent，在 GUI 里弹密码框。解锁逻辑统一收在
+# ios_signing_import.sh --unlock（它会把两个 session 都覆盖）。
 unlock_signing_keychain() {
     local keychain="mindra-signing.keychain-db"
     local pwfile="$HOME/.mindra-signing-keychain-password"
     if security list-keychains -d user | grep -q "$keychain" && [ -f "$pwfile" ]; then
-        security unlock-keychain -p "$(cat "$pwfile")" "$keychain" \
+        ./scripts/ios_signing_import.sh --unlock \
             || { log_error "解锁 $keychain 失败"; exit 1; }
-        log_info "已解锁 $keychain"
     fi
 }
 
@@ -194,7 +195,7 @@ verify_ipa() {
     got_build=$(echo "$app_plist" | plutil -extract CFBundleVersion raw -o - - 2>/dev/null)
 
     if [ "$got_id" != "$BUNDLE_ID" ]; then
-        log_error "Bundle ID 不匹配: 期望 $BUNDLE_ID，实际 $got_id"
+        log_error "Bundle ID 不匹配: 期望 ${BUNDLE_ID}，实际 $got_id"
         exit 1
     fi
     if [ "$got_ver" != "$MARKETING_VERSION" ] || [ "$got_build" != "$BUILD_NUMBER" ]; then

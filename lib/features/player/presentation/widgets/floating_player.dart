@@ -81,10 +81,10 @@ class _FloatingPlayerState extends State<FloatingPlayer>
   void _setDefaultPosition() {
     final screenSize = MediaQuery.of(context).size;
     // 调整默认位置，确保不干扰导航栏
-    // 导航栏现在高度为68px + SafeArea，预留更多空间
+    // 导航栏高度为 49px + SafeArea，预留更多空间
     final defaultX = screenSize.width - 80.0; // 60(浮动球宽度) + 20(边距)
     final defaultY =
-        screenSize.height - 180.0; // 增加间距：68(导航栏) + 52(SafeArea+间距) + 60(浮动球高度)
+        screenSize.height - 161.0; // 间距：49(导航栏) + 52(SafeArea+间距) + 60(浮动球高度)
 
     setState(() {
       _position = Offset(defaultX, defaultY);
@@ -141,7 +141,7 @@ class _FloatingPlayerState extends State<FloatingPlayer>
             _position += details.delta;
 
             // 增强边界限制，确保不会干扰导航栏
-            final navBarHeight = 68 + 20; // 导航栏高度 + 安全间距
+            final navBarHeight = 49 + 20; // 导航栏高度 + 安全间距
             _position = Offset(
               _position.dx.clamp(0, screenSize.width - 60),
               _position.dy.clamp(

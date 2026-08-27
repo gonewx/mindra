@@ -49,6 +49,8 @@ Mindra 宿主 ↔ Mac 编译机 同步
                 --password PW   .p12 密码（或环境变量 MINDRA_P12_PASSWORD）
                 --reset    让 VM 先清空旧签名资产
   status      查看 VM 编译环境状态（项目、证书、profile、磁盘）
+  unlock      解锁 VM 上的签名 keychain（含 GUI session）
+                GUI 里用 Xcode / appuploader 前跑一次，避免弹 keychain 密码框
 
 环境变量:
   MINDRA_VM_HOST       SSH 别名（默认 imacvm-tahoe）
@@ -58,7 +60,7 @@ EOF
 
 need_ssh() {
     if ! ssh -o ConnectTimeout=8 -o BatchMode=yes "$SSH_HOST" true 2>/dev/null; then
-        log_error "无法 SSH 到 $SSH_HOST（VM 没开？）"
+        log_error "无法 SSH 到 ${SSH_HOST}（VM 没开？）"
         log_info "启动脚本: /mnt/disk0/project/mindra/mindra_cc/.build_usbmuxd/start-macos-tahoe.sh"
         exit 1
     fi
@@ -198,6 +200,18 @@ cmd_status() {
 REMOTE
 }
 
+# ---- unlock ----------------------------------------------------------------
+# 专用 keychain 不像 login keychain 会随图形登录自动解锁 —— VM 挂起恢复、注销
+# 重登或 securityd 重启后它就回到锁定状态。此时在 GUI 里用 Xcode / appuploader
+# 签名会弹 "codesign wants to use the mindra-signing keychain" 密码框。
+# 走 ios:vm:archive 的话脚本会自动解锁，GUI 里手动操作前先跑一次这个。
+cmd_unlock() {
+    need_ssh
+    log_info "解锁编译机签名 keychain（含 GUI session）..."
+    # shellcheck disable=SC2029
+    ssh "$SSH_HOST" "cd $VM_PROJECT_DIR && ./scripts/ios_signing_import.sh --unlock"
+}
+
 # ---- 入口 -------------------------------------------------------------------
 main() {
     if [ $# -eq 0 ]; then
@@ -209,6 +223,7 @@ main() {
         pull)   cmd_pull ;;
         cert)   cmd_cert "$@" ;;
         status) cmd_status ;;
+        unlock) cmd_unlock ;;
         -h|--help|help) show_help ;;
         *) log_error "未知命令: $cmd"; show_help; exit 1 ;;
     esac

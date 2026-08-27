@@ -363,6 +363,47 @@ git tag 发布版本时照旧用 tag 递增（`v0.5.8` 起），与上述规则�
 
 ## 故障排查
 
+**Xcode 报「The sandbox is not in sync with the Podfile.lock」（红字）**
+→ 编译机上 `Pods/Manifest.lock` 与 `Podfile.lock` 不同步。深层原因：`Podfile.lock` /
+`.flutter-plugins-dependencies` / `.symlinks/plugins` 是从宿主(Linux)同步来的，里面写死了
+宿主的 pub 缓存路径 `/home/decker/.pub-cache/...`，而 macOS 编译机的实际缓存是
+`/Users/decker/.pub-cache/...`（且 VM 上缓存本来就是空的）。于是 `.symlinks` 全部悬空 →
+`pod install` 找不到 podspec → `Pods/Manifest.lock` 永远无法与 lock 同步。修复：先在 VM 上
+`flutter pub get`（下载包并重写 `.flutter-plugins-dependencies` 为 `/Users/decker` 路径），再
+`pod install`。日常链路 `mise run ios:vm:archive` 里的 `flutter build ipa` 会先跑 `flutter pub get`，
+所以正常发版自愈；只有跳过它、直接开 Xcode workspace 或在 VM 上裸跑 `pod install` 才暴露。
+
+**`pod install` / Xcode 报「No podspec found for <插件> in .symlinks/plugins/<插件>/darwin」**
+→ 同上：`.symlinks` 里的符号链接指向宿主的 `/home/decker/.pub-cache`，在 VM 上不存在。
+在 VM 上 `flutter pub get` 后再 `pod install` 即修复。
+
+**Xcode 弹「codesign wants to use the mindra-signing keychain」密码框**
+→ 专用 keychain（mindra-signing.keychain-db）不像 login keychain 那样登录自动解锁；VM 挂起
+恢复、注销重登或 securityd 重启后就锁定。SSH 与 GUI 是独立 audit session，CLI 构建
+（`ios_archive.sh` 构建前自动解锁）不受影响，只有 Xcode(GUI) 会弹。已给 `ios_signing_import.sh`
+加 `install_unlock_agent()`，会装一个 `com.mindra.signing-unlock` LaunchAgent（RunAtLoad 登录即
+解锁 GUI 会话），Xcode 不再弹；若个别时候又锁，重跑一次 `mise run ios:vm:signing:unlock`。
+
+**真机点 Run 报「0xe800801f (Attempted to install a Beta profile without the proper entitlement)」**
+→ 用错了 profile 类型：App Store 分发 profile（MindraAppStore）只用于上传 App Store/TestFlight，
+不允许直接装到真机上运行。要在真机直接装，得用 **Ad Hoc 分发 profile**（把设备 UDID 加进去）。
+证书复用现有 `iPhone Distribution`，只换描述文件：
+`mise run ios:vm:signing:import -- -p <adhoc.mobileprovision>`（证书已在 keychain，`-c` 可省略）。
+
+**真机点 Run 报「The executable does not contain get-task-allow ... the debugger will fail to attach」**
+→ Release/Ad Hoc 签名不带 `get-task-allow`（调试权限），而 Xcode 的 Run 默认要挂调试器，所以报这
+个。这是 Release 正常属性，不是配置错误。改用 **Product → Run Without Debugging（⌃⌘R）**，或在
+**Edit Scheme → Run → 去掉 "Debug executable" 勾选**（Build Configuration 保持 Release）。若要在
+真机断点/热重载，需另配 Development 证书 + Development profile。
+
+**Xcode Signing 界面 Team 显示「Unknown Name (97W62GB3JA)」**
+→ 编译机离线拿不到团队的显示名，属正常现象；Team ID 本身正确，不影响签名与构建。
+
+**ExportOptions.plist.template 的 method 写死 `app-store-connect`**
+→ 该模板给 App Store/TestFlight 上传用。若要用 CLI（`flutter build ipa`）产出**能装到真机**的
+Ad Hoc 包，需把导出方式改为 `ad-hoc`（`ios_archive.sh` 加 `--method ad-hoc` 或按 profile 自动判断）；
+用 Xcode Run（Release + 去掉 Debug executable）装真机则不受此模板影响。
+
 **`mise run ios:vm:archive` 报 "No signing certificate / No profile matching"**
 → Signing.xcconfig 变量为空或证书没装。`mise run ios:vm:signing:status` 看缺什么，
 必要时重新导入：`mise run ios:vm:signing:import -- --reset -c <p12> -p <profile>`。

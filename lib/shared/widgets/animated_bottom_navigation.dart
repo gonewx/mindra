@@ -37,7 +37,8 @@ class AnimatedBottomNavigationBar extends StatelessWidget {
       ),
       child: SafeArea(
         child: SizedBox(
-          height: 68, // 增加导航栏高度，提供更大的点击区域
+          height: 49, // 对齐 iOS 原生 TabBar（49pt）；SafeArea 会在下方再补
+          // 34px Home 指示器安全区，固定值给太大会让 tab 整体显得悬空偏高
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -145,10 +146,10 @@ class _AnimatedNavItemState extends State<_AnimatedNavItem> {
           onTapUp: (_) => _onPressedChange(false), // 直接重置，去除延迟
           onTapCancel: () => _onPressedChange(false),
           child: Container(
-            height: 68, // 增加点击区域高度，改善移动端体验
+            height: 49, // 必须与外层 SizedBox 一致，否则子项撑破父约束报溢出
             padding: const EdgeInsets.symmetric(
               horizontal: 2, // 减小水平内边距，增加点击区域
-              vertical: 6, // 增加垂直内边距，改善视觉平衡
+              vertical: 2, // 49 高度下收紧垂直边距，避免内容溢出/留白过大
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

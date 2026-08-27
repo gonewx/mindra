@@ -53,6 +53,7 @@ Mindra iOS 签名资产导入
   --no-apply              只导入，不改写 Signing.xcconfig
   --reset                 删除专用 keychain 与已装 profile 后重新导入
   --status                只显示当前签名资产状态，不做改动
+  --unlock                只解锁 keychain（含 GUI session），不做其他改动
 
 密码也可以用环境变量 MINDRA_P12_PASSWORD 传入，避免落进 shell history。
 
@@ -63,7 +64,7 @@ EOF
 }
 
 CERT_PATH=""; PROFILE_PATH=""; P12_PASSWORD="${MINDRA_P12_PASSWORD:-}"
-APPLY_XCCONFIG=true; DO_RESET=false; STATUS_ONLY=false
+APPLY_XCCONFIG=true; DO_RESET=false; STATUS_ONLY=false; UNLOCK_ONLY=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -74,13 +75,14 @@ while [[ $# -gt 0 ]]; do
         --no-apply)   APPLY_XCCONFIG=false; shift ;;
         --reset)      DO_RESET=true; shift ;;
         --status)     STATUS_ONLY=true; shift ;;
+        --unlock)     UNLOCK_ONLY=true; shift ;;
         *) log_error "未知参数: $1"; show_help; exit 1 ;;
     esac
 done
 
 check_environment() {
     if [[ "$OSTYPE" != "darwin"* ]]; then
-        log_error "本脚本必须在 macOS 编译机上运行（当前: $OSTYPE）"
+        log_error "本脚本必须在 macOS 编译机上运行（当前: ${OSTYPE}）"
         log_info "宿主 Linux 上请改用: mise run ios:vm:signing:import"
         exit 1
     fi
@@ -99,6 +101,50 @@ ensure_keychain_password() {
         chmod 600 "$KEYCHAIN_PW_FILE"
     fi
     KEYCHAIN_PASSWORD="$(cat "$KEYCHAIN_PW_FILE")"
+}
+
+# ---- 解锁 keychain（含 GUI session）-----------------------------------------
+# macOS 按 audit session 隔离 keychain 的锁定状态：SSH 登录是独立 session，
+# 在 SSH 里解的锁对 GUI(Aqua) session 里的 Xcode / appuploader 完全无效，反之
+# 亦然。而专用 keychain 不像 login keychain 会随图形登录自动解锁 —— 只要 VM
+# 挂起恢复、注销重登或 securityd 重启，它就回到锁定状态。此时 codesign 访问
+# 私钥：SSH 里报 errSecInternalComponent / "User interaction is not allowed"，
+# GUI 里则弹出 "codesign wants to use the mindra-signing keychain" 密码框。
+# 注意：set-key-partition-list 授权的是「已解锁钥匙串内私钥的免授权访问」，
+# 它不能替代解锁本身，所以那步做对了也照样会弹。
+unlock_signing_keychain() {
+    [ -f "$KEYCHAIN_PATH" ] || return 0
+    ensure_keychain_password
+
+    security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME" \
+        || { log_error "解锁 $KEYCHAIN_NAME 失败（密码文件可能与 keychain 不匹配）"; return 1; }
+    log_success "已解锁当前 session 的 $KEYCHAIN_NAME"
+
+    # 再把解锁注入 GUI 登录用户的 session，这样 Xcode / appuploader 也不弹框。
+    local console_user uid
+    console_user=$(stat -f "%Su" /dev/console 2>/dev/null || true)
+    if [ -z "$console_user" ] || [ "$console_user" = "root" ]; then
+        log_info "无图形界面登录用户，跳过 GUI session 解锁"
+        return 0
+    fi
+    uid=$(id -u "$console_user" 2>/dev/null) || return 0
+
+    # launchctl asuser 需要 root。没有免密 sudo 时不让整条链路失败，只给指引。
+    if ! sudo -n true 2>/dev/null; then
+        log_warning "无免密 sudo，无法解锁 GUI session —— Xcode 里可能仍会弹密码框"
+        log_info "如遇弹框，在编译机图形界面的终端里执行："
+        log_info "  security unlock-keychain -p \"\$(cat $KEYCHAIN_PW_FILE)\" $KEYCHAIN_NAME"
+        return 0
+    fi
+
+    if sudo -n launchctl asuser "$uid" \
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" 2>/dev/null; then
+        # 变量名后紧跟全角括号必须写成 ${}：macOS 自带 bash 3.2 会把多字节字符的
+        # 首字节并进变量名，配合 set -u 直接报 unbound variable。
+        log_success "已解锁 GUI session（用户 ${console_user}）的 keychain，Xcode / appuploader 可用"
+    else
+        log_warning "GUI session 解锁失败，Xcode 里可能仍会弹密码框"
+    fi
 }
 
 reset_signing_assets() {
@@ -247,7 +293,7 @@ import_profile() {
             now_epoch=$(date "+%s")
             days_left=$(( (expiry_epoch - now_epoch) / 86400 ))
             if [ "$days_left" -lt 0 ]; then
-                log_error "profile 已过期（$PROFILE_EXPIRY），请在 appuploader 里重新创建"
+                log_error "profile 已过期（${PROFILE_EXPIRY}），请在 appuploader 里重新创建"
                 exit 1
             elif [ "$days_left" -le 14 ]; then
                 log_warning "profile 仅剩 $days_left 天有效 —— 这通常意味着它由免费账号签发，"
@@ -291,6 +337,75 @@ MINDRA_DEVELOPMENT_TEAM = $PROFILE_TEAM
 MINDRA_PROVISIONING_PROFILE = $PROFILE_NAME
 EOF
     log_success "签名参数已写入，可以直接 mise run ios:archive"
+}
+
+# ---- 安装「登录自动解锁」LaunchAgent -----------------------------------------
+# 专用 keychain 不像 login keychain 那样登录时自动解锁，于是 Xcode（GUI 会话）里
+# 每次 codesign 都因 keychain 锁定而弹密码框。这里在 ~/Library/LaunchAgents 生成一个
+# 登录即解锁的 agent 并立即加载（RunAtLoad 当前也生效）。幂等：重复执行先卸载旧的再重装。
+# 注意：SSH 与 GUI 是独立 audit session，本 agent 装在 gui/UID 域，只覆盖 Xcode/GUI；
+# CLI 链路（flutter build ipa）由 --unlock 在 SSH 会话解锁，不需要它。
+install_unlock_agent() {
+    [ -f "$KEYCHAIN_PW_FILE" ] || return 0
+    local agent_dir="$HOME/Library/LaunchAgents"
+    local label="com.mindra.signing-unlock"
+    local script="$agent_dir/$label.sh"
+    local plist="$agent_dir/$label.plist"
+
+    mkdir -p "$agent_dir"
+
+    cat > "$script" <<'EOF'
+#!/bin/bash
+# Mindra: 登录时自动解锁签名 keychain，避免 Xcode codesign 反复弹密码框。
+# 由 scripts/ios_signing_import.sh 自动安装。改动请同时改那个脚本。
+PW_FILE="$HOME/.mindra-signing-keychain-password"
+KEYCHAIN="mindra-signing.keychain-db"
+[ -f "$PW_FILE" ] || exit 0
+PW="$(cat "$PW_FILE")"
+/usr/bin/security unlock-keychain -p "$PW" "$KEYCHAIN" 2>/dev/null \
+  || /usr/bin/security unlock-keychain -p "$PW" "$HOME/Library/Keychains/$KEYCHAIN" 2>/dev/null \
+  || true
+EOF
+    chmod +x "$script"
+
+    cat > "$plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>$label</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>$script</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>StandardOutPath</key>
+    <string>/tmp/$label.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/$label.log</string>
+</dict>
+</plist>
+EOF
+
+    # 装载到 GUI 会话（RunAtLoad 立即解锁一次）；老系统退回 load。幂等，先 bootout。
+    local console_user uid
+    console_user=$(stat -f "%Su" /dev/console 2>/dev/null || true)
+    if [ -z "$console_user" ] || [ "$console_user" = "root" ]; then
+        log_warning "无图形登录用户，跳过 LaunchAgent 装载（不影响 CLI 链路解锁）"
+        return 0
+    fi
+    uid=$(id -u "$console_user" 2>/dev/null) || return 0
+    launchctl bootout "gui/$uid/$label" 2>/dev/null || true
+    if ! launchctl bootstrap "gui/$uid" "$plist" 2>/dev/null; then
+        launchctl load -w "$plist" 2>/dev/null || true
+    fi
+    log_success "已安装登录解锁 agent（$label）"
+    log_info "Xcode 的 codesign 弹框应已消失；若 VM 挂起恢复后又锁，再跑一次 unlock 即可"
 }
 
 # 从 keychain 里取分发证书的完整名称，例如 "Apple Distribution: Some Name (TEAMID)"。
@@ -366,6 +481,23 @@ show_status() {
 main() {
     check_environment
 
+    if [ "$UNLOCK_ONLY" = true ]; then
+        if [ ! -f "$KEYCHAIN_PATH" ]; then
+            log_error "专用 keychain 不存在，先跑一次导入：--cert/--profile"
+            exit 1
+        fi
+        # 这里不能落到 ensure_keychain_password 的"随机生成"分支上 —— 新密码
+        # 解不开已有 keychain，只会得到一个更难懂的失败。
+        if [ ! -f "$KEYCHAIN_PW_FILE" ]; then
+            log_error "keychain 密码文件丢失: $KEYCHAIN_PW_FILE"
+            log_info "无法解锁已有 keychain，需要重新导入：--reset -c <p12> -p <profile>"
+            exit 1
+        fi
+        unlock_signing_keychain
+        install_unlock_agent
+        exit 0
+    fi
+
     if [ "$STATUS_ONLY" = true ]; then
         show_status; exit 0
     fi
@@ -383,6 +515,7 @@ main() {
     import_wwdr_certs
     import_profile
     apply_xcconfig
+    install_unlock_agent
     show_status
 }
 

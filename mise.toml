@@ -94,6 +94,10 @@ run = "./scripts/ios_sync.sh status"
 description = "（宿主）递送 .p12/.mobileprovision 到编译机并导入（参数原样透传）"
 run = "./scripts/ios_sync.sh cert"
 
+[tasks."ios:vm:signing:unlock"]
+description = "（宿主）解锁编译机签名 keychain（含 GUI session），修 Xcode 弹密码框"
+run = "./scripts/ios_sync.sh unlock"
+
 [tasks."ios:vm:archive"]
 description = "（宿主）先同步代码，再远程在编译机上构建 IPA"
 run = '''
