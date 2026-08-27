@@ -9,6 +9,8 @@
 >
 > 2026-08-27 全链路首次跑通（1.0.0 build 1 已产出 IPA），当天修复的脚本问题
 > 已全部反映在本文档的「故障排查」一节。
+> 2026-08-28 增加**真机调试**与**真机独立安装包**两条车道：签名按构建配置拆分
+> （Debug=AdHoc 真机 / Release=App Store 正式），详见「阶段二」与「签名参数的流转」。
 
 ## 目录
 
@@ -78,7 +80,9 @@
 |---|---|
 | `ios:vm:signing:import` | 递送 .p12/.mobileprovision 到编译机并导入（参数透传：`-- -c <p12路径> -p <profile路径>`） |
 | `ios:vm:signing:status` | 远程查看编译机签名资产状态 |
-| `ios:vm:archive` | **先自动同步代码**，再远程在编译机上构建 IPA |
+| `ios:vm:archive` | **先自动同步代码**，再远程在编译机上构建 **App Store 签名** IPA（上架/TestFlight 用）|
+| `ios:vm:archive:adhoc` | 同上，但构建 **AdHoc 签名** IPA（`mindra-adhoc.ipa`，装真机独立运行；勿传 TestFlight）|
+| `ios:ipa:install` | （编译机上）按名称装 IPA 到真机：默认 `mindra-adhoc.ipa`；加 `-- --appstore` 装 `mindra.ipa`；`IPA_PATH=` 精确指定 |
 | `ios:sync:push` | 只同步代码到编译机 |
 | `ios:sync:back` | 从编译机回收 IPA 到宿主 `build/ios/ipa/` |
 | `ios:sync:status` | 查看编译机环境（Xcode、项目、磁盘） |
@@ -86,6 +90,7 @@
 
 编译机上直接运行的（一般用不着，远程任务已覆盖）：
 `ios:signing:status` / `ios:signing:import` / `ios:signing:reset` / `ios:archive`。
+真机调试在编译机上跑：`ios:run:debug`（Debug+AdHoc，热重载调外观，见车道 A）。
 
 ## 固定参数速查
 
@@ -287,6 +292,9 @@ mise run ios:sync:back
 
 > 如果这一步之前已经在别处构建过同版本 build number，先 `mise run ios:build:bump`
 > 再 archive——TestFlight 要求 build number 严格递增，重复上传同一 build number 会被拒收。
+> ⚠️ `ios:build:bump` **只修改 `ios/build_number.txt`，不会改动任何已产出的 IPA**；
+> 上传 TestFlight 时 appuploader 读取的是 IPA 打包时固化在 Info.plist 里的版本号。
+> 想让新包带新号必须：**bump → archive**（bump 前的旧包文件不变）。
 
 ### 步骤 10：appuploader 上传 TestFlight
 
@@ -317,20 +325,51 @@ appuploader → 提交上传 → 选择 `mindra/build/ios/ipa/` 下的 IPA 文�
 
 ---
 
-## 阶段二：日常迭代发布
+## 阶段二：日常迭代发布（三条车道）
 
-首次发布完成后，每次更新版本只需：
+首次发布完成后，日常有三条互不干扰的车道，按需选：
+
+### 车道 A：真机调试（调外观/功能，可热重载）
 
 ```bash
-cd mindra/
+# 编译机上（Mac VM 终端）：
+cd ~/mindra && mise run ios:run:debug
+```
 
-mise run ios:build:bump      # 1. build number +1（必须，否则 TestFlight 拒收）
-mise run ios:vm:archive      # 2. 同步代码 + 编译签名
+- Debug 构建自动读 `Signing.xcconfig`（AdHoc），安装到 `$IOS_DEVICE_ID` 那台 iPhone 上
+- LLDB 附加已在编译机用 `flutter config --no-enable-lldb-debugging` 关闭
+  （否则 Debug 版会停在蓝屏等调试器，见故障排查）
+- **保持 flutter run 进程在线**；退出后直接点手机图标会提示
+  "iOS 14+ debug mode can only be launched from flutter tooling"（系统限制，不是 bug）
+
+### 车道 B：真机独立安装（体验正式包，不连电脑）
+
+```bash
+# 宿主机：构建 AdHoc 签名包（自动同步代码 → 编译机构建 mindra-adhoc.ipa）
+mise run ios:vm:archive:adhoc
+
+# 编译机上：按名称装到 iPhone（默认就是 mindra-adhoc.ipa）
+mise run ios:ipa:install
+```
+
+- AdHoc 包是 Release 版，无 debugger 依赖，装完点图标独立运行，无"iOS 14+ 提示"
+- 设备 UDID 必须在 `MindraAdHoc` profile 白名单里（appuploader 建 AdHoc 描述文件时勾设备）
+- **AdHoc 包不能上传 TestFlight**（会被拒收）；上架必须走车道 C 的 App Store 包
+- 安装按名称区分，不会装错：`mise run ios:ipa:install`（默认 adhoc）/
+  `mise run ios:ipa:install -- --appstore`（App Store 包）/ `IPA_PATH=` 精确指定
+
+### 车道 C：发布上架（TestFlight / App Store）
+
+```bash
+mise run ios:build:bump      # 1. build number +1（必须，否则 TestFlight 拒收；只对下一步构建生效，不影响已产出的包）
+mise run ios:vm:archive      # 2. 同步代码 + 编译签名（App Store 包，自动读 Signing.release.xcconfig）
 mise run ios:sync:back       # 3. IPA 回宿主
 # 4. appuploader 里选新 IPA 上传
 # 5. ASC → TestFlight 页面看处理状态（几分钟），添加测试者
 # 6. 测试通过后，在 ASC 版本页面填「本次更新内容」→ 提交审核
 ```
+
+三条车道共用同一张分发证书，只是 profile 不同；切换 profile 不改 Xcode、不改 pbxproj。
 
 ## 版本号规则
 
@@ -341,6 +380,8 @@ mise run ios:sync:back       # 3. IPA 回宿主
 
 注意 pubspec 里的 `+7` 与 iOS build number **无关**（那是本地构建计数的历史遗留）。
 iOS 的 build number 只通过 `ios/build_number.txt` 管理，`ios:build:bump` 递增。
+`ios:build:bump` **不触发构建**：已产出 IPA 内的 build number 在打包时固化，
+上传 TestFlight 以 IPA 内读到的值为准；先 `build:bump` 再 `ios:vm:archive` 新包才带新号。
 
 git tag 发布版本时照旧用 tag 递增（`v0.5.8` 起），与上述规则互不影响。
 
@@ -353,29 +394,44 @@ git tag 发布版本时照旧用 tag 递增（`v0.5.8` 起），与上述规则�
 | `mindra/scripts/ios_signing_import.sh` | VM 侧签名资产导入 | ✅ |
 | `mindra/scripts/ios_archive.sh` | VM 侧编译签名出 IPA（构建前自动解锁专用 keychain） | ✅ |
 | `mindra/scripts/apple-certs/` | Apple WWDR 中间证书 G3-G6（离线 VM 验证证书链用） | ✅ |
-| `mindra/ios/Flutter/Signing.xcconfig` | 签名参数（Team ID 等） | ❌ 已 ignore |
-| `mindra/ios/Flutter/Signing.xcconfig.example` | 上面的模板 | ✅ |
-| `mindra/ios/ExportOptions.plist.template` | IPA 导出选项模板 | ✅ |
+| `mindra/ios/Flutter/Signing.debug.xcconfig` | 签名参数：**Debug 真机调试**（Development，get-task-allow） | ❌ 已 ignore，rsync 排除（`Signing*.xcconfig`）|
+| `mindra/ios/Flutter/Signing.xcconfig` | 签名参数：**AdHoc 独立安装**（车道 B） | ❌ 同上 |
+| `mindra/ios/Flutter/Signing.release.xcconfig` | 签名参数：**Release 正式 IPA**（App Store，车道 C） | ❌ 同上 |
+| `mindra/ios/Flutter/Signing.xcconfig.example` | 签名参数模板 | ✅ |
+| `mindra/ios/Flutter/Debug.xcconfig` / `Release.xcconfig` | Debug 先兜底 Signing.xcconfig、再优先 Signing.debug.xcconfig；Release include Signing.release.xcconfig | ✅ |
+| `mindra/ios/ExportOptions.plist.template` | IPA 导出选项模板（`method` 为占位符，按 distribution 自动填） | ✅ |
 | `mindra/ios/build_number.txt` | iOS build number | ✅ |
 
-签名参数的流转：`pbxproj` 引用 `$(MINDRA_*)` 变量 → 变量定义在 `Signing.xcconfig` →
-由导入脚本从 profile 自动解析写入。全程无人工填值，Team ID 不进版本库。
+签名参数的流转：`pbxproj` 的 Debug/Release/Profile 配置均引用 `$(MINDRA_*)` 变量
+（基配置 xcconfig 各 include 自己的签名文件）：
+
+- **Debug（真机调试）**：`Debug.xcconfig` → `Signing.debug.xcconfig`（Development profile，
+  带 get-task-allow 调试权限；未导入开发签名前兜底 `Signing.xcconfig` AdHoc，只能跑不能调）
+- **AdHoc（独立安装包）**：`ios:vm:archive:adhoc` 读 `Signing.xcconfig`（AdHoc）
+- **Release（正式 IPA）**：`Release.xcconfig` → `Signing.release.xcconfig`（App Store profile）
+
+全程无人工填值，Team ID 不进版本库。**导入脚本按 profile 类型自动分流写入三份文件**
+（development/adhoc/appstore，判断依据：get-task-allow=true→development；带设备列表→adhoc；
+其余→appstore），开发签名无需先建文件。证书名**兼容新旧叫法**：开发证书
+「Apple Development」（新）或「iPhone Developer」（appuploader/API 创建的旧式名）都认。
+**真机调试与 App Store 发布并行兼容**——三条车道互不干扰、无需切换。
+换 profile 只需重新导入并保证新 `.mobileprovision` 已装在编译机信任库
+（`~/Library/MobileDevice/Provisioning Profiles/`，文件名=UUID，装好才算真的可用）。
 
 ## 故障排查
 
-**Xcode 报「The sandbox is not in sync with the Podfile.lock」（红字）**
-→ 编译机上 `Pods/Manifest.lock` 与 `Podfile.lock` 不同步。深层原因：`Podfile.lock` /
-`.flutter-plugins-dependencies` / `.symlinks/plugins` 是从宿主(Linux)同步来的，里面写死了
-宿主的 pub 缓存路径 `/home/decker/.pub-cache/...`，而 macOS 编译机的实际缓存是
-`/Users/decker/.pub-cache/...`（且 VM 上缓存本来就是空的）。于是 `.symlinks` 全部悬空 →
-`pod install` 找不到 podspec → `Pods/Manifest.lock` 永远无法与 lock 同步。修复：先在 VM 上
-`flutter pub get`（下载包并重写 `.flutter-plugins-dependencies` 为 `/Users/decker` 路径），再
-`pod install`。日常链路 `mise run ios:vm:archive` 里的 `flutter build ipa` 会先跑 `flutter pub get`，
-所以正常发版自愈；只有跳过它、直接开 Xcode workspace 或在 VM 上裸跑 `pod install` 才暴露。
-
-**`pod install` / Xcode 报「No podspec found for <插件> in .symlinks/plugins/<插件>/darwin」**
-→ 同上：`.symlinks` 里的符号链接指向宿主的 `/home/decker/.pub-cache`，在 VM 上不存在。
-在 VM 上 `flutter pub get` 后再 `pod install` 即修复。
+**Xcode 报「The sandbox is not in sync with the Podfile.lock」（红字）/ 「No podspec found for <插件> in .symlinks/plugins/<插件>/darwin」**
+→ 同一根源，**已根治（2026-08-28）**：`ios_sync.sh push` 曾把宿主的
+`.flutter-plugins-dependencies` / `ios/Podfile.lock` / `ios/Flutter/flutter_export_environment.sh`
+同步到编译机（宿主版写死 `/home/decker/.pub-cache` 路径），Flutter 按它生成的 `.symlinks`
+全部悬空 → pod install 找不到 podspec → Manifest.lock 永不同步。这三个文件现已加入
+rsync 排除（另有 `Signing*.xcconfig`），编译机以自身 `flutter pub get` 产物为准。
+若从旧状态救火（VM 上）：
+```bash
+cd ~/mindra && rm -rf ios/.symlinks .flutter-plugins-dependencies ios/Podfile.lock
+flutter pub get
+flutter build ios --debug --no-codesign   # .symlinks 由 build/run 时生成，pub get 不建它
+```
 
 **Xcode 弹「codesign wants to use the mindra-signing keychain」密码框**
 → 专用 keychain（mindra-signing.keychain-db）不像 login keychain 那样登录自动解锁；VM 挂起
@@ -386,9 +442,10 @@ git tag 发布版本时照旧用 tag 递增（`v0.5.8` 起），与上述规则�
 
 **真机点 Run 报「0xe800801f (Attempted to install a Beta profile without the proper entitlement)」**
 → 用错了 profile 类型：App Store 分发 profile（MindraAppStore）只用于上传 App Store/TestFlight，
-不允许直接装到真机上运行。要在真机直接装，得用 **Ad Hoc 分发 profile**（把设备 UDID 加进去）。
-证书复用现有 `iPhone Distribution`，只换描述文件：
-`mise run ios:vm:signing:import -- -p <adhoc.mobileprovision>`（证书已在 keychain，`-c` 可省略）。
+不允许直接装到真机上运行。真机要装包，走**车道 B**（`mise run ios:vm:archive:adhoc` +
+`ios:ipa:install` 装 `mindra-adhoc.ipa`）——已内置 AdHoc 分发 profile（设备 UDID 加进白名单），
+**不需要手动换签名配置**。旧做法「再导入一次 adhoc.mobileprovision」会覆盖 `Signing.xcconfig`、
+破坏车道 A 的真机调试，不要再用了。
 
 **真机点 Run 报「The executable does not contain get-task-allow ... the debugger will fail to attach」**
 → Release/Ad Hoc 签名不带 `get-task-allow`（调试权限），而 Xcode 的 Run 默认要挂调试器，所以报这
@@ -399,10 +456,9 @@ git tag 发布版本时照旧用 tag 递增（`v0.5.8` 起），与上述规则�
 **Xcode Signing 界面 Team 显示「Unknown Name (97W62GB3JA)」**
 → 编译机离线拿不到团队的显示名，属正常现象；Team ID 本身正确，不影响签名与构建。
 
-**ExportOptions.plist.template 的 method 写死 `app-store-connect`**
-→ 该模板给 App Store/TestFlight 上传用。若要用 CLI（`flutter build ipa`）产出**能装到真机**的
-Ad Hoc 包，需把导出方式改为 `ad-hoc`（`ios_archive.sh` 加 `--method ad-hoc` 或按 profile 自动判断）；
-用 Xcode Run（Release + 去掉 Debug executable）装真机则不受此模板影响。
+**ExportOptions.plist.template 的 method 是占位符 `__MINDRA_EXPORT_METHOD__`**
+→ 由 `ios_archive.sh` 按 `--distribution` 自动填：`app-store-connect`（默认，上架用）/
+`ad-hoc`（`mise run ios:vm:archive:adhoc`，装真机用）。无需手工改模板。
 
 **`mise run ios:vm:archive` 报 "No signing certificate / No profile matching"**
 → Signing.xcconfig 变量为空或证书没装。`mise run ios:vm:signing:status` 看缺什么，
@@ -434,8 +490,11 @@ Ad Hoc 包，需把导出方式改为 `ad-hoc`（`ios_archive.sh` 加 `--method 
 
 **编译签名时报 `errSecInternalComponent`**
 → 构建 SSH 会话里 keychain 是锁的，codesign 拿私钥时无法弹密码框。已修复：
-`ios_archive.sh` 构建前自动解锁专用 keychain。若用其他方式触发构建遇到此错，
-先手动解锁再构建。
+`ios_archive.sh` 构建前自动解锁专用 keychain；`ios:run:debug` / `ios:run:release`
+也已内置解锁（2026-08-28，否则 flutter run 时报
+"Failed to codesign ... App.framework with identity ... errSecInternalComponent"）。
+手动解锁：`./scripts/ios_signing_import.sh --unlock`（SSH 与 GUI 会话是独立 audit session，
+互不覆盖，要用哪条就得在哪条里解锁）。
 
 **导出 IPA 报 "No certificate for team ... matching 'iPhoneDistribution'"**
 → Signing.xcconfig 里的签名身份被去掉了空格（应为 `iPhone Distribution`）。
@@ -447,7 +506,8 @@ keychain 则重跑导入。另：VM 上跑 Xcode GUI 自动签名必然失败—
 `developerservices2.apple.com`，**这是预期行为，不要去修**。
 
 **TestFlight 拒收 "build number already exists"**
-→ 忘了 bump。`mise run ios:build:bump` 后重新构建。
+→ 忘了 bump（或用了重复的 build number）。`mise run ios:build:bump` 后**必须重新构建**
+（`ios:vm:archive` + `sync:back`）再上传——bump 只影响下一次构建，旧包不会被"修正"。
 
 **profile 只剩几天有效期**
 → 免费账号签的（7 天期），无法做 App Store 分发。确认 appuploader 里登录的是
@@ -464,3 +524,28 @@ keychain 则重跑导入。另：VM 上跑 Xcode GUI 自动签名必然失败—
 
 - `docs/app_store_release_guide_ZH.md` —— App Store 元数据、截图规格、提审流程（步骤 11 的详细版）
 - `scripts/ios_build_guide.md` —— 构建脚本细节（本文档的链路就是它的自动化版）
+
+## 2026-08-28 增补的故障排查
+
+**真机蓝屏 / 停在 LaunchScreen、`flutter run` 卡 "Installing and launching..."**
+→ Debug 版启动后等 LLDB 附加，SSH 会话里附加慢/卡是典型场景，app 停在默认蓝底 LaunchScreen。
+已在编译机执行 `flutter config --no-enable-lldb-debugging` 关闭 LLDB 附加，之后跑
+`mise run ios:run:debug` 正常出界面。旧进程先 Ctrl+C 清掉再跑。
+
+**手机点图标提示「iOS 14+ debug mode only be launched from flutter tooling」**
+→ Debug 版不允许脱离调试器独立启动（iOS 14+ 限制），是正常现象不是 bug。
+要么保持 `flutter run` 在线使用，要么装 AdHoc 的 Release 包（车道 B，独立点图标无此限制）。
+
+**archive 显示"构建完成"但 IPA 是旧的（exportArchive 有红字仍显示成功）**
+→ 已修复（2026-08-28）：`ios_archive.sh` 现在只认构建开始后新生成的 IPA（mtime 比较），
+无新产物会明确报「未产出新的 IPA」并提示查看 exportArchive 报错
+（常见原因：profile 与 ExportOptions method 不匹配，如 AdHoc profile 配 app-store-connect）。
+
+**keychain 解锁报 "label�: unbound variable"（macOS 自带 bash 3.2）**
+→ bash 3.2 对 `$var）`（变量后紧跟全角字符）解析错误，须写成 `${var}）`。已修复（2026-08-28）。
+
+**Archive 报「不是 iOS App Store profile」或切了 profile 后另一条车道失效**
+→ 检查是否把 AdHoc 与 App Store 的 xcconfig 串了：`Signing.xcconfig`（Debug 真机）与
+`Signing.release.xcconfig`（Release 正式）是两套，`ios_archive.sh` 按 `--distribution`
+自动选，**不要手工互换**。导入脚本只写 `Signing.xcconfig`，重新导入 App Store profile 后
+需把 AdHoc 值恢复回去（或用已有的 Signing.release.xcconfig 覆盖参数）。

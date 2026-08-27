@@ -244,6 +244,7 @@ import_wwdr_certs() {
 
 # ---- 导入 .mobileprovision -------------------------------------------------
 PROFILE_NAME=""; PROFILE_UUID=""; PROFILE_TEAM=""; PROFILE_EXPIRY=""; PROFILE_APPID=""
+PROFILE_TYPE="appstore"   # development | adhoc | appstore，由 parse_profile 按 profile 内容判断
 
 parse_profile() {
     local path="$1" plist
@@ -258,6 +259,17 @@ parse_profile() {
     PROFILE_TEAM=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" "$plist" 2>/dev/null || echo "")
     PROFILE_EXPIRY=$(/usr/libexec/PlistBuddy -c "Print :ExpirationDate" "$plist" 2>/dev/null || echo "")
     PROFILE_APPID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "$plist" 2>/dev/null || echo "")
+    # 类型判断：get-task-allow=true 是开发签名（真机调试）；带设备列表的是 AdHoc 分发；
+    # 其余是 App Store 分发。
+    local gta
+    gta=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:get-task-allow" "$plist" 2>/dev/null || echo "")
+    if [ "$gta" = "true" ]; then
+        PROFILE_TYPE="development"
+    elif /usr/libexec/PlistBuddy -c "Print :ProvisionedDevices" "$plist" >/dev/null 2>&1; then
+        PROFILE_TYPE="adhoc"
+    else
+        PROFILE_TYPE="appstore"
+    fi
     rm -f "$plist"
 }
 
@@ -273,6 +285,7 @@ import_profile() {
 
     log_info "Profile 名称: $PROFILE_NAME"
     log_info "Profile UUID: $PROFILE_UUID"
+    log_info "Profile 类型: $PROFILE_TYPE"
     log_info "Team ID:      $PROFILE_TEAM"
     log_info "过期时间:     $PROFILE_EXPIRY"
     log_info "App ID:       $PROFILE_APPID"
@@ -318,25 +331,48 @@ apply_xcconfig() {
         return 0
     fi
 
-    local identity
-    identity=$(signing_identity_name)
-    if [ -z "$identity" ]; then
-        identity="Apple Distribution"
-        log_warning "keychain 里没找到分发证书，Signing.xcconfig 暂填默认值 $identity"
-    fi
+    # profile 类型 → 目标签名 xcconfig（Debug 开发 / AdHoc 安装 / App Store 上架三者互不干扰）
+    local target identity
+    case "$PROFILE_TYPE" in
+        development)
+            target="ios/Flutter/Signing.debug.xcconfig"
+            identity=$(signing_identity_name development)
+            if [ -z "$identity" ]; then
+                identity="Apple Development"
+                log_warning "keychain 里没找到开发证书，Signing.debug.xcconfig 暂填默认值 $identity"
+            fi
+            ;;
+        appstore)
+            target="ios/Flutter/Signing.release.xcconfig"
+            identity=$(signing_identity_name distribution)
+            if [ -z "$identity" ]; then
+                identity="Apple Distribution"
+                log_warning "keychain 里没找到分发证书，Signing.release.xcconfig 暂填默认值 $identity"
+            fi
+            ;;
+        *)
+            target="ios/Flutter/Signing.xcconfig"
+            identity=$(signing_identity_name distribution)
+            if [ -z "$identity" ]; then
+                identity="iPhone Distribution"
+                log_warning "keychain 里没找到分发证书，Signing.xcconfig 暂填默认值 $identity"
+            fi
+            ;;
+    esac
 
-    log_info "写入 $SIGNING_XCCONFIG"
-    cat > "$SIGNING_XCCONFIG" <<EOF
+    log_info "写入 ${target}（profile 类型: ${PROFILE_TYPE}）"
+    cat > "$target" <<EOF
 // 由 scripts/ios_signing_import.sh 自动生成，请勿手工编辑。
 // 生成时间: $(date '+%Y-%m-%d %H:%M:%S')
 // 来源 profile: $PROFILE_NAME ($PROFILE_UUID)
+// 类型: $PROFILE_TYPE
 // 本文件已被 .gitignore 排除。
 
 MINDRA_CODE_SIGN_IDENTITY = $identity
 MINDRA_DEVELOPMENT_TEAM = $PROFILE_TEAM
 MINDRA_PROVISIONING_PROFILE = $PROFILE_NAME
 EOF
-    log_success "签名参数已写入，可以直接 mise run ios:archive"
+    log_success "签名参数已写入（${PROFILE_TYPE} → ${target}）"
 }
 
 # ---- 安装「登录自动解锁」LaunchAgent -----------------------------------------
@@ -404,16 +440,23 @@ EOF
     if ! launchctl bootstrap "gui/$uid" "$plist" 2>/dev/null; then
         launchctl load -w "$plist" 2>/dev/null || true
     fi
-    log_success "已安装登录解锁 agent（$label）"
+    log_success "已安装登录解锁 agent（${label}）"
     log_info "Xcode 的 codesign 弹框应已消失；若 VM 挂起恢复后又锁，再跑一次 unlock 即可"
 }
 
-# 从 keychain 里取分发证书的完整名称，例如 "Apple Distribution: Some Name (TEAMID)"。
+# 从 keychain 里取证书的完整名称，例如 "Apple Distribution: Some Name (TEAMID)"。
 # ExportOptions 的 signingCertificate 用 "Apple Distribution" 这个前缀即可，
-# 但要先确认证书真的在。
+# 但要先确认证书真的在。development=Apple Development 证书；其他=分发证书。
 signing_identity_name() {
+    local kind="${1:-distribution}"
+    local pattern
+    if [ "$kind" = "development" ]; then
+        pattern='(Apple Development|iPhone Developer)[^"]*'
+    else
+        pattern='(Apple Distribution|iPhone Distribution)[^"]*'
+    fi
     security find-identity -v -p codesigning 2>/dev/null \
-        | grep -oE '"(Apple Distribution|iPhone Distribution)[^"]*"' \
+        | grep -oE "\"${pattern}\"" \
         | head -n 1 | tr -d '"' | cut -d: -f1 || true
 }
 

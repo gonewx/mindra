@@ -1,2 +1,8 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
 #include "Generated.xcconfig"
+// 手动签名参数（Team ID / profile 名 / 证书类型），不进 git。
+// Debug 真机调试优先用 Signing.debug.xcconfig（Development，带 get-task-allow 调试权限）；
+// 还没导入开发签名前兜底用 Signing.xcconfig（AdHoc：能跑但不能调试，会报 get-task-allow）。
+// 后 include 的赋值覆盖先 include，故开发签名赢。
+#include? "Signing.xcconfig"
+#include? "Signing.debug.xcconfig"

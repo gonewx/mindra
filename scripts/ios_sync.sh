@@ -80,10 +80,13 @@ cmd_push() {
         --exclude '.git/' \
         --exclude 'build/' \
         --exclude '.dart_tool/' \
+        --exclude '.flutter-plugins-dependencies' \
         --exclude 'ios/Pods/' \
+        --exclude 'ios/Podfile.lock' \
         --exclude 'ios/.symlinks/' \
         --exclude 'ios/Flutter/Generated.xcconfig' \
-        --exclude 'ios/Flutter/Signing.xcconfig' \
+        --exclude 'ios/Flutter/Signing*.xcconfig' \
+        --exclude 'ios/Flutter/flutter_export_environment.sh' \
         --exclude 'ios/Flutter/ephemeral/' \
         --exclude 'ios/Signing.xcconfig' \
         --exclude 'macos/Flutter/ephemeral/' \
@@ -102,8 +105,10 @@ cmd_pull() {
     mkdir -p "$LOCAL_IPA_DIR"
 
     local pulled=0
-    # --ignore-existing 防止把本地已有的同名 IPA 覆盖掉（每次构建文件名一样时）
-    if rsync -az --ignore-existing \
+    # --update：同名 IPA 只有在远端比本地新时才覆盖。
+    # 不能用 --ignore-existing——文件名不变但内容更新的包（每次构建同名 mindra.ipa）
+    # 会被误跳过，导致本地一直拿旧包（曾出现"mindra.ipa 时间还是旧的"）。
+    if rsync -az --update \
         "$SSH_HOST:$VM_PROJECT_DIR/build/ios/ipa/*.ipa" "$LOCAL_IPA_DIR/" 2>/dev/null; then
         while IFS= read -r f; do
             [ -n "$f" ] || continue
@@ -114,13 +119,23 @@ cmd_pull() {
 
     if [ "$pulled" -eq 0 ]; then
         log_warning "VM 上没有新 IPA（1 小时内未回传过任何文件）"
-        log_info "先编译: mise run ios:vm:archive"
+        log_info "先编译: mise run ios:vm:archive（App Store 包，上架）"
+        log_info "     或: mise run ios:vm:archive:adhoc（真机独立包）"
         exit 1
     fi
 
     echo ""
-    log_info "给 appuploader 用的 IPA（在 appuploader 里选这个文件）:"
-    find "$LOCAL_IPA_DIR" -maxdepth 1 -name '*.ipa' -printf '  %f (%k KB)\n' | sort
+    log_info "本地 IPA 清单（用途不同，别给 appuploader 传错包）:"
+    for f in "$LOCAL_IPA_DIR"/*.ipa; do
+        [ -f "$f" ] || continue
+        local base hint
+        base=$(basename "$f")
+        case "$base" in
+            *adhoc*) hint="真机安装包（装 iPhone 用，勿传 TestFlight）" ;;
+            *)       hint="App Store 包（appuploader 选这个上传 TestFlight）" ;;
+        esac
+        echo "  $base ($(du -h "$f" | cut -f1)) —— $hint"
+    done
 }
 
 # ---- cert：签名资产递送 + VM 侧导入 ----------------------------------------

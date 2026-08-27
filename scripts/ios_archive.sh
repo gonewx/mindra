@@ -20,7 +20,6 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 
-SIGNING_XCCONFIG="ios/Flutter/Signing.xcconfig"
 EXPORT_TEMPLATE="ios/ExportOptions.plist.template"
 GENERATED_EXPORT="build/ios/ExportOptions.plist"
 BUILD_NUMBER_FILE="ios/build_number.txt"
@@ -36,6 +35,7 @@ Mindra iOS Archive 构建（签名 + 导出 IPA）
   -h, --help        显示此帮助
   -c, --clean       构建前 flutter clean
   --build N         覆盖 build number（不写回 build_number.txt）
+  --distribution T  app-store（默认，TestFlight/上架）| ad-hoc（装真机独立使用）
   --skip-verify     跳过产物校验
 
 前置条件:
@@ -48,15 +48,21 @@ EOF
 }
 
 CLEAN=false; BUILD_OVERRIDE=""; SKIP_VERIFY=false
+DISTRIBUTION="app-store"   # app-store（默认，TestFlight/上架）| ad-hoc（装真机独立使用）
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)      show_help; exit 0 ;;
         -c|--clean)     CLEAN=true; shift ;;
         --build)        BUILD_OVERRIDE="$2"; shift 2 ;;
+        --distribution) DISTRIBUTION="$2"; shift 2 ;;
         --skip-verify)  SKIP_VERIFY=true; shift ;;
         *) log_error "未知参数: $1"; show_help; exit 1 ;;
     esac
 done
+if [ "$DISTRIBUTION" != "app-store" ] && [ "$DISTRIBUTION" != "ad-hoc" ]; then
+    log_error "--distribution 只接受 app-store 或 ad-hoc（当前: $DISTRIBUTION）"
+    exit 1
+fi
 
 check_environment() {
     if [[ "$OSTYPE" != "darwin"* ]]; then
@@ -73,6 +79,14 @@ check_environment() {
 
 # ---- 读签名配置 ------------------------------------------------------------
 read_signing_config() {
+    # app-store（默认）：读 MindraAppStore 签名配置（正式 IPA/TestFlight）；
+    # ad-hoc：读通用 Signing.xcconfig（MindraAdHoc，装真机独立运行）
+    if [ "$DISTRIBUTION" = "ad-hoc" ]; then
+        SIGNING_XCCONFIG="ios/Flutter/Signing.xcconfig"
+    else
+        SIGNING_XCCONFIG="ios/Flutter/Signing.release.xcconfig"
+        [ -f "$SIGNING_XCCONFIG" ] || SIGNING_XCCONFIG="ios/Flutter/Signing.xcconfig"
+    fi
     if [ ! -f "$SIGNING_XCCONFIG" ]; then
         log_error "缺少 $SIGNING_XCCONFIG"
         log_info "先在宿主 Linux 上跑: mise run ios:vm:signing:import"
@@ -139,7 +153,15 @@ generate_export_options() {
         exit 1
     fi
     mkdir -p build/ios
-    sed -e "s/__MINDRA_DEVELOPMENT_TEAM__/$SIGN_TEAM/g" \
+    if [ "$DISTRIBUTION" = "ad-hoc" ]; then
+        EXPORT_METHOD="ad-hoc"
+        log_info "导出类型: ad-hoc（可装真机独立运行）"
+    else
+        EXPORT_METHOD="app-store-connect"
+        log_info "导出类型: app-store-connect（上传 TestFlight/App Store）"
+    fi
+    sed -e "s/__MINDRA_EXPORT_METHOD__/$EXPORT_METHOD/g" \
+        -e "s/__MINDRA_DEVELOPMENT_TEAM__/$SIGN_TEAM/g" \
         -e "s/__MINDRA_CODE_SIGN_IDENTITY__/$SIGN_IDENTITY/g" \
         -e "s/__MINDRA_PROVISIONING_PROFILE__/$SIGN_PROFILE/g" \
         -e "s/__MINDRA_BUNDLE_ID__/$BUNDLE_ID/g" \
@@ -163,16 +185,37 @@ do_build() {
         flutter pub get >/dev/null
     fi
 
+    # 记录构建前最新 IPA 的 mtime（epoch 秒）：flutter build ipa 导出失败时
+    # 不会更新 build/ios/ipa/ 里的产物，若不检查会拿旧 IPA 误报成功
+    # （曾出现 exportArchive 报错但脚本仍"构建完成"的假阳性）。
+    local before_mtime newest_mtime
+    before_mtime=$(ls -t build/ios/ipa/*.ipa 2>/dev/null | head -n 1 | xargs stat -f %m 2>/dev/null || true)
+    before_mtime="${before_mtime:-0}"
+
     log_info "开始构建 IPA（约 1-3 分钟）..."
     flutter build ipa --release \
         --build-name="$MARKETING_VERSION" \
         --build-number="$BUILD_NUMBER" \
         --export-options-plist="$GENERATED_EXPORT"
 
-    IPA_PATH=$(find build/ios/ipa -maxdepth 1 -name '*.ipa' -print 2>/dev/null | head -n 1)
+    newest_mtime=$(ls -t build/ios/ipa/*.ipa 2>/dev/null | head -n 1 | xargs stat -f %m 2>/dev/null || true)
+    newest_mtime="${newest_mtime:-0}"
+    if [ "$newest_mtime" -le "$before_mtime" ]; then
+        log_error "未产出新的 IPA（检查上方 flutter build 的 exportArchive 报错）"
+        log_error "常见原因：profile 类型与 ExportOptions method（app-store-connect）不匹配，"
+        log_error "或 Signing.release.xcconfig 里 MINDRA_PROVISIONING_PROFILE 指向了 AdHoc/开发 profile"
+        exit 1
+    fi
+
+    IPA_PATH=$(ls -t build/ios/ipa/*.ipa 2>/dev/null | head -n 1)
     if [ -z "$IPA_PATH" ] || [ ! -f "$IPA_PATH" ]; then
         log_error "构建命令成功但没找到 IPA，检查 build/ios/ipa/"
         exit 1
+    fi
+    # ad-hoc 包改名区分，避免与 app-store 正式包同名、误传 TestFlight
+    if [ "$DISTRIBUTION" = "ad-hoc" ]; then
+        mv "$IPA_PATH" "build/ios/ipa/mindra-adhoc.ipa"
+        IPA_PATH="build/ios/ipa/mindra-adhoc.ipa"
     fi
     log_success "IPA: $IPA_PATH ($(du -h "$IPA_PATH" | cut -f1))"
 }
@@ -239,10 +282,17 @@ main() {
     echo "  IPA: $IPA_PATH"
     echo "  版本: $MARKETING_VERSION ($BUILD_NUMBER)"
     echo ""
-    echo "下一步:"
-    echo "  宿主回传:  mise run ios:sync:back"
-    echo "  上传 TestFlight: 在 appuploader 里选择回传的 IPA"
-    echo "  发下一版前递增: mise run ios:build:bump"
+    if [ "$DISTRIBUTION" = "ad-hoc" ]; then
+        echo "下一步（ad-hoc 包，装真机独立运行）:"
+        echo "  编译机安装到真机:  mise run ios:ipa:install"
+        echo "  注意: AdHoc 包不能上传 TestFlight/App Store（会被拒收）"
+        echo "  设备须注册在 MindraAdHoc profile 白名单内"
+    else
+        echo "下一步（app-store 包，上传 TestFlight）:"
+        echo "  宿主回传:  mise run ios:sync:back"
+        echo "  上传 TestFlight: 在 appuploader 里选择回传的 IPA"
+        echo "  发下一版前递增: mise run ios:build:bump（只对下一次构建生效，不影响本包）"
+    fi
     echo "=========================================="
 }
 

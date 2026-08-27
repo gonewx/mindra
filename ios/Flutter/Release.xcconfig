@@ -1,6 +1,7 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
 // 手动签名参数（Team ID / profile 名 / 证书类型），不进 git。
-// 见 Signing.xcconfig.example；缺失时用 include? 静默跳过，
-// 这样没配签名也能跑 flutter build ios --no-codesign。
-#include? "Signing.xcconfig"
+// Release（正式 IPA / TestFlight）读 Signing.release.xcconfig（App Store profile）；
+// Debug（真机测试）读 Signing.xcconfig（AdHoc profile），见 Debug.xcconfig。
+// 缺失时用 include? 静默跳过，这样没配签名也能跑 flutter build ios --no-codesign。
+#include? "Signing.release.xcconfig"

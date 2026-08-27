@@ -8,7 +8,8 @@
   —— 它进 git。
 
   几个容易踩的点：
-  - method 用 app-store-connect（Xcode 15 起的新名，旧名 app-store 会告警）
+  - method 是占位符 __MINDRA_EXPORT_METHOD__，由 ios_archive.sh 按
+    --distribution 填 app-store-connect（Xcode 15 起新名）/ ad-hoc
   - signingStyle 必须是 manual，否则 Xcode 会去联系 developerservices2.apple.com，
     而编译用的 macOS VM 已在 /etc/hosts 阻断该域名，会卡住然后失败
   - destination 显式设为 export，确保只产出 IPA 不尝试上传
@@ -18,7 +19,7 @@
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>app-store-connect</string>
+    <string>__MINDRA_EXPORT_METHOD__</string>
     <key>destination</key>
     <string>export</string>
     <key>signingStyle</key>

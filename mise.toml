@@ -26,12 +26,18 @@ xcrun simctl launch booted "$IOS_BUNDLE_ID"
 '''
 
 [tasks."ios:run:debug"]
-description = "Run Debug on the configured physical iPhone"
-run = "flutter run -d \"$IOS_DEVICE_ID\""
+description = "Run Debug on the configured physical iPhone（先解锁签名 keychain，避免 errSecInternalComponent）"
+run = '''
+./scripts/ios_signing_import.sh --unlock
+flutter run -d "$IOS_DEVICE_ID"
+'''
 
 [tasks."ios:run:release"]
-description = "Install and run Release on the configured physical iPhone"
-run = "flutter run --release -d \"$IOS_DEVICE_ID\""
+description = "Install and run Release on the configured physical iPhone（先解锁签名 keychain）"
+run = '''
+./scripts/ios_signing_import.sh --unlock
+flutter run --release -d "$IOS_DEVICE_ID"
+'''
 
 [tasks."ios:ipa:build"]
 description = "Build a signed Release IPA"
@@ -63,11 +69,12 @@ description = "（编译机上）清空专用 keychain 与已装 profile"
 run = "./scripts/ios_signing_import.sh --reset"
 
 [tasks."ios:build:bump"]
-description = "iOS build number +1（ios/build_number.txt，TestFlight 要求递增）"
+description = "iOS build number +1（只改 ios/build_number.txt，不影响已产出的 IPA；先 bump 再 archive，新包才带新号）"
 run = '''
 n=$(cat ios/build_number.txt)
 echo $((n + 1)) > ios/build_number.txt
 echo "build number: $n -> $((n + 1))"
+echo "提示: 仅对下一次 ios:vm:archive 生成的新包生效；已产出 IPA 内的 build number 不变，上传 TestFlight 以 IPA 打包时固化值为准"
 '''
 
 [tasks."ios:archive"]
@@ -105,23 +112,28 @@ run = '''
 ssh "$MINDRA_VM_HOST" "cd mindra && mise exec -- ./scripts/ios_archive.sh"
 '''
 
+[tasks."ios:vm:archive:adhoc"]
+description = "（宿主）同步代码并远程构建 AdHoc 签名 IPA（mindra-adhoc.ipa，可装真机独立运行；勿传 TestFlight）"
+run = '''
+./scripts/ios_sync.sh push
+ssh "$MINDRA_VM_HOST" "cd mindra && mise exec -- ./scripts/ios_archive.sh --distribution ad-hoc"
+'''
+
 [tasks."ios:ipa:install"]
-description = "Install the newest IPA, or the file specified by IPA_PATH"
+description = "按名称安装 IPA 到真机。默认 mindra-adhoc.ipa（真机独立版）；--appstore 装 mindra.ipa；或用 IPA_PATH= 精确指定文件"
 run = '''
 ipa_path="${IPA_PATH:-}"
+name="${IPA_NAME:-mindra-adhoc.ipa}"
 
 if [ -z "$ipa_path" ]; then
-  ipa_path=$(find build/ios/ipa "$HOME/Documents" -type f -name '*.ipa' -print 2>/dev/null \
-    | while IFS= read -r candidate; do
-        printf '%s\t%s\n' "$(stat -f '%m' "$candidate")" "$candidate"
-      done \
-    | sort -nr \
-    | head -n 1 \
-    | cut -f 2-)
+  if [ "${1:-}" = "--appstore" ]; then
+    name="mindra.ipa"
+  fi
+  ipa_path=$(find build/ios/ipa "$HOME/Documents" -maxdepth 1 -type f -name "$name" -print 2>/dev/null | head -n 1)
 fi
 
 if [ -z "$ipa_path" ] || [ ! -f "$ipa_path" ]; then
-  echo "No IPA found. Pass a path or run: mise run ios:ipa:build" >&2
+  echo "未找到要安装的 IPA（期望：$name；或 IPA_PATH= 指定文件）。先构建: mise run ios:vm:archive:adhoc" >&2
   exit 1
 fi
 
