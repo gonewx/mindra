@@ -176,6 +176,10 @@ jarsigner -verify build/app/outputs/bundle/release/app-release.aab
   - Secondary: Lifestyle
 - **Content Rating**: 4+
 
+> Note: The subtitle is filled in on the App Store Connect website, where special characters like `&` are allowed.
+> Do not confuse it with the Description field when registering the App ID in appuploader — that is only
+> an internal label, disallows `@` `&` `*` `"`, and can simply be `Mindra` (see [ios_release_pipeline.md](ios_release_pipeline.md)).
+
 #### App Description
 ```
 Mindra is a professional meditation and mindfulness app dedicated to helping users find inner peace and focus in their fast-paced lives.

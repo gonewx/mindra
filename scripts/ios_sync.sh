@@ -23,7 +23,16 @@ log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 SSH_HOST="${MINDRA_VM_HOST:-imacvm-tahoe}"
 VM_PROJECT_DIR="mindra"
 LOCAL_IPA_DIR="build/ios/ipa"
-TRANSFER_DIR="${MINDRA_TRANSFER_DIR:-$HOME/mindra-transfer}"
+# 注意：这是 VM 上的目录，相对路径以 VM 的 HOME 为基准。
+# macOS 的 /home 是 autofs（auto_home）挂载点，不能 mkdir，所以绝不能把
+# 宿主机的 $HOME（/home/decker）原样发给 VM 当绝对路径用。
+TRANSFER_DIR="${MINDRA_TRANSFER_DIR:-mindra-transfer}"
+
+# 给 VM 上导入脚本用的绝对路径：ssh 的 mkdir / scp 相对路径都落在远端 HOME 下，
+# 但导入脚本在 `cd mindra` 之后运行，相对路径会解析错位，必须补上 ~。
+vm_abs_path() {
+    if [[ "$1" == /* ]]; then echo "$1"; else echo "~/$1"; fi
+}
 
 show_help() {
     cat <<EOF
@@ -132,9 +141,10 @@ cmd_cert() {
     log_info "已送到 VM: ${sent[*]}"
 
     log_info "在 VM 上执行导入 ..."
+    local vm_dir; vm_dir="$(vm_abs_path "$TRANSFER_DIR")"
     local args=("$reset_flag")
-    [ -z "$cert" ]    || args+=(-c "$TRANSFER_DIR/$(basename "$cert")")
-    [ -z "$profile" ] || args+=(-p "$TRANSFER_DIR/$(basename "$profile")")
+    [ -z "$cert" ]    || args+=(-c "$vm_dir/$(basename "$cert")")
+    [ -z "$profile" ] || args+=(-p "$vm_dir/$(basename "$profile")")
 
     # 密码通过 stdin 传给远端脚本（read -s 读一行），不进进程列表与 history
     if [ -n "$password" ]; then

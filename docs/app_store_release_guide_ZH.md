@@ -176,6 +176,10 @@ jarsigner -verify build/app/outputs/bundle/release/app-release.aab
   - 次要：生活
 - **内容分级**: 4+
 
+> 注意：这里的副标题在 App Store Connect 网页上填写，允许 `&` 等特殊字符。
+> 不要和 appuploader 注册 App ID 时的 Description 字段混淆——那只是内部备注名，
+> 禁用 `@` `&` `*` `"`，填 `Mindra` 即可（见 [ios_release_pipeline.md](ios_release_pipeline.md)）。
+
 #### 应用描述
 ```
 Mindra 是一款专业的冥想与正念应用，致力于帮助用户在快节奏的生活中找到内心的平静与专注。

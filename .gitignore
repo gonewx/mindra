@@ -48,6 +48,12 @@ app.*.map.json
 
 .env
 
+# iOS 签名资产（appuploader 导出的证书/描述文件，绝不进版本库）
+*.p12
+*.mobileprovision
+*.p8
+ios/Flutter/Signing.xcconfig
+
 # Google Play Console API 密钥文件
 android/play-console-service-account.json
 android/fastlane/service-account.json
