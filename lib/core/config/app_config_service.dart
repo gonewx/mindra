@@ -13,18 +13,18 @@ class AppConfigService {
 
   // 默认配置
   static const Map<String, String> _defaultConfig = {
-    // 默认隐私政策URL（中文）
+    // 默认隐私政策URL（英文版兜底）
     _privacyPolicyUrlKey:
-        'https://ycmindra.oss-cn-shanghai.aliyuncs.com/privacy_policy_en.md',
+        'https://mindra.gonewx.com/policy/privacy_policy_en.md',
     // 中文隐私政策URL
     '${_privacyPolicyUrlKey}_zh':
-        'https://ycmindra.oss-cn-shanghai.aliyuncs.com/privacy_policy_zh.md',
+        'https://mindra.gonewx.com/policy/privacy_policy_zh.md',
     // 英文隐私政策URL
     '${_privacyPolicyUrlKey}_en':
-        'https://ycmindra.oss-cn-shanghai.aliyuncs.com/privacy_policy_en.md',
+        'https://mindra.gonewx.com/policy/privacy_policy_en.md',
 
     _termsOfServiceUrlKey:
-        'https://raw.githubusercontent.com/mindra-app/mindra/main/docs/terms_of_service_zh.md',
+        'https://mindra.gonewx.com/policy/terms_of_service_zh.md',
     _remoteConfigUrlKey:
         'https://raw.githubusercontent.com/mindra-app/mindra/main/config/app_config.json',
   };
