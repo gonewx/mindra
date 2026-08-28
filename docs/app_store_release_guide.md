@@ -95,7 +95,7 @@ Whether you're a meditation beginner or an experienced practitioner, Mindra prov
 #### Contact Details
 - **Website**: https://mindra.gonewx.com
 - **Email**: support@mindra.gonewx.com
-- **Privacy Policy**: https://mindra.gonewx.com/privacy
+- **Privacy Policy**: https://mindra.gonewx.com/about/privacy-policy
 
 ### 4. Content Rating
 
@@ -208,8 +208,9 @@ meditation,mindfulness,relaxation,focus,health,mental health,stress relief,sleep
 
 #### Support URLs
 - **Marketing URL**: https://mindra.gonewx.com
-- **Support URL**: https://mindra.gonewx.com/support
-- **Privacy Policy URL**: https://mindra.gonewx.com/privacy
+- **Support URL**: https://mindra.gonewx.com/about/faq
+- **Privacy Policy URL**: https://mindra.gonewx.com/about/privacy-policy
+- **Terms of Service URL**: https://mindra.gonewx.com/about/terms-of-service
 
 ### 4. Pricing and Availability
 

@@ -95,7 +95,7 @@ Mindra 是一款专业的冥想与正念应用，致力于帮助用户在快节�
 #### 联系详情
 - **网站**: https://mindra.gonewx.com
 - **电子邮件**: support@mindra.gonewx.com
-- **隐私政策**: https://mindra.gonewx.com/privacy
+- **隐私政策**: https://mindra.gonewx.com/about/privacy-policy
 
 ### 4. 内容分级
 
@@ -208,8 +208,9 @@ Mindra 是一款专业的冥想与正念应用，致力于帮助用户在快节�
 
 #### 支持 URL
 - **营销网址**: https://mindra.gonewx.com
-- **支持网址**: https://mindra.gonewx.com/support
-- **隐私政策网址**: https://mindra.gonewx.com/privacy
+- **支持网址**: https://mindra.gonewx.com/about/faq
+- **隐私政策网址**: https://mindra.gonewx.com/about/privacy-policy
+- **服务条款网址**: https://mindra.gonewx.com/about/terms-of-service
 
 ### 4. 定价和销售范围
 

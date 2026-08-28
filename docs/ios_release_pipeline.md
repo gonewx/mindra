@@ -339,7 +339,7 @@ appuploader → 提交上传 → 选择 `mindra/build/ios/ipa/` 下的 IPA 文�
 | 类别 | 主要：健康健美；次要：生活 |
 | 内容分级 | 4+（填问卷） |
 | 关键词 | 冥想,正念,放松,专注,健康,心理健康,减压,睡眠,瑜伽,呼吸 |
-| 营销/支持/隐私政策 URL | https://mindra.gonewx.com 等（见发布指南） |
+| 营销/支持/隐私政策 URL | 营销 https://mindra.gonewx.com / 支持 https://mindra.gonewx.com/about/faq / 隐私 https://mindra.gonewx.com/about/privacy-policy（见 app_store_release_guide） |
 | 价格 | 免费 |
 | 截图 | iPhone 至少 1 张，6.7" 用 1290x2796 px，PNG/JPG |
 | App Review 联系信息 | 姓名/电话/邮箱（应用无需登录，不用给演示账户） |
